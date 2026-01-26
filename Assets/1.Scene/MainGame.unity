@@ -337,7 +337,7 @@ Transform:
   m_GameObject: {fileID: 322732902}
   serializedVersion: 2
   m_LocalRotation: {x: 0.7071068, y: -0, z: -0, w: 0.7071068}
-  m_LocalPosition: {x: 43.6925, y: 5, z: 6.428}
+  m_LocalPosition: {x: 43.6925, y: 5, z: 9.17}
   m_LocalScale: {x: 1, y: 0.1, z: 11}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -445,8 +445,8 @@ RectTransform:
   m_GameObject: {fileID: 404843084}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
+  m_LocalScale: {x: 1.4100001, y: 1.4100001, z: 1.4100001}
+  m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 1343960571}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -659,7 +659,7 @@ GameObject:
   - component: {fileID: 546414848}
   - component: {fileID: 546414847}
   - component: {fileID: 546414846}
-  m_Layer: 6
+  m_Layer: 7
   m_Name: Platform
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -770,7 +770,7 @@ GameObject:
   - component: {fileID: 555283947}
   - component: {fileID: 555283946}
   - component: {fileID: 555283945}
-  m_Layer: 6
+  m_Layer: 7
   m_Name: Platform
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1176,7 +1176,7 @@ Transform:
   m_GameObject: {fileID: 773697414}
   serializedVersion: 2
   m_LocalRotation: {x: 0.7071068, y: -0, z: -0, w: 0.7071068}
-  m_LocalPosition: {x: 43.6925, y: 5, z: -7.162}
+  m_LocalPosition: {x: 43.6925, y: 5, z: -9.91}
   m_LocalScale: {x: 1, y: 0.1, z: 11}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1432,17 +1432,31 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController
   moveSpeed: 3
-  jumpForce: 7
+  rotationSpeed: 15
+  dashSpeed: 20
+  dashDuration: 0.15
+  maxDashCharges: 1
+  dashCooldown: 2
+  jumpForce: 10
   jumpCutMultiplier: 0.5
+  gravityScale: 2.5
+  fastFallSpeed: 20
+  wallSlideSpeed: 2
+  wallJumpPower: {x: 12, y: 16}
+  wallJumpStopControlTime: 0.2
   coyoteTime: 0.15
   jumpBufferTime: 0.2
-  rotationSpeed: 15
   dropDisableTime: 0.5
   groundCheckPos: {fileID: 1329825590}
-  groundCheckRadius: 0.1
+  wallCheckPos: {fileID: 1416467093}
+  checkRadius: 0.2
   groundLayer:
     serializedVersion: 2
+    m_Bits: 128
+  wallLayer:
+    serializedVersion: 2
     m_Bits: 64
+  playerAim: {fileID: 1056764910}
 --- !u!114 &1056764902
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1550,13 +1564,13 @@ MonoBehaviour:
     m_ActionName: 'Player/Hook[/Mouse/leftButton]'
   - m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: 
-        m_MethodName: 
-        m_Mode: 1
+      - m_Target: {fileID: 1056764901}
+        m_TargetAssemblyTypeName: PlayerMovement, Assembly-CSharp
+        m_MethodName: OnDash
+        m_Mode: 0
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: 
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
           m_IntArgument: 0
           m_FloatArgument: 0
           m_StringArgument: 
@@ -1684,11 +1698,12 @@ Transform:
   m_GameObject: {fileID: 1056764900}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 1, z: -5.76}
+  m_LocalPosition: {x: 0, y: 1, z: 9.22}
   m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1329825590}
+  - {fileID: 1416467093}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!65 &1056764908
@@ -1853,7 +1868,7 @@ GameObject:
   - component: {fileID: 1097735094}
   - component: {fileID: 1097735093}
   - component: {fileID: 1097735097}
-  m_Layer: 6
+  m_Layer: 7
   m_Name: Platform
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2088,7 +2103,7 @@ GameObject:
   - component: {fileID: 1217065889}
   - component: {fileID: 1217065888}
   - component: {fileID: 1217065887}
-  m_Layer: 6
+  m_Layer: 7
   m_Name: Floor
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2181,7 +2196,7 @@ Transform:
   m_GameObject: {fileID: 1217065886}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 43.6925, y: 0, z: -0.36439}
+  m_LocalPosition: {x: 43.6925, y: -0.7, z: -0.36439}
   m_LocalScale: {x: 1, y: 1, z: 20}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -2495,6 +2510,37 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 0}
+--- !u!1 &1416467092
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1416467093}
+  m_Layer: 0
+  m_Name: WallCheck
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1416467093
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1416467092}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: -0.3, z: 0.5}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1056764907}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1433590058
 GameObject:
   m_ObjectHideFlags: 0

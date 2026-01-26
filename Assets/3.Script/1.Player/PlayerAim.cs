@@ -32,6 +32,11 @@ public class PlayerAim : MonoBehaviour
         DrawAimLine();
     }
 
+    public Vector3 GetAimWorldPosition()
+    {
+        return _aimWorldPosition;
+    }
+
     public void OnAim(InputAction.CallbackContext context)
     {
         _mouseScreenPosition = context.ReadValue<Vector2>();
