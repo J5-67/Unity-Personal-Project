@@ -43,6 +43,7 @@ public class PlayerMovement : MonoBehaviour
     private Rigidbody _rb;
     private Collider _playerCollider;
     private Vector2 _moveInput;
+    public Vector2 MoveInput => _moveInput; // [유니] 외부에서 입력값 확인용 (Hook 등)
 
     // 상태 변수
     private bool _isGrounded;
@@ -201,7 +202,47 @@ public class PlayerMovement : MonoBehaviour
     private void Move()
     {
         float targetSpeedZ = _moveInput.x * moveSpeed;
-        _rb.linearVelocity = new Vector3(0f, _rb.linearVelocity.y, targetSpeedZ);
+
+        // [유니] 땅에 있을 때는 빠릿하게! (기존 로직 유지)
+        if (_isGrounded)
+        {
+            _rb.linearVelocity = new Vector3(0f, _rb.linearVelocity.y, targetSpeedZ);
+        }
+        // [유니] 공중에 있을 때는 관성(Momentum)을 지켜주자! 🚀
+        else
+        {
+            float currentZ = _rb.linearVelocity.z;
+
+            // 1. 입력이 있을 때
+            if (Mathf.Abs(targetSpeedZ) > 0.1f)
+            {
+                // 입력 방향과 같은 방향으로 이미 기본 속도보다 빠르다면? -> 건드리지 마! (스윙 가속 유지)
+                bool isMovingFast = Mathf.Abs(currentZ) > moveSpeed;
+                bool isSameDir = Mathf.Sign(currentZ) == Mathf.Sign(targetSpeedZ);
+
+                if (isMovingFast && isSameDir)
+                {
+                    // [유니] 수정: 관성을 유지하되, 너무 과하지 않게 서서히 줄어들도록 변경 (과속 방지)
+                    // 기존: 완전 유지 (decayed X) -> 변경: 서서히 원래 moveSpeed로 복귀
+                    float decayed = Mathf.MoveTowards(currentZ, targetSpeedZ, 10f * Time.deltaTime); // 10f 정도로 서서히 감속
+                    _rb.linearVelocity = new Vector3(0f, _rb.linearVelocity.y, decayed);
+                }
+                else
+                {
+                    // 속도가 느리거나, 방향을 바꿀 때는 가속/감속 적용 (공중 제어력 Air Control)
+                    // 땅보다 조금 더 부드럽게 (가속도 5배)
+                    float newSpeed = Mathf.MoveTowards(currentZ, targetSpeedZ, moveSpeed * 5f * Time.deltaTime);
+                    _rb.linearVelocity = new Vector3(0f, _rb.linearVelocity.y, newSpeed);
+                }
+            }
+            // 2. 입력이 없을 때 (키를 뗐을 때)
+            else
+            {
+                // 천천히 멈추기 (공기 저항 느낌)
+                float newSpeed = Mathf.MoveTowards(currentZ, 0f, moveSpeed * 2f * Time.deltaTime);
+                _rb.linearVelocity = new Vector3(0f, _rb.linearVelocity.y, newSpeed);
+            }
+        }
     }
 
     public void SetHookState(bool isHooking)
@@ -209,23 +250,32 @@ public class PlayerMovement : MonoBehaviour
         if (isHooking)
         {
             _canMove = false; // 키보드 이동 차단
-            _rb.useGravity = false; // 중력 끄기 (공중 부양)
-            _rb.linearVelocity = Vector3.zero; // 순간 정지
+            _rb.useGravity = true; 
+            
+            // [유니] 초기 드래그 설정 (기본은 1.0f)
+            // 하지만 실제 스윙 중에는 PlayerHook에서 매 프레임 조절할 거야!
+            _rb.linearDamping = 1.0f;
         }
         else
         {
             _canMove = true;
             _rb.useGravity = true; // 중력 복구
-
-            // [벡터 퓨전 기초] 훅이 끝날 때 관성을 유지하려면 아래 줄을 지우면 돼!
-            // _rb.linearVelocity = Vector3.zero; 
+            _rb.linearDamping = 0f; // 원래대로 복구
         }
     }
 
-    // 2. 훅으로 이동할 때 속도 적용 (PlayerHook에서 매 프레임 호출)
-    public void SetVelocity(Vector3 velocity)
+    // [유니] 외부(PlayerHook)에서 드래그를 조절할 수 있게 허용!
+    public void SetDrag(float drag)
     {
-        _rb.linearVelocity = velocity;
+        _rb.linearDamping = drag;
+    }
+
+    // 2. 훅으로 당겨질 때 가속도 적용 (ForceMode.Acceleration)
+    public void AddHookForce(Vector3 force)
+    {
+        _rb.AddForce(force, ForceMode.Acceleration);
+        
+        // [선택] 너무 빨라지면 속도 제한을 걸 수도 있어 (일단은 시원하게 뚫리게 둠!)
     }
 
     // 3. 대시 스택 충전 (훅 적중 시 호출)
@@ -273,7 +323,7 @@ public class PlayerMovement : MonoBehaviour
     }
     private void PerformWallJump() { float wallDir = transform.forward.z > 0 ? 1f : -1f; float jumpDirection = -wallDir; Vector3 force = new Vector3(0, wallJumpPower.y, jumpDirection * wallJumpPower.x); _rb.linearVelocity = Vector3.zero; _rb.AddForce(force, ForceMode.Impulse); Vector3 lookDir = new Vector3(0, 0, jumpDirection); transform.rotation = Quaternion.LookRotation(lookDir); StartCoroutine(DisableMoveRoutine()); _jumpBufferCounter = 0f; }
     private void WallSlide() { bool isPushingWall = (_moveInput.x > 0 && transform.forward.z > 0) || (_moveInput.x < 0 && transform.forward.z < 0); if (_isTouchingWall && !_isGrounded && _rb.linearVelocity.y < 0 && isPushingWall) { _isWallSliding = true; _rb.linearVelocity = new Vector3(0, Mathf.Max(_rb.linearVelocity.y, -wallSlideSpeed), _rb.linearVelocity.z); } else { _isWallSliding = false; } }
-    private void HandleGravity() { if (!_isGrounded && !_isWallSliding) { _rb.AddForce(Vector3.down * 9.81f * (gravityScale - 1f), ForceMode.Acceleration); if (_moveInput.y < -0.5f) { if (_rb.linearVelocity.y > -fastFallSpeed) { _rb.linearVelocity = new Vector3(_rb.linearVelocity.x, -fastFallSpeed, _rb.linearVelocity.z); } } } }
+    private void HandleGravity() { if (!_isGrounded && !_isWallSliding) { _rb.AddForce(Vector3.down * 9.81f * (gravityScale - 1f), ForceMode.Acceleration); /* [유니] 빠른 낙하 삭제 요청으로 주석 처리! */ } }
     private void ApplyRotation() { if (_moveInput.x != 0) { Vector3 lookDir = new Vector3(0, 0, _moveInput.x); transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(lookDir), rotationSpeed * Time.deltaTime); } }
     private void CutJumpVelocity() { _rb.linearVelocity = new Vector3(_rb.linearVelocity.x, _rb.linearVelocity.y * jumpCutMultiplier, _rb.linearVelocity.z); }
     private void UpdateTimers() { if (_isGrounded) _coyoteTimeCounter = coyoteTime; else _coyoteTimeCounter -= Time.deltaTime; if (_jumpBufferCounter > 0) _jumpBufferCounter -= Time.deltaTime; }
