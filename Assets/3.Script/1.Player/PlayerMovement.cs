@@ -14,6 +14,7 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private float dashDuration = 0.15f; // 대시 지속 시간
     [SerializeField] private int maxDashCharges = 2;     // 최대 스택 (2개)
     [SerializeField] private float dashCooldown = 3f;    // 스택 1개 충전 시간
+    [SerializeField] private LayerMask dashPassLayer;    // [NEW] 대시 중 통과할 레이어 (적 등)
 
     [Header("🦘 Jump & Gravity")]
     [SerializeField] private float jumpForce = 18f;
@@ -39,6 +40,9 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private LayerMask wallLayer;
     [SerializeField] private PlayerAim playerAim; // [연결 필요] 조준 스크립트
 
+    [Header("✨ Visuals")]
+    [SerializeField] private TrailRenderer dashTrail; // [NEW] 대시 잔상 효과
+
     // --- 내부 변수 ---
     private Rigidbody _rb;
     private Collider _playerCollider;
@@ -55,6 +59,8 @@ public class PlayerMovement : MonoBehaviour
     // [대시 관련 상태]
     private bool _isDashing;          // 현재 대시 중인가?
     private int _currentDashCharges;  // 현재 남은 스택
+    public int CurrentDashCharges => _currentDashCharges; // [UI용] 읽기 전용 프로퍼티
+    public int MaxDashCharges => maxDashCharges;          // [UI용] 읽기 전용 프로퍼티
     private float _dashRechargeTimer; // 충전 타이머
 
     private float _coyoteTimeCounter;
@@ -68,6 +74,10 @@ public class PlayerMovement : MonoBehaviour
 
         // [자동 연결 시도] 만약 Inspector에서 안 넣었으면 찾음
         if (playerAim == null) playerAim = GetComponent<PlayerAim>();
+        
+        // [자동 연결] TrailRenderer가 같은 오브젝트에 있으면 가져오기
+        if (dashTrail == null) TryGetComponent(out dashTrail);
+        if (dashTrail != null) dashTrail.emitting = false; // 시작할 땐 꺼두기
 
         _rb.constraints = RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezeRotation;
 
@@ -159,6 +169,20 @@ public class PlayerMovement : MonoBehaviour
         _currentDashCharges--; // 스택 소모
         _dashRechargeTimer = 0f; // 쿨타임 타이머 초기화 (충전 시작)
 
+        // [유니] 대시 중에는 적(설정된 레이어)과 충돌 무시! (고스트 모드 👻)
+        int playerLayer = gameObject.layer;
+        // LayerMask는 비트마스크니까, 켜져 있는 모든 레이어를 찾아서 무시해야 함
+        for (int i = 0; i < 32; i++)
+        {
+            if ((dashPassLayer.value & (1 << i)) != 0)
+            {
+                Physics.IgnoreLayerCollision(playerLayer, i, true);
+            }
+        }
+        
+        // [유니] 잔상 효과 켜기! ✨
+        if (dashTrail != null) dashTrail.emitting = true;
+
         // 1. 방향 계산 (마우스 좌표 - 내 위치)
         Vector3 mousePos = playerAim.GetAimWorldPosition();
         Vector3 dashDir = (mousePos - transform.position).normalized;
@@ -171,11 +195,40 @@ public class PlayerMovement : MonoBehaviour
 
         // [선택] 대시 중에는 잠깐 무적 판정을 넣거나 레이어를 바꿀 수도 있어
 
-        // 3. 대시 지속 시간 대기
-        yield return new WaitForSeconds(dashDuration);
+        // 3. 대시 지속 시간 대기 + [유니] 적 얼리기 감지! ❄️
+        float elapsedTime = 0f;
+        while (elapsedTime < dashDuration)
+        {
+            // 매 프레임마다 내 몸에 닿은 적이 있는지 검사 (Physics.IgnoreCollision이라 충돌 이벤트 안 뜸)
+            // 캡슐 모양으로 검사!
+            Collider[] hits = Physics.OverlapCapsule(transform.position + Vector3.up * 0.5f, transform.position + Vector3.up * 1.5f, 0.5f, dashPassLayer);
+            foreach (var hit in hits)
+            {
+                if (hit.TryGetComponent(out BaseEnemy enemy) || (hit.transform.parent != null && hit.transform.parent.TryGetComponent(out enemy)))
+                {
+                    enemy.Freeze(); // 설정된 시간만큼 얼리기!
+                }
+            }
+            
+            elapsedTime += Time.deltaTime;
+            yield return null;
+        }
 
         // 4. 대시 종료 (속도 초기화 or 관성 유지? 일단 정밀 조작을 위해 초기화)
         _rb.linearVelocity = Vector3.zero;
+        
+        // [유니] 충돌 무시 해제! (다시 부딪힘)
+        for (int i = 0; i < 32; i++)
+        {
+            if ((dashPassLayer.value & (1 << i)) != 0)
+            {
+                Physics.IgnoreLayerCollision(playerLayer, i, false);
+            }
+        }
+        
+        // [유니] 잔상 효과 끄기
+        if (dashTrail != null) dashTrail.emitting = false;
+        
         _isDashing = false;
     }
 
@@ -322,7 +375,22 @@ public class PlayerMovement : MonoBehaviour
         }
     }
     private void PerformWallJump() { float wallDir = transform.forward.z > 0 ? 1f : -1f; float jumpDirection = -wallDir; Vector3 force = new Vector3(0, wallJumpPower.y, jumpDirection * wallJumpPower.x); _rb.linearVelocity = Vector3.zero; _rb.AddForce(force, ForceMode.Impulse); Vector3 lookDir = new Vector3(0, 0, jumpDirection); transform.rotation = Quaternion.LookRotation(lookDir); StartCoroutine(DisableMoveRoutine()); _jumpBufferCounter = 0f; }
-    private void WallSlide() { bool isPushingWall = (_moveInput.x > 0 && transform.forward.z > 0) || (_moveInput.x < 0 && transform.forward.z < 0); if (_isTouchingWall && !_isGrounded && _rb.linearVelocity.y < 0 && isPushingWall) { _isWallSliding = true; _rb.linearVelocity = new Vector3(0, Mathf.Max(_rb.linearVelocity.y, -wallSlideSpeed), _rb.linearVelocity.z); } else { _isWallSliding = false; } }
+    private void WallSlide()
+    {
+        bool isPushingWall = (_moveInput.x > 0 && transform.forward.z > 0) || (_moveInput.x < 0 && transform.forward.z < 0);
+
+        if (_isTouchingWall && !_isGrounded && _rb.linearVelocity.y < 0 && isPushingWall)
+        {
+            _isWallSliding = true;
+            // [유니] 수정: 기존 Mathf.Max(y, -2)는 y가 0일 때 0을 반환해서 멈춰버림!
+            // 벽 타는 중에는 무조건 정해진 속도로 미끄러지게 강제 설정!
+            _rb.linearVelocity = new Vector3(0, -wallSlideSpeed, _rb.linearVelocity.z);
+        }
+        else
+        {
+            _isWallSliding = false;
+        }
+    }
     private void HandleGravity() { if (!_isGrounded && !_isWallSliding) { _rb.AddForce(Vector3.down * 9.81f * (gravityScale - 1f), ForceMode.Acceleration); /* [유니] 빠른 낙하 삭제 요청으로 주석 처리! */ } }
     private void ApplyRotation() { if (_moveInput.x != 0) { Vector3 lookDir = new Vector3(0, 0, _moveInput.x); transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(lookDir), rotationSpeed * Time.deltaTime); } }
     private void CutJumpVelocity() { _rb.linearVelocity = new Vector3(_rb.linearVelocity.x, _rb.linearVelocity.y * jumpCutMultiplier, _rb.linearVelocity.z); }

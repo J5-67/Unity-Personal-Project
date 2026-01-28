@@ -6,9 +6,13 @@ public class PlayerHook : MonoBehaviour
 {
     [Header("🪝 Hook Settings")]
     [SerializeField] private float maxDistance = 15f;      // 사거리
-    [SerializeField] private float hookAcceleration = 80f; // [NEW] 훅 당기는 가속도 (기존 pullSpeed 대체)
-    [SerializeField] private float retrieveSpeed = 30f;    // 적을 당겨오는 속도
+    [SerializeField] private float hookAcceleration = 80f; // [NEW] 훅 당기는 가속도 (기존 pullSpeed 대체) - Fallback
+    [SerializeField] private float retrieveSpeed = 30f;    // 적을 당겨오는 속도 - Fallback
     [SerializeField] private float throwSpeed = 60f;       // [NEW] 훅이 날아가는 속도
+
+    [Header("🎯 Enemy Hook Settings (Fallback)")]
+    [SerializeField] private float lightEnemyRetrieveSpeed = 30f;    // 가벼운 적을 당겨오는 속도
+    [SerializeField] private float heavyEnemyPullAcceleration = 80f; // 무거운 적에게 날아가는 가속도
     
     [Header("🧗 Swing Settings")]
     [SerializeField] private float swingForce = 50f;       // 좌우 스윙 힘
@@ -18,11 +22,9 @@ public class PlayerHook : MonoBehaviour
     [SerializeField] private float winchUpForce = 0.8f;    // 올라갈 때 당기는 힘 비율
     [SerializeField] private float winchDownForce = 0.5f;  // 내려갈 때 미는 힘 비율
     
-    // [유니] 자동 모드라서 Speed 변수는 이제 다 필요 없어졌어!
-    // Force(힘)만 조절하면 알아서 감기고 풀려!
-
-    [SerializeField] private float stopDistance = 1.5f;    // 목표 도달 판정 거리
+    [SerializeField] private float stopDistance = 0.5f;    // 목표 도달 판정 거리 (더 가까이 붙어야 끊김!)
     [SerializeField] private float hookRadius = 0.5f;      // [NEW] 훅 충돌 판정 범위
+
     [SerializeField] private LayerMask hookableLayer;      // 훅이 박히는 모든 레이어 (벽, 적)
 
     [Header("🏷️ Tags (구분용)")]
@@ -101,6 +103,109 @@ public class PlayerHook : MonoBehaviour
         // 2.5D 보정
         dir = new Vector3(0, dir.y, dir.z).normalized;
 
+        // [유니] 0. 발사 직전! 나랑 겹쳐있는 적이 있는지 확인 (제로 거리 사격)
+        // SphereCast는 시작점이 콜라이더 내부면 감지를 못해서 뚫고 지나가버림! -> OverlapSphere로 해결
+        Collider[] overlaps = Physics.OverlapSphere(currentPos, hookRadius, hookableLayer);
+        if (overlaps.Length > 0)
+        {
+            // [유니] "가장 내 조준 방향에 가까운" 녀석 하나만 고르자!
+            // 그냥 overlaps[0]을 쓰면 바닥(Ground)이 먼저 잡혀서 자꾸 미역줄기처럼 바닥에 꽂힘... 😭
+            Collider bestCol = null;
+            float maxDot = -1.0f;
+            Vector3 bestHitPoint = Vector3.zero;
+
+            foreach (var col in overlaps)
+            {
+                // [유니] 나 자신(플레이어)은 무시해야지! 자해 금지! 🙅‍♀️
+                if (col.gameObject == gameObject) continue;
+
+                // 1. 표면 지점 찾기
+                Vector3 closest = col.ClosestPoint(currentPos);
+                
+                // 2. 방향 계산 (내 위치 -> 표면)
+                Vector3 toTarget = (closest - currentPos).normalized;
+
+                // [예외] 만약 내가 완전히 뱃속에 들어와서 closest == currentPos라면?
+                // 방향이 0이 되니까, 그냥 "내 조준 방향"에 있는 것으로 쳐주자!
+                if (Vector3.Distance(closest, currentPos) < 0.01f)
+                {
+                     toTarget = dir; 
+                }
+
+                // 3. 내 조준 방향(dir)과 얼마나 일치하는지 확인 (내적)
+                float dot = Vector3.Dot(dir, toTarget);
+
+                // 4. 가장 정면에 있는 녀석(Dot이 큰 녀석) 찾기
+                // 최소한 내 시야 앞쪽(Dot > 0.5f, 약 60도)에는 있어야 함! (발밑 바닥 제외)
+                if (dot > maxDot && dot > 0.3f) 
+                {
+                    maxDot = dot;
+                    bestCol = col;
+                    bestHitPoint = closest;
+                }
+            }
+
+            // 적합한 타겟을 찾았다면? 바로 꽂아버리기!
+            if (bestCol != null)
+            {
+                ropeVisual.DrawRope(transform.position, bestHitPoint);
+                
+                // [Hit Logic]
+                if (bestCol.TryGetComponent(out BaseEnemy enemy) || (bestCol.transform.parent != null && bestCol.transform.parent.TryGetComponent(out enemy)))
+                {
+                     Debug.Log($"[유니] 훅 적중! 대상: {enemy.name}, 타입: {enemy.Type}, 얼음: {enemy.IsFrozen}");
+                     enemy.OnHooked();
+
+                     // [유니] 얼어있는 적은 "벽" 취급! (스윙 가능) ❄️
+                     if (enemy.IsFrozen)
+                     {
+                         Debug.Log("[유니] 얼어있는 적! 벽 타기(Swing) 모드 발동!");
+                         _currentHookTarget = new GameObject("HookTargetAnchor").transform;
+                         _currentHookTarget.position = bestHitPoint;
+                         _currentHookTarget.parent = bestCol.transform;
+                         yield return StartCoroutine(PullSelfRoutine(_currentHookTarget));
+                     }
+                     else if (enemy.Type == EnemyType.Heavy)
+                     {
+                         // [유니] Heavy Enemy는 이제 "돌진(Zip)"이야! 스윙 아님! ⚡
+                         Debug.Log("[유니] Heavy Enemy 감지! Zip 모드 발동!");
+                         yield return StartCoroutine(ZipToTargetRoutine(enemy.transform)); // bestCol.transform 대신 enemy.transform 권장
+                     }
+                     else
+                     {
+                         yield return StartCoroutine(PullTargetRoutine(enemy.transform));
+                     }
+                }
+                else
+                {
+                     string tag = bestCol.tag;
+
+                     // [유니] 태그로직 분리: Wall(벽)은 스윙, Heavy(무거운 적)는 지퍼!
+                     if (tag == wallTag || tag == frozenEnemyTag)
+                     {
+                         _currentHookTarget = new GameObject("HookTargetAnchor").transform;
+                         _currentHookTarget.position = bestHitPoint;
+                         _currentHookTarget.parent = bestCol.transform;
+                         yield return StartCoroutine(PullSelfRoutine(_currentHookTarget));
+                     }
+                     else if (tag == heavyEnemyTag)
+                     {
+                         // [유니] 태그가 Heavy라면 돌진!
+                         yield return StartCoroutine(ZipToTargetRoutine(bestCol.transform));
+                     }
+                     else if (tag == lightEnemyTag)
+                     {
+                         yield return StartCoroutine(PullTargetRoutine(bestCol.transform));
+                     }
+                     else
+                     {
+                         StopHook();
+                     }
+                }
+                yield break; // 투사체 로직 종료
+            }
+        }
+
         float traveledDistance = 0f;
 
         // [유니] 최대 거리까지 날아가거나 어딘가에 부딪힐 때까지 반복!
@@ -123,27 +228,57 @@ public class PlayerHook : MonoBehaviour
                 currentPos = hit.point;
                 ropeVisual.DrawRope(transform.position, currentPos);
 
-                // 태그 확인 및 분기 처리
-               string tag = hit.collider.tag;
+                // [유니] 먼저 BaseEnemy 컴포넌트가 있는지 확인해볼게!
+                if (hit.collider.TryGetComponent(out BaseEnemy enemy))
+                {
+                    enemy.OnHooked(); // 훅 걸렸다고 알려주기!
 
-                // 1. 내가 날아가는 대상 (벽, 대형 적, 얼어붙은 적)
-                if (tag == wallTag || tag == heavyEnemyTag || tag == frozenEnemyTag)
-                {
-                    // [유니] 바로 이동 시작!
-                    _currentHookTarget = new GameObject("HookTargetAnchor").transform; // 임시 앵커 생성
-                    _currentHookTarget.position = hit.point;
-                    _currentHookTarget.parent = hit.transform; // 타겟에 붙임 (움직이는 발판 대응)
-                    yield return StartCoroutine(PullSelfRoutine(_currentHookTarget));  
+                    if (enemy.IsFrozen)
+                    {
+                        // [유니] 얼어있는 적은 "벽" 취급! (Projectile)
+                         Debug.Log("[유니] 얼어있는 적(Projectile)! 벽 타기(Swing) 모드 발동!");
+                        _currentHookTarget = new GameObject("HookTargetAnchor").transform;
+                        _currentHookTarget.position = hit.point;
+                        _currentHookTarget.parent = hit.transform;
+                        yield return StartCoroutine(PullSelfRoutine(_currentHookTarget));
+                    }
+                    else if (enemy.Type == EnemyType.Heavy)
+                    {
+                        // 묵직한 적이니까 내가 날아가야지! (Zip)
+                        Debug.Log("[유니] Heavy Enemy (Projectile) 감지! Zip 모드 발동!");
+                        yield return StartCoroutine(ZipToTargetRoutine(enemy.transform));
+                    }
+                    else
+                    {
+                        // 가벼운 적이니까 내 쪽으로 당겨올게!
+                        yield return StartCoroutine(PullTargetRoutine(hit.transform));
+                    }
                 }
-                // 2. 끌고 오는 대상 (소형 적)
-                else if (tag == lightEnemyTag)
-                {
-                    yield return StartCoroutine(PullTargetRoutine(hit.transform));
-                }
+                // [유니] 적이 아니라면 기존처럼 태그(벽 등)로 판단하자!
                 else
                 {
-                    // 쏘면 안 되는 물체에 맞았을 때 (예: 못 뚫는 장애물) -> 그냥 회수
-                     StopHook();
+                    string tag = hit.collider.tag;
+
+                    if (tag == wallTag || tag == frozenEnemyTag)
+                    {
+                        _currentHookTarget = new GameObject("HookTargetAnchor").transform;
+                        _currentHookTarget.position = hit.point;
+                        _currentHookTarget.parent = hit.transform;
+                        yield return StartCoroutine(PullSelfRoutine(_currentHookTarget));
+                    }
+                    else if (tag == heavyEnemyTag)
+                    {
+                         // [유니] Heavy Tag -> Zip!
+                         yield return StartCoroutine(ZipToTargetRoutine(hit.transform));
+                    }
+                    else if (tag == lightEnemyTag)
+                    {
+                        yield return StartCoroutine(PullTargetRoutine(hit.transform));
+                    }
+                    else
+                    {
+                        StopHook();
+                    }
                 }
                 
                 // 루프 종료 (처리 완료)
@@ -166,6 +301,32 @@ public class PlayerHook : MonoBehaviour
 
     private void StopHook()
     {
+        // [유니] 훅이 끝날 때, 만약 잡고 있던 게 순찰 중인 적이었다면 다시 순찰 지시!
+        if (_currentHookTarget != null)
+        {
+            Transform targetToCheck = _currentHookTarget;
+            // 만약 _currentHookTarget이 임시 앵커라면, 부모가 실제 타겟일 수 있음
+            if (_currentHookTarget.name == "HookTargetAnchor" && _currentHookTarget.parent != null)
+            {
+                targetToCheck = _currentHookTarget.parent;
+            }
+
+            if (targetToCheck.TryGetComponent(out EnemyPatrol patrol))
+            {
+                // [유니] 만약 적이 얼어있는 상태라면 순찰을 다시 켜면 안 돼!
+                bool isFrozen = false;
+                if (targetToCheck.TryGetComponent(out BaseEnemy enemy))
+                {
+                    isFrozen = enemy.IsFrozen;
+                }
+
+                if (!isFrozen)
+                {
+                    patrol.SetPatrol(true);
+                }
+            }
+        }
+
         _isHooking = false;
         _playerMovement.SetHookState(false); // 이동 권한 반납
         
@@ -218,46 +379,83 @@ public class PlayerHook : MonoBehaviour
 
         // [유니] 훅 걸린 시점의 거리를 초기 로프 길이로 설정
         float currentRopeLength = Vector3.Distance(transform.position, targetPos);
+        float startTime = Time.time; // [유니] 바로 끊김 방지용 타이머
 
         while (_isHooking)
         {
+            // [유니] 타겟이 파괴되었는지 확인 (Destroy되면 null이 됨)
+            if (targetTransform == null)
+            {
+                StopHook();
+                yield break;
+            }
+
             Vector3 myPos = transform.position;
-            Vector3 hookToPlayer = myPos - targetPos;
-            float currentDist = hookToPlayer.magnitude;
+            
+            // [유니] 거리 계산을 두 가지로 분리해야 해!
+            // 1. 물리 연산용: 고정된 앵커(타겟)까지의 거리 (그래야 원 궤도로 스윙이 됨!)
+            float distToAnchor = Vector3.Distance(myPos, targetPos);
+
+            // 2. 도착 판정용: 실제 표면까지의 거리 (ClosestPoint)
+            float distToSurface = distToAnchor; // 기본값은 앵커 거리
+
+            // 앵커(targetTransform)에는 콜라이더가 없으니 부모(적)를 찾아봐야 해!
+            Collider targetCol = targetTransform.GetComponent<Collider>(); 
+            if (targetCol == null && targetTransform.parent != null)
+            {
+                targetCol = targetTransform.parent.GetComponent<Collider>();
+            }
+            
+            if (targetCol != null)
+            {
+                // 내 위치에서 가장 가까운 적의 표면 지점 찾기
+                Vector3 closestPoint = targetCol.ClosestPoint(myPos);
+                distToSurface = Vector3.Distance(myPos, closestPoint);
+            }
+            
+            // 물리 계산에는 이제 distToAnchor를 써야 해!
+            Vector3 hookToPlayer = myPos - targetPos; 
             Vector3 tensionDir = -hookToPlayer.normalized; // 타겟 방향
 
             // 1. 윈치 (W/S) : 로프 길이 조절 (물리 기반)
             float inputY = _playerMovement.MoveInput.y;
+
+            // [유니] 적 정보 가져오기 (속도 설정을 위해)
+            float currentAccel = heavyEnemyPullAcceleration; // 기본값
+            if (targetTransform.parent != null && targetTransform.parent.TryGetComponent(out BaseEnemy enemy))
+            {
+                currentAccel = enemy.HookInteractSpeed;
+            }
+
             if (Mathf.Abs(inputY) > 0.1f)
             {
                 // W (위): 당기는 힘 적용
                 if (inputY > 0)
                 {
-                    // 당기는 힘 (User Setting)
-                    Vector3 pullForce = tensionDir * hookAcceleration * inputY * winchUpForce; 
+                    // [유니] 설정된 가속도(currentAccel) 사용!
+                    Vector3 pullForce = tensionDir * currentAccel * inputY * winchUpForce; 
                     _playerMovement.AddHookForce(pullForce);
 
-                    // [유니] 자동 감기 (Auto Winding)
-                    // 줄어드는 속도를 따로 설정하지 않고, 플레이어가 힘에 의해 가까워진 만큼
-                    // 즉시 줄 길이를 갱신해서 빈틈을 없앱니다. (Slack 방지)
-                    if (currentDist < currentRopeLength)
+                    // [유니] 개선: 움직이는 적(또는 도망가는 적)을 상대로 물리 힘만으로는 부족할 때가 있음.
+                    // 그래서 입력이 들어오면 "강제로" 로프 길이를 줄여버림! (적극적 윈치)
+                    float reduceAmount = 5f * Time.fixedDeltaTime; // 감기 속도 (조절 가능)
+                    currentRopeLength = Mathf.Max(currentRopeLength - reduceAmount, 1f); 
+                    
+                    // 물리적 거리가 더 짧아졌다면 그것도 반영
+                    if (distToAnchor < currentRopeLength)
                     {
-                        currentRopeLength = currentDist;
+                        currentRopeLength = distToAnchor;
                     }
                 }
                 // S (아래): 줄 풀기
                 else 
                 {
-                    // 내려가는 힘 (User Setting)
-                    Vector3 pushForce = -tensionDir * hookAcceleration * Mathf.Abs(inputY) * winchDownForce;
+                    Vector3 pushForce = -tensionDir * currentAccel * Mathf.Abs(inputY) * winchDownForce;
                     _playerMovement.AddHookForce(pushForce);
 
-                    // [유니] 자동 풀기 (Auto Unwinding)
-                    // 줄을 강제로 늘리는 게 아니라, "늘어나는 걸 허용"하는 방식. (Lock 해제)
-                    // 현재 거리(currentDist)가 로프 길이보다 길어졌다면(내려갔다면), 로프 길이를 거기에 맞춰줌.
-                    if (currentDist > currentRopeLength)
+                    if (distToAnchor > currentRopeLength)
                     {
-                        currentRopeLength = currentDist;
+                        currentRopeLength = distToAnchor;
                     }
                 }
                 
@@ -265,11 +463,17 @@ public class PlayerHook : MonoBehaviour
             }
             else
             {
-                // [선택] 줄이 팽팽해질 때까지 자연스럽게 감기게 하려면:
-                 if (currentDist < currentRopeLength)
+                // [유니] 수정: "자동 감기" 기능 끄기! 🚫
+                // 스윙을 하면 당연히 줄이 느슨해졌다가 팽팽해졌다가 하는데,
+                // 이때마다 줄을 줄여버리면 점점 고립되어서 지그재그로 떨어지게 됨.
+                // 줄 길이는 오직 'W'키를 눌렀을 때만 줄어들어야 함!
+
+                /*
+                 if (distToAnchor < currentRopeLength)
                  {
-                     currentRopeLength = Mathf.Lerp(currentRopeLength, currentDist, Time.deltaTime * 5f);
+                     currentRopeLength = Mathf.Lerp(currentRopeLength, distToAnchor, Time.deltaTime * 5f);
                  }
+                */
             }
 
             // -------------------------------------------------------------
@@ -298,22 +502,49 @@ public class PlayerHook : MonoBehaviour
             // 아까 떨림 때문에 뺐더니, 중력 때문에 조금씩 흘러내리는 문제 발생!
             // -> 다시 넣되, 이번엔 떨림이 없도록 아주 부드럽게(Lerp) 적용하거나
             //    Rigidbody.position을 직접 건드려서 물리 엔진과 싸우지 않게 함.
-            if (currentDist > currentRopeLength + 0.02f) // 허용 오차 0.02m (더 타이트하게)
+            if (distToAnchor > currentRopeLength + 0.02f) // 허용 오차 0.02m (더 타이트하게)
             {
-                float error = currentDist - currentRopeLength;
+                float error = distToAnchor - currentRopeLength;
                 
                 // [핵심] transform.position 대신 rb.position을 쓰거나, 
                 // MovePosition을 써야 물리 엔진이 "아, 이동했구나" 하고 인지함.
                 Vector3 fixPos = transform.position + tensionDir * error;
                 // rb.MovePosition(fixPos); // 이건 다음 프레임에 적용돼서 늦을 수 있음.
                 
-                // 그냥 직접 이동하되, 아주 미세하게 나눠서 떨림 방지
+                // [유니] 직접 이동하되, 아주 미세하게 나눠서 떨림 방지
                 transform.position = Vector3.Lerp(transform.position, fixPos, 0.5f); 
-                // 0.5f 정도면 절반씩 보정하니까 부드러움.
+            }
+
+            // -------------------------------------------------------------
+            // [유니] 도착 판정! (Heavy Enemy 충돌 시 해제)
+            // -------------------------------------------------------------
+            // [유니] 최소 0.2초는 유지해야 함 (너무 가까워서 바로 끊기는 거 방지!)
+            bool isMinTimePassed = (Time.time - startTime) > 0.2f;
+
+            // [판정] 물리 거리는 멀어도, 표면 거리가 가까우면 멈춰야 함!
+            if (distToSurface < stopDistance && isMinTimePassed)
+            {
+                // 타겟의 부모나 자신에게 BaseEnemy가 있는지 확인
+                if (targetTransform.parent != null && targetTransform.parent.TryGetComponent(out BaseEnemy hitEnemy))
+                {
+                    Debug.Log($"[유니] 훅 도착! (거리: {distToSurface} < 설정값: {stopDistance})");
+                    StopHook();
+                    yield break;
+                }
+            }
+
+
+
+            // [유니] 바닥 마찰 문제 해결: 땅에 있는데 훅을 당기거나 이동하려고 하면 살짝 띄워줌!
+            if (_playerMovement.MoveInput.magnitude > 0.1f && Physics.Raycast(transform.position, Vector3.down, 1.1f, LayerMask.GetMask("Ground", "Wall")))
+            {
+                // 아주 살짝만 들어올려서 마찰(Friction)을 없앰
+                // 힘(Force)으로 하면 잘 안 될 때가 있어서 위치(Position)를 아주 미세하게 보정
+                transform.position += Vector3.up * Time.deltaTime * 0.5f;
             }
 
             // B. 속도 제어 (Velocity Projection) - 줄이 팽팽할 때 바깥으로 나가는 속도 제거
-            if (currentDist >= currentRopeLength)
+            if (distToAnchor >= currentRopeLength)
             {
                 Vector3 velocity = rb.linearVelocity;
                 // 밧줄 방향(tensionDir)과 내 속도의 내적 = 밧줄 쪽으로 이동하는 속도 성분
@@ -386,43 +617,132 @@ public class PlayerHook : MonoBehaviour
     // ---------------------------------------------------------
     private IEnumerator PullTargetRoutine(Transform target)
     {
-        // [유니] ThrowHookRoutine에서 연결됨
-        _playerMovement.AddDashStack(1); // [시너지] 성공 시 대시 충전
+        _playerMovement.AddDashStack(1); // [시너지] 성공 시 대시 충전!
 
-        // [중요] 적이 물리 효과를 받으려면 Rigidbody가 있어야 당겨짐
         Rigidbody targetRb = target.GetComponent<Rigidbody>();
         if (targetRb != null) targetRb.isKinematic = false; // 물리 켜기
 
+        // [유니] 처음 훅이 걸렸을 때의 거리를 유지해줄게! (목줄 효과)
+        float currentRopeLength = Vector3.Distance(transform.position, target.position);
+        float startTime = Time.time; // [유니] 최소 지속 시간 체크용
+
         while (_isHooking && target != null)
         {
-            float distance = Vector3.Distance(transform.position, target.position);
+            Vector3 myPos = transform.position;
+            Vector3 targetPos = target.position;
 
-            // 내 앞에 오면 멈춤
-            if (distance < stopDistance)
+            // [유니] 표면 거리 계산 (ClosestPoint)
+            float currentDist = 0f;
+            Collider targetCol = target.GetComponent<Collider>();
+            
+            if (targetCol != null)
             {
-                // [추가] 당겨온 후 적을 기절시키거나 처리하는 로직 필요
-                // target.GetComponent<EnemyAI>()?.Stun(); 
+                Vector3 closestPoint = targetCol.ClosestPoint(myPos);
+                currentDist = Vector3.Distance(myPos, closestPoint);
+            }
+            else
+            {
+                currentDist = Vector3.Distance(myPos, targetPos);
+            }
+
+            Vector3 playerToTarget = targetPos - myPos;
+            Vector3 pullDir = -playerToTarget.normalized; // 플레이어를 향하는 방향
+
+            float inputY = _playerMovement.MoveInput.y;
+
+            // [유니] 적마다 다른 속도 적용!
+            float currentRetrieveSpeed = lightEnemyRetrieveSpeed; // 기본값
+            BaseEnemy enemyInfo = target.GetComponent<BaseEnemy>();
+            
+            // [유니] 훅 걸린 동안 순찰(Patrol) 끄기! (안 그러면 물리 엔진이랑 싸워서 덜덜 떨림)
+            EnemyPatrol enemyPatrol = target.GetComponent<EnemyPatrol>();
+            if (enemyPatrol != null) enemyPatrol.SetPatrol(false);
+
+            if (enemyInfo != null)
+            {
+                currentRetrieveSpeed = enemyInfo.HookInteractSpeed;
+            }
+
+            // 1. [자동] 무조건 당기기! "이리 와!"
+            // [유니] 설정된 속도(currentRetrieveSpeed) 사용!
+            if (targetRb != null)
+            {
+                targetRb.linearVelocity = pullDir * currentRetrieveSpeed;
+            }
+            else
+            {
+                target.position += pullDir * currentRetrieveSpeed * Time.deltaTime;
+            }
+
+            if (currentDist < currentRopeLength)
+            {
+                currentRopeLength = currentDist;
+            }
+
+            // 3. 내 코앞(stopDistance)까지 오면 훅 해제!
+            // [유니] 너무 빨리 끊기는 거 방지 (0.2초 딜레이)
+            if (currentDist < stopDistance && (Time.time - startTime) > 0.2f)
+            {
                 StopHook();
                 yield break;
             }
 
-            // 적을 내 쪽으로 당기기
-            Vector3 dir = (transform.position - target.position).normalized;
+            // [유니] 로프 그리기용 위치 갱신 (LateUpdate에서 처리해!)
+            _flyingHookPosition = target.position; 
 
-            // Rigidbody가 있으면 속도로, 없으면 Transform으로
-            if (targetRb != null)
+            yield return new WaitForFixedUpdate(); // 물리 싱크 맞추기!
+        }
+        StopHook(); // [유니] 루프가 끝나면(타겟이 사라지거나 훅이 끊기면) 정리
+    }
+
+    // ---------------------------------------------------------
+    // ⚡ Type C: Zip To Target (적에게 돌진)
+    // ---------------------------------------------------------
+    private IEnumerator ZipToTargetRoutine(Transform target)
+    {
+        _playerMovement.AddDashStack(1); // 성공 시 대시 충전
+
+        Rigidbody targetRb = target.GetComponent<Rigidbody>();
+        Vector3 targetOffset = Vector3.zero;
+
+        // 타겟의 중심보다는 살짝 위나 표면을 향하는 게 좋지만, 일단 심플하게!
+        
+        float startTime = Time.time;
+        float zipSpeed = heavyEnemyPullAcceleration * 2f; // 당기는 힘보다 2배 빠르게 슉!
+        
+        while (_isHooking && target != null)
+        {
+            Vector3 myPos = transform.position;
+            Vector3 targetPos = target.position; // 타겟 위치 갱신
+            
+            // 표면 거리 계산
+            float distToSurface = Vector3.Distance(myPos, targetPos);
+            Collider targetCol = target.GetComponent<Collider>();
+            if (targetCol != null)
             {
-                targetRb.linearVelocity = dir * retrieveSpeed;
+                Vector3 closest = targetCol.ClosestPoint(myPos);
+                distToSurface = Vector3.Distance(myPos, closest);
             }
-            else
+
+            // 1. 방향 계산
+            Vector3 zipDir = (targetPos - myPos).normalized;
+
+            // 2. 이동 (MovePosition으로 물리 뚫고 감)
+            // 너무 빠르면 통과해버릴 수 있으니 Rigidbody 이동 사용
+            GetComponent<Rigidbody>().linearVelocity = zipDir * zipSpeed;
+
+            // 3. 도착 판정
+            if (distToSurface < stopDistance && (Time.time - startTime) > 0.1f)
             {
-                target.position += dir * retrieveSpeed * Time.deltaTime;
+                // 충돌! (여기서 데미지 주거나 밀쳐내기 가능)
+                StopHook();
+                yield break;
             }
+            
+            // [유니] 로프 그리기용 위치 갱신
+            _flyingHookPosition = target.position;
 
-            // 로프 그리기
-            ropeVisual.DrawRope(transform.position, target.position);
-
-            yield return null;
+            yield return new WaitForFixedUpdate();
         }
         StopHook();
     }

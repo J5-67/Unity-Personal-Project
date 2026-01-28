@@ -7,7 +7,7 @@ TagManager:
   - Wall
   - Heavy
   - Light
-  - Freeze
+  - FrozenEnemy
   layers:
   - Default
   - TransparentFX
@@ -17,7 +17,7 @@ TagManager:
   - UI
   - Wall
   - Ground
-  - 
+  - Enemy
   - 
   - 
   - 
