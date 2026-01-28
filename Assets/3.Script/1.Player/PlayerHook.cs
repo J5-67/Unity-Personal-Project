@@ -35,6 +35,8 @@ public class PlayerHook : MonoBehaviour
 
     [Header("✨ Visuals")]
     [SerializeField] private HookRopeVisual ropeVisual;    // [유니] 젤리처럼 찰랑거리는 로프 효과!
+    [SerializeField] private float waveStrength = 1.0f;    // [NEW] 웨이브 강도 (Amp)
+    [SerializeField] private float waveFrequency = 3.0f;   // [NEW] 웨이브 빈도 (Freq)
     [SerializeField] private Transform firePoint;          // 발사 위치 (플레이어 중심)
 
     // 내부 변수
@@ -153,13 +155,12 @@ public class PlayerHook : MonoBehaviour
                 // [Hit Logic]
                 if (bestCol.TryGetComponent(out BaseEnemy enemy) || (bestCol.transform.parent != null && bestCol.transform.parent.TryGetComponent(out enemy)))
                 {
-                     Debug.Log($"[유니] 훅 적중! 대상: {enemy.name}, 타입: {enemy.Type}, 얼음: {enemy.IsFrozen}");
+                     Debug.Log($"훅 적중 대상: {enemy.name}, 타입: {enemy.Type}, 얼음: {enemy.IsFrozen}");
                      enemy.OnHooked();
 
                      // [유니] 얼어있는 적은 "벽" 취급! (스윙 가능) ❄️
                      if (enemy.IsFrozen)
                      {
-                         Debug.Log("[유니] 얼어있는 적! 벽 타기(Swing) 모드 발동!");
                          _currentHookTarget = new GameObject("HookTargetAnchor").transform;
                          _currentHookTarget.position = bestHitPoint;
                          _currentHookTarget.parent = bestCol.transform;
@@ -168,7 +169,6 @@ public class PlayerHook : MonoBehaviour
                      else if (enemy.Type == EnemyType.Heavy)
                      {
                          // [유니] Heavy Enemy는 이제 "돌진(Zip)"이야! 스윙 아님! ⚡
-                         Debug.Log("[유니] Heavy Enemy 감지! Zip 모드 발동!");
                          yield return StartCoroutine(ZipToTargetRoutine(enemy.transform)); // bestCol.transform 대신 enemy.transform 권장
                      }
                      else
@@ -236,7 +236,6 @@ public class PlayerHook : MonoBehaviour
                     if (enemy.IsFrozen)
                     {
                         // [유니] 얼어있는 적은 "벽" 취급! (Projectile)
-                         Debug.Log("[유니] 얼어있는 적(Projectile)! 벽 타기(Swing) 모드 발동!");
                         _currentHookTarget = new GameObject("HookTargetAnchor").transform;
                         _currentHookTarget.position = hit.point;
                         _currentHookTarget.parent = hit.transform;
@@ -245,7 +244,6 @@ public class PlayerHook : MonoBehaviour
                     else if (enemy.Type == EnemyType.Heavy)
                     {
                         // 묵직한 적이니까 내가 날아가야지! (Zip)
-                        Debug.Log("[유니] Heavy Enemy (Projectile) 감지! Zip 모드 발동!");
                         yield return StartCoroutine(ZipToTargetRoutine(enemy.transform));
                     }
                     else
@@ -348,19 +346,23 @@ public class PlayerHook : MonoBehaviour
         if (_isHooking)
         {
             Vector3 endPos;
+            float currentAmp = 0f;
+            float currentFreq = waveFrequency;
 
-            // 1. 어딘가에 꽂혀있다면 -> 타겟 위치
+            // 1. 어딘가에 꽂혀있다면 -> 타겟 위치 (팽팽하게! 웨이브 거의 없음)
             if (_currentHookTarget != null)
             {
                 endPos = _currentHookTarget.position;
+                currentAmp = 0.1f; // [유니] 아주 미세한 떨림만 남김
             }
-            // 2. 날아가는 중이라면 -> 투사체 위치
+            // 2. 날아가는 중이라면 -> 투사체 위치 (꼬불꼬불하게!)
             else
             {
                 endPos = _flyingHookPosition;
+                currentAmp = waveStrength; // 설정한 만큼 강하게!
             }
 
-            ropeVisual.DrawRope(firePoint.position, endPos);
+            ropeVisual.DrawRope(firePoint.position, endPos, currentAmp, currentFreq);
         }
     }
 
@@ -527,7 +529,6 @@ public class PlayerHook : MonoBehaviour
                 // 타겟의 부모나 자신에게 BaseEnemy가 있는지 확인
                 if (targetTransform.parent != null && targetTransform.parent.TryGetComponent(out BaseEnemy hitEnemy))
                 {
-                    Debug.Log($"[유니] 훅 도착! (거리: {distToSurface} < 설정값: {stopDistance})");
                     StopHook();
                     yield break;
                 }

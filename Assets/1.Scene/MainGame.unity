@@ -1824,6 +1824,8 @@ MonoBehaviour:
   frozenEnemyTag: Freeze
   lightEnemyTag: Light
   ropeVisual: {fileID: 0}
+  waveStrength: 0.1
+  waveFrequency: 0.5
   firePoint: {fileID: 705036206}
 --- !u!114 &1056764912
 MonoBehaviour:
@@ -1837,6 +1839,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b2551e965d5a1bc46b51355d07e24c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HookRopeVisual
+  resolution: 20
 --- !u!96 &1056764913
 TrailRenderer:
   serializedVersion: 3
@@ -2893,8 +2896,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BaseEnemy
   enemyType: 0
-  hookInteractSpeed: 30
-  freezeDuration: 5
+  hookInteractSpeed: 10
+  freezeDuration: 100
+  glitchShader: {fileID: 4800000, guid: 4680fba1598edad4db7d7ecd46ff810e, type: 3}
+  glitchIntensity: 1.5
+  glitchSpeed: 20
 --- !u!54 &1664372720
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -3131,7 +3137,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BaseEnemy
   enemyType: 1
   hookInteractSpeed: 30
-  freezeDuration: 3
+  freezeDuration: 100
+  glitchShader: {fileID: 4800000, guid: 4680fba1598edad4db7d7ecd46ff810e, type: 3}
+  glitchIntensity: 1.5
+  glitchSpeed: 20
 --- !u!54 &1786824552
 Rigidbody:
   m_ObjectHideFlags: 0

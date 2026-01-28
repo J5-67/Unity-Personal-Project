@@ -54,43 +54,73 @@ public class BaseEnemy : MonoBehaviour
         StartCoroutine(FreezeRoutine());
     }
 
+    [Header("⚡ Glitch Effect")]
+    [SerializeField] private Shader glitchShader;           // [NEW] GlitchURP.shader 연결!
+    [SerializeField] private float glitchIntensity = 0.5f;  // 쉐이더 파워
+    [SerializeField] private float glitchSpeed = 20f;       // 노이즈 속도
+
     private IEnumerator FreezeRoutine()
     {
         IsFrozen = true;
         
-        // 1. 비주얼 변경 (파란색!)
+        // 1. 초기 설정: 쉐이더 교체 준비
+        Material originalMat = null;
+        Material glitchMat = null;
+
         if (_renderer != null)
         {
-            _originalColor = _renderer.material.color;
-            _renderer.material.color = Color.cyan;
+            originalMat = _renderer.material; // 원래 재질 저장
+            
+            // [유니] 글리치 쉐이더가 있으면 새 재질을 만들어서 씌운다!
+            if (glitchShader != null)
+            {
+                glitchMat = new Material(glitchShader);
+                // 원래 텍스처가 있다면 가져오기 (없으면 흰색)
+                if (originalMat.HasProperty("_MainTex")) 
+                    glitchMat.SetTexture("_MainTex", originalMat.GetTexture("_MainTex"));
+                else if (originalMat.HasProperty("_BaseMap")) // URP 기본 텍스처 이름
+                    glitchMat.SetTexture("_MainTex", originalMat.GetTexture("_BaseMap"));
+
+                glitchMat.SetFloat("_NoiseSpeed", glitchSpeed);
+                
+                // 재질 교체! 짠! ✨
+                _renderer.material = glitchMat;
+            }
         }
 
-        // 2. 태그 변경
-        try 
-        { 
-            gameObject.tag = "FrozenEnemy"; 
-        }
-        catch (System.Exception) 
-        { 
-            Debug.LogWarning("[유니] 'FrozenEnemy' 태그가 프로젝트에 없어! Inspector에서 추가해줘!"); 
-        }
-
-        // 3. 행동 정지 (순찰 끄기)
+        try { gameObject.tag = "FrozenEnemy"; } catch {}
         if (_patrol != null) _patrol.SetPatrol(false);
         if (_rb != null) _rb.isKinematic = true; 
 
-        Debug.Log($"[유니] {name} 꽁꽁 얼어라! ❄️ ({freezeDuration}초 후 파괴)");
+        // 2. 글리치 루프 (쉐이더 프로퍼티 조절)
+        float timer = 0f;
+        while (timer < freezeDuration)
+        {
+            if (glitchMat != null)
+            {
+                // [유니] 시간이 지날수록 더 심하게 깨지거나, 불규칙하게 튀게 만듦
+                // Perlin Noise를 섞어서 파워를 조절! (0.2 ~ 1.0)
+                float noise = Mathf.PerlinNoise(Time.time * 10f, 0f);
+                float currentPower = glitchIntensity * (0.5f + noise * 0.5f);
+                
+                glitchMat.SetFloat("_GlitchPower", currentPower);
 
-        yield return new WaitForSeconds(freezeDuration);
+                // 색상도 가끔 빨강/시안으로 틴트 조절
+                if (noise > 0.8f) glitchMat.SetColor("_Color", Color.white); // 번쩍!
+                else glitchMat.SetColor("_Color", Color.cyan);
+            }
 
-        // 4. 파괴 (Shatter!)
-        Debug.Log($"[유니] {name} 산산조각 났어! 💥");
+            timer += Time.deltaTime;
+            yield return null;
+        }
+
+        // 4. 파괴
         Destroy(gameObject);
     }
 
     // [유니] 나중에 여기에 데미지를 입거나 기절하는 로직을 넣으면 딱이겠지?
     public void OnHooked()
     {
-        Debug.Log($"[유니] {gameObject.name} (타입: {enemyType})가 훅에 걸렸어!");
+
     }
 }

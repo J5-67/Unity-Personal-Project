@@ -153,10 +153,6 @@ public class PlayerMovement : MonoBehaviour
             {
                 StartCoroutine(DashRoutine());
             }
-            else
-            {
-                Debug.Log("⚠️ 대시 불가 (스택 부족 or 사용 중)");
-            }
         }
     }
 
@@ -214,8 +210,8 @@ public class PlayerMovement : MonoBehaviour
             yield return null;
         }
 
-        // 4. 대시 종료 (속도 초기화 or 관성 유지? 일단 정밀 조작을 위해 초기화)
-        _rb.linearVelocity = Vector3.zero;
+        // 4. 관성 유지! (속도 초기화 삭제)
+        // _rb.linearVelocity = Vector3.zero;
         
         // [유니] 충돌 무시 해제! (다시 부딪힘)
         for (int i = 0; i < 32; i++)
@@ -244,7 +240,6 @@ public class PlayerMovement : MonoBehaviour
             {
                 _currentDashCharges++;
                 _dashRechargeTimer = 0;
-                Debug.Log($"⚡ 대시 충전 완료! (현재: {_currentDashCharges})");
             }
         }
     }
@@ -335,7 +330,6 @@ public class PlayerMovement : MonoBehaviour
     public void AddDashStack(int amount)
     {
         _currentDashCharges = Mathf.Min(_currentDashCharges + amount, maxDashCharges);
-        Debug.Log($"🔋 대시 스택 충전! (현재: {_currentDashCharges})");
     }
 
     // ... (TryJump, PerformWallJump 등 기존 코드와 동일) ...
