@@ -69,13 +69,14 @@ public class EnemyPatrol : MonoBehaviour
 
         // 1. 방향 및 거리 계산
         Vector3 dir = (targetPos - currentPos).normalized;
-        float dist = Vector3.Distance(currentPos, targetPos);
-
+        float distSqr = (currentPos - targetPos).sqrMagnitude; // [유니] 제곱 거리 사용
+        
         // 2. 이동 (MovePosition 사용)
         // 이번 프레임에 이동할 거리
         float moveStep = moveSpeed * Time.fixedDeltaTime;
 
-        if (dist <= moveStep)
+        // dist <= moveStep  ==  distSqr <= moveStep * moveStep
+        if (distSqr <= moveStep * moveStep)
         {
             // 도착! (정확히 위치 맞춤)
             _rb.MovePosition(targetPos);

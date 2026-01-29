@@ -41,27 +41,31 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private PlayerAim playerAim; // [연결 필요] 조준 스크립트
 
     [Header("✨ Visuals")]
-    [SerializeField] private TrailRenderer dashTrail; // [NEW] 대시 잔상 효과
+    [SerializeField] private GhostTrail ghostTrail;   // [NEW] 사이버펑크 잔상 효과
+    [SerializeField] private float ghostSpacing = 0.5f; // [NEW] 잔상 생성 간격 (거리 기준)
 
     // --- 내부 변수 ---
     private Rigidbody _rb;
     private Collider _playerCollider;
+    private GameInput _input;
     private Vector2 _moveInput;
     public Vector2 MoveInput => _moveInput; // [유니] 외부에서 입력값 확인용 (Hook 등)
 
     // 상태 변수
     private bool _isGrounded;
+    public bool IsGrounded => _isGrounded; // [유니] 외부에서 확인 가능하도록 공개!
     private bool _isTouchingWall;
     private bool _isWallSliding;
     private bool _isJumpPressed;
     private bool _canMove = true;
-
+    private bool _isHookingState = false; 
+    
     // [대시 관련 상태]
-    private bool _isDashing;          // 현재 대시 중인가?
-    private int _currentDashCharges;  // 현재 남은 스택
-    public int CurrentDashCharges => _currentDashCharges; // [UI용] 읽기 전용 프로퍼티
-    public int MaxDashCharges => maxDashCharges;          // [UI용] 읽기 전용 프로퍼티
-    private float _dashRechargeTimer; // 충전 타이머
+    private bool _isDashing;          
+    private int _currentDashCharges;  
+    public int CurrentDashCharges => _currentDashCharges; 
+    public int MaxDashCharges => maxDashCharges;          
+    private float _dashRechargeTimer; 
 
     private float _coyoteTimeCounter;
     private float _jumpBufferCounter;
@@ -75,9 +79,8 @@ public class PlayerMovement : MonoBehaviour
         // [자동 연결 시도] 만약 Inspector에서 안 넣었으면 찾음
         if (playerAim == null) playerAim = GetComponent<PlayerAim>();
         
-        // [자동 연결] TrailRenderer가 같은 오브젝트에 있으면 가져오기
-        if (dashTrail == null) TryGetComponent(out dashTrail);
-        if (dashTrail != null) dashTrail.emitting = false; // 시작할 땐 꺼두기
+        // [자동 연결] GhostTrail 연결
+        if (ghostTrail == null) ghostTrail = GetComponentInChildren<GhostTrail>();
 
         _rb.constraints = RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezeRotation;
 
@@ -104,6 +107,7 @@ public class PlayerMovement : MonoBehaviour
         if (_canMove)
         {
             Move();
+          _input = new GameInput();
             ApplyRotation();
         }
 
@@ -176,8 +180,6 @@ public class PlayerMovement : MonoBehaviour
             }
         }
         
-        // [유니] 잔상 효과 켜기! ✨
-        if (dashTrail != null) dashTrail.emitting = true;
 
         // 1. 방향 계산 (마우스 좌표 - 내 위치)
         Vector3 mousePos = playerAim.GetAimWorldPosition();
@@ -189,20 +191,37 @@ public class PlayerMovement : MonoBehaviour
         // 2. 물리 적용 (중력 무시하고 직선으로 쏘기)
         _rb.linearVelocity = dashDir * dashSpeed;
 
-        // [선택] 대시 중에는 잠깐 무적 판정을 넣거나 레이어를 바꿀 수도 있어
-
-        // 3. 대시 지속 시간 대기 + [유니] 적 얼리기 감지! ❄️
+        // 3. 대시 지속 시간 대기 + [유니] 적 얼리기 감지 & 고스트 잔상 생성! ❄️👻
         float elapsedTime = 0f;
+        Vector3 lastGhostPos = transform.position; // 마지막 잔상 위치
+
+        // 첫 잔상 바로 생성
+        if (ghostTrail != null) 
+        {
+            ghostTrail.ShowGhost();
+            lastGhostPos = transform.position;
+        }
+
         while (elapsedTime < dashDuration)
         {
-            // 매 프레임마다 내 몸에 닿은 적이 있는지 검사 (Physics.IgnoreCollision이라 충돌 이벤트 안 뜸)
-            // 캡슐 모양으로 검사!
+            // [Ghost Effect] 거리 기반으로 잔상 찍기 (훨씬 균일함!)
+            if (ghostTrail != null)
+            {
+                float distance = Vector3.Distance(transform.position, lastGhostPos);
+                if (distance >= ghostSpacing) 
+                {
+                    ghostTrail.ShowGhost();
+                    lastGhostPos = transform.position;
+                }
+            }
+
+            // 매 프레임마다 내 몸에 닿은 적이 있는지 검사
             Collider[] hits = Physics.OverlapCapsule(transform.position + Vector3.up * 0.5f, transform.position + Vector3.up * 1.5f, 0.5f, dashPassLayer);
             foreach (var hit in hits)
             {
                 if (hit.TryGetComponent(out BaseEnemy enemy) || (hit.transform.parent != null && hit.transform.parent.TryGetComponent(out enemy)))
                 {
-                    enemy.Freeze(); // 설정된 시간만큼 얼리기!
+                    enemy.Freeze(); 
                 }
             }
             
@@ -221,9 +240,6 @@ public class PlayerMovement : MonoBehaviour
                 Physics.IgnoreLayerCollision(playerLayer, i, false);
             }
         }
-        
-        // [유니] 잔상 효과 끄기
-        if (dashTrail != null) dashTrail.emitting = false;
         
         _isDashing = false;
     }
@@ -251,8 +267,8 @@ public class PlayerMovement : MonoBehaviour
     {
         float targetSpeedZ = _moveInput.x * moveSpeed;
 
-        // [유니] 땅에 있을 때는 빠릿하게! (기존 로직 유지)
-        if (_isGrounded)
+        // [유니] 땅에 있을 때는 빠릿하게! (단, 훅을 걸고 있다면 미끄러지듯 움직여야 하니 공중 물리 적용!)
+        if (_isGrounded && !_isHookingState)
         {
             _rb.linearVelocity = new Vector3(0f, _rb.linearVelocity.y, targetSpeedZ);
         }
@@ -295,6 +311,8 @@ public class PlayerMovement : MonoBehaviour
 
     public void SetHookState(bool isHooking)
     {
+        _isHookingState = isHooking; // [유니] 상태 저장
+
         if (isHooking)
         {
             _canMove = false; // 키보드 이동 차단
@@ -338,6 +356,9 @@ public class PlayerMovement : MonoBehaviour
 
     private void TryJump()
     {
+        // [유니] 훅 사용 중에는 PlayerMovement의 자체 점프 로직은 막아둠! (Zip 기능을 위해)
+        if (_isHookingState) return;
+
         // [유니] 아래 방향키를 누르고 있을 때! (드랍을 하거나, 점프를 안 하거나)
         if (_moveInput.y < -0.5f)
         {
@@ -393,4 +414,15 @@ public class PlayerMovement : MonoBehaviour
     private IEnumerator DisableCollisionRoutine(PlatformFunction platform) { Collider platformCollider = platform.platformCollider; Physics.IgnoreCollision(_playerCollider, platformCollider, true); yield return new WaitForSeconds(dropDisableTime); Physics.IgnoreCollision(_playerCollider, platformCollider, false); }
     private IEnumerator DisableMoveRoutine() { _canMove = false; yield return new WaitForSeconds(wallJumpStopControlTime); _canMove = true; }
     private void OnDrawGizmos() { if (groundCheckPos != null) { Gizmos.color = _isGrounded ? Color.green : Color.red; Gizmos.DrawWireSphere(groundCheckPos.position, checkRadius); } if (wallCheckPos != null) { Gizmos.color = _isTouchingWall ? Color.blue : Color.red; Gizmos.DrawWireSphere(wallCheckPos.position, checkRadius); } }
+
+    // [유니] PlayerHook에서 점프 입력을 가져가서 쓰기 위한 함수!
+    public bool ConsumeJumpInput()
+    {
+        if (_jumpBufferCounter > 0)
+        {
+            _jumpBufferCounter = 0f; // 입력 소모!
+            return true;
+        }
+        return false;
+    }
 }

@@ -59,33 +59,47 @@ public class BaseEnemy : MonoBehaviour
     [SerializeField] private float glitchIntensity = 0.5f;  // 쉐이더 파워
     [SerializeField] private float glitchSpeed = 20f;       // 노이즈 속도
 
+    // [유니] 최적화를 위한 공유 자원 (Static)
+    private static Material _sharedGlitchMaterial;
+    private static int _mainTexId = Shader.PropertyToID("_MainTex");
+    private static int _baseMapId = Shader.PropertyToID("_BaseMap");
+    private static int _glitchPowerId = Shader.PropertyToID("_GlitchPower");
+    private static int _noiseSpeedId = Shader.PropertyToID("_NoiseSpeed");
+    private static int _colorId = Shader.PropertyToID("_Color"); // 혹은 _BaseColor
+
+    // 개별 프로퍼티 블록 (메모리 할당 없이 값만 변경!)
+    private MaterialPropertyBlock _propBlock;
+
     private IEnumerator FreezeRoutine()
     {
         IsFrozen = true;
         
-        // 1. 초기 설정: 쉐이더 교체 준비
-        Material originalMat = null;
-        Material glitchMat = null;
-
-        if (_renderer != null)
+        // 1. 초기 설정: 공유 재질 생성 (최초 1회만!)
+        if (_sharedGlitchMaterial == null && glitchShader != null)
         {
-            originalMat = _renderer.material; // 원래 재질 저장
-            
-            // [유니] 글리치 쉐이더가 있으면 새 재질을 만들어서 씌운다!
-            if (glitchShader != null)
-            {
-                glitchMat = new Material(glitchShader);
-                // 원래 텍스처가 있다면 가져오기 (없으면 흰색)
-                if (originalMat.HasProperty("_MainTex")) 
-                    glitchMat.SetTexture("_MainTex", originalMat.GetTexture("_MainTex"));
-                else if (originalMat.HasProperty("_BaseMap")) // URP 기본 텍스처 이름
-                    glitchMat.SetTexture("_MainTex", originalMat.GetTexture("_BaseMap"));
+             _sharedGlitchMaterial = new Material(glitchShader);
+             _sharedGlitchMaterial.enableInstancing = true; // [유니] 배칭을 위해 켜두면 좋아!
+        }
 
-                glitchMat.SetFloat("_NoiseSpeed", glitchSpeed);
-                
-                // 재질 교체! 짠! ✨
-                _renderer.material = glitchMat;
-            }
+        if (_renderer != null && _sharedGlitchMaterial != null)
+        {
+            // 원래 텍스처 가져오기
+            Texture originalTex = null;
+            Material originalMat = _renderer.sharedMaterial; // [유니] sharedMaterial로 가져와야 함!
+
+            if (originalMat.HasProperty(_mainTexId)) originalTex = originalMat.GetTexture(_mainTexId);
+            else if (originalMat.HasProperty(_baseMapId)) originalTex = originalMat.GetTexture(_baseMapId);
+
+            // [유니] 새 재질 생성 없이, 공유 재질을 덮어씌움!
+            _renderer.sharedMaterial = _sharedGlitchMaterial;
+            
+            // 프로퍼티 블록 준비
+            if (_propBlock == null) _propBlock = new MaterialPropertyBlock();
+
+            // 텍스처 및 초기값 설정
+            if (originalTex != null) _propBlock.SetTexture(_mainTexId, originalTex);
+            _propBlock.SetFloat(_noiseSpeedId, glitchSpeed);
+            _renderer.SetPropertyBlock(_propBlock);
         }
 
         try { gameObject.tag = "FrozenEnemy"; } catch {}
@@ -96,20 +110,23 @@ public class BaseEnemy : MonoBehaviour
         float timer = 0f;
         while (timer < freezeDuration)
         {
-            if (glitchMat != null)
+            if (_renderer != null)
             {
                 // [유니] 시간이 지날수록 더 심하게 깨지거나, 불규칙하게 튀게 만듦
-                // Perlin Noise를 섞어서 파워를 조절! (0.2 ~ 1.0)
-                float noise = Mathf.PerlinNoise(Time.time * 10f, 0f);
+                float noise = Mathf.PerlinNoise(Time.time * 10f, transform.position.x); // 위치값 섞어서 적마다 다르게!
                 float currentPower = glitchIntensity * (0.5f + noise * 0.5f);
                 
-                glitchMat.SetFloat("_GlitchPower", currentPower);
+                // 블록 값 업데이트
+                _renderer.GetPropertyBlock(_propBlock); // 현재 상태 가져오기
+                _propBlock.SetFloat(_glitchPowerId, currentPower);
 
                 // 색상도 가끔 빨강/시안으로 틴트 조절
-                if (noise > 0.8f) glitchMat.SetColor("_Color", Color.white); // 번쩍!
-                else glitchMat.SetColor("_Color", Color.cyan);
-            }
+                if (noise > 0.8f) _propBlock.SetColor(_colorId, Color.white); // 번쩍!
+                else _propBlock.SetColor(_colorId, Color.cyan);
 
+                _renderer.SetPropertyBlock(_propBlock); // 적용!
+            }
+ 
             timer += Time.deltaTime;
             yield return null;
         }

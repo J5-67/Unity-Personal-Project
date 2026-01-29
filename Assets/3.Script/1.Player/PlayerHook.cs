@@ -12,13 +12,15 @@ public class PlayerHook : MonoBehaviour
 
     [Header("🎯 Enemy Hook Settings (Fallback)")]
     [SerializeField] private float lightEnemyRetrieveSpeed = 30f;    // 가벼운 적을 당겨오는 속도
-    [SerializeField] private float heavyEnemyPullAcceleration = 80f; // 무거운 적에게 날아가는 가속도
+    [SerializeField] private float heavyEnemyPullAcceleration = 80f; // [Swing] 무거운 적에게 매달릴 때 가속도
+    [SerializeField] private float heavyEnemyZipSpeed = 120f;        // [NEW] 무거운 적에게 날아갈 때 속도 (돌진)
+    [SerializeField] private float wallZipSpeed = 100f;              // [NEW] 벽/바닥에서 점프 시 날아가는 속도 (Zero-G Zip)
     
     [Header("🧗 Swing Settings")]
     [SerializeField] private float swingForce = 50f;       // 좌우 스윙 힘
     [SerializeField] [Range(0, 180)] private float swingAngleLimit = 80f; // [NEW] 스윙 최대 각도 (0: 수직, 90: 수평, 180: 무제한)
 
-    [Header("🏗️ Winch Settings")]
+
     [SerializeField] private float winchUpForce = 0.8f;    // 올라갈 때 당기는 힘 비율
     [SerializeField] private float winchDownForce = 0.5f;  // 내려갈 때 미는 힘 비율
     
@@ -33,7 +35,12 @@ public class PlayerHook : MonoBehaviour
     [SerializeField] private string frozenEnemyTag = "FrozenEnemy"; // 이동 가능 (정지된 적)
     [SerializeField] private string lightEnemyTag = "SmallEnemy"; // 당겨오기
 
-    [Header("✨ Visuals")]
+    [Header("🏗️ Auto Winch Settings")]
+    [SerializeField] private float autoWinchAmount = 3.0f; // [NEW] 얼마나 감을지 (미터)
+    [SerializeField] private float autoWinchSpeed = 5.0f;  // [NEW] 감는 속도
+
+
+
     [SerializeField] private HookRopeVisual ropeVisual;    // [유니] 젤리처럼 찰랑거리는 로프 효과!
     [SerializeField] private float waveStrength = 1.0f;    // [NEW] 웨이브 강도 (Amp)
     [SerializeField] private float waveFrequency = 3.0f;   // [NEW] 웨이브 빈도 (Freq)
@@ -45,6 +52,7 @@ public class PlayerHook : MonoBehaviour
     private Camera _mainCamera;
     private bool _isHooking;
     private Transform _currentHookTarget; // 현재 꽂힌 대상
+    private Transform _hookAnchor;       // [유니] 훅 앵커 재사용 (GC 최적화)
     private Vector3 _flyingHookPosition; // [유니] 날아가는 도중의 위치 저장용
 
     private void Awake()
@@ -58,6 +66,11 @@ public class PlayerHook : MonoBehaviour
         {
             ropeVisual = gameObject.AddComponent<HookRopeVisual>();
         }
+        
+        // [유니] 앵커 미리 만들어두기 (이름은 에디터 정리용으로 숨김)
+        _hookAnchor = new GameObject("HookTargetAnchor_Pool").transform;
+        _hookAnchor.SetParent(transform); // 플레이어 자식으로 두기
+        _hookAnchor.gameObject.SetActive(false); // 평소엔 꺼두기
     }
 
     // ---------------------------------------------------------
@@ -129,7 +142,7 @@ public class PlayerHook : MonoBehaviour
 
                 // [예외] 만약 내가 완전히 뱃속에 들어와서 closest == currentPos라면?
                 // 방향이 0이 되니까, 그냥 "내 조준 방향"에 있는 것으로 쳐주자!
-                if (Vector3.Distance(closest, currentPos) < 0.01f)
+                if ((closest - currentPos).sqrMagnitude < 0.0001f)
                 {
                      toTarget = dir; 
                 }
@@ -161,9 +174,10 @@ public class PlayerHook : MonoBehaviour
                      // [유니] 얼어있는 적은 "벽" 취급! (스윙 가능) ❄️
                      if (enemy.IsFrozen)
                      {
-                         _currentHookTarget = new GameObject("HookTargetAnchor").transform;
-                         _currentHookTarget.position = bestHitPoint;
-                         _currentHookTarget.parent = bestCol.transform;
+                         _hookAnchor.position = bestHitPoint;
+                         _hookAnchor.SetParent(bestCol.transform);
+                         _hookAnchor.gameObject.SetActive(true);
+                         _currentHookTarget = _hookAnchor;
                          yield return StartCoroutine(PullSelfRoutine(_currentHookTarget));
                      }
                      else if (enemy.Type == EnemyType.Heavy)
@@ -183,9 +197,10 @@ public class PlayerHook : MonoBehaviour
                      // [유니] 태그로직 분리: Wall(벽)은 스윙, Heavy(무거운 적)는 지퍼!
                      if (tag == wallTag || tag == frozenEnemyTag)
                      {
-                         _currentHookTarget = new GameObject("HookTargetAnchor").transform;
-                         _currentHookTarget.position = bestHitPoint;
-                         _currentHookTarget.parent = bestCol.transform;
+                         _hookAnchor.position = bestHitPoint;
+                         _hookAnchor.SetParent(bestCol.transform);
+                         _hookAnchor.gameObject.SetActive(true);
+                         _currentHookTarget = _hookAnchor;
                          yield return StartCoroutine(PullSelfRoutine(_currentHookTarget));
                      }
                      else if (tag == heavyEnemyTag)
@@ -236,9 +251,10 @@ public class PlayerHook : MonoBehaviour
                     if (enemy.IsFrozen)
                     {
                         // [유니] 얼어있는 적은 "벽" 취급! (Projectile)
-                        _currentHookTarget = new GameObject("HookTargetAnchor").transform;
-                        _currentHookTarget.position = hit.point;
-                        _currentHookTarget.parent = hit.transform;
+                        _hookAnchor.position = hit.point;
+                        _hookAnchor.SetParent(hit.transform);
+                        _hookAnchor.gameObject.SetActive(true);
+                        _currentHookTarget = _hookAnchor;
                         yield return StartCoroutine(PullSelfRoutine(_currentHookTarget));
                     }
                     else if (enemy.Type == EnemyType.Heavy)
@@ -259,9 +275,10 @@ public class PlayerHook : MonoBehaviour
 
                     if (tag == wallTag || tag == frozenEnemyTag)
                     {
-                        _currentHookTarget = new GameObject("HookTargetAnchor").transform;
-                        _currentHookTarget.position = hit.point;
-                        _currentHookTarget.parent = hit.transform;
+                        _hookAnchor.position = hit.point;
+                        _hookAnchor.SetParent(hit.transform);
+                        _hookAnchor.gameObject.SetActive(true);
+                        _currentHookTarget = _hookAnchor;
                         yield return StartCoroutine(PullSelfRoutine(_currentHookTarget));
                     }
                     else if (tag == heavyEnemyTag)
@@ -304,9 +321,9 @@ public class PlayerHook : MonoBehaviour
         {
             Transform targetToCheck = _currentHookTarget;
             // 만약 _currentHookTarget이 임시 앵커라면, 부모가 실제 타겟일 수 있음
-            if (_currentHookTarget.name == "HookTargetAnchor" && _currentHookTarget.parent != null)
+            if (_currentHookTarget == _hookAnchor && _hookAnchor.parent != null)
             {
-                targetToCheck = _currentHookTarget.parent;
+                targetToCheck = _hookAnchor.parent;
             }
 
             if (targetToCheck.TryGetComponent(out EnemyPatrol patrol))
@@ -328,12 +345,29 @@ public class PlayerHook : MonoBehaviour
         _isHooking = false;
         _playerMovement.SetHookState(false); // 이동 권한 반납
         
-        // [유니] 타겟 정보 즉시 삭제 (잔상 방지)
-        if (_currentHookTarget != null)
+        // [유니] 타겟 정보 초기화 및 앵커 원위치
+        if (_currentHookTarget == _hookAnchor)
         {
-            Destroy(_currentHookTarget.gameObject); // 임시 앵커 파괴
-            _currentHookTarget = null;
+            // [유니] 중요! 앵커를 적에게 자식으로 넣어놨는데, 적이 죽으면(Destroy) 앵커도 같이 사라져버려! 👻
+            // 그래서 앵커가 살아있는지 체크해야 해.
+            if (_hookAnchor != null)
+            {
+                _hookAnchor.SetParent(transform); // 다시 내 자식으로 회수
+                _hookAnchor.gameObject.SetActive(false);
+            }
+            else
+            {
+                 // 앵커가 적과 함께 장렬히 전사했다면... 다시 만들어주자! 🛠️
+                 _hookAnchor = new GameObject("HookTargetAnchor_Pool").transform;
+                 _hookAnchor.SetParent(transform);
+                 _hookAnchor.gameObject.SetActive(false);
+            }
         }
+        else if (_currentHookTarget != null)
+        {
+             // 혹시라도 앵커가 아닌 다른 걸 잡았을 경우 (지금 로직엔 없지만 안전장치)
+        }
+        _currentHookTarget = null;
 
         ropeVisual.ClearRope();
         StopAllCoroutines(); // 진행 중인 훅 로직 중단
@@ -366,9 +400,8 @@ public class PlayerHook : MonoBehaviour
         }
     }
 
-    // ---------------------------------------------------------
-    // 🤸 Type A: Pull Self (내가 날아감)
-    // ---------------------------------------------------------
+
+
     // ---------------------------------------------------------
     // 🤸 Type A: Pull Self (내가 날아감 + 스윙)
     // ---------------------------------------------------------
@@ -381,6 +414,20 @@ public class PlayerHook : MonoBehaviour
 
         // [유니] 훅 걸린 시점의 거리를 초기 로프 길이로 설정
         float currentRopeLength = Vector3.Distance(transform.position, targetPos);
+        
+        // [유니] Auto-Winch: 땅에 있을 때만 자동으로 감아올리기! 🏗️
+        // 부드럽게 감기 위해 목표 길이를 설정하고 Loop 안에서 감을 거야.
+        float finalRopeLength = currentRopeLength;
+        bool isAutoWinching = false;
+
+        if (_playerMovement.IsGrounded)
+        {
+             finalRopeLength = Mathf.Max(currentRopeLength - autoWinchAmount, 1.0f); // [유니] 변수 적용 완료!
+             isAutoWinching = true;
+        }
+
+        float currentRopeLengthSqr = currentRopeLength * currentRopeLength; // [유니] 제곱 거리 캐싱
+        
         float startTime = Time.time; // [유니] 바로 끊김 방지용 타이머
 
         while (_isHooking)
@@ -392,10 +439,34 @@ public class PlayerHook : MonoBehaviour
                 yield break;
             }
 
+            // -------------------------------------------------------------
+            // [NEW] Zero-G Zip: 벽/바닥에서 점프 키 누르면 돌진! 🚀
+            // -------------------------------------------------------------
+            if (_playerMovement.ConsumeJumpInput())
+            {
+                bool isEnemy = false;
+                // 앵커의 부모(실제 히트 대상)가 적인지 확인
+                if (targetTransform.parent != null && targetTransform.parent.GetComponent<BaseEnemy>() != null)
+                {
+                    isEnemy = true;
+                }
+
+                // 적이 아닐 때만 발동 (Enemy 레이어 제외, Wall/Ground 등)
+                // [유니] Frozen Enemy도 BaseEnemy 컴포넌트가 있으니 여기서 걸러짐 (스윙 유지)
+                if (!isEnemy)
+                {
+                    // 스윙 중단하고 돌진으로 전환!
+                    yield return StartCoroutine(ZipToTargetRoutine(targetTransform, wallZipSpeed));
+                    yield break; // Loop 탈출
+                }
+            }
+            // -------------------------------------------------------------
+
             Vector3 myPos = transform.position;
             
             // [유니] 거리 계산을 두 가지로 분리해야 해!
             // 1. 물리 연산용: 고정된 앵커(타겟)까지의 거리 (그래야 원 궤도로 스윙이 됨!)
+            // sqrMagnitude로 비교 최적화 가능하지만, 밧줄 물리 연산엔 실제 Distance가 필요해서 유지 (여기선 어쩔 수 없음!)
             float distToAnchor = Vector3.Distance(myPos, targetPos);
 
             // 2. 도착 판정용: 실제 표면까지의 거리 (ClosestPoint)
@@ -465,17 +536,18 @@ public class PlayerHook : MonoBehaviour
             }
             else
             {
-                // [유니] 수정: "자동 감기" 기능 끄기! 🚫
-                // 스윙을 하면 당연히 줄이 느슨해졌다가 팽팽해졌다가 하는데,
-                // 이때마다 줄을 줄여버리면 점점 고립되어서 지그재그로 떨어지게 됨.
-                // 줄 길이는 오직 'W'키를 눌렀을 때만 줄어들어야 함!
-
-                /*
-                 if (distToAnchor < currentRopeLength)
+                 // [Auto-Winch] 초기 발동 시 부드럽게 감기 (땅에서 떴을 때)
+                 if (isAutoWinching)
                  {
-                     currentRopeLength = Mathf.Lerp(currentRopeLength, distToAnchor, Time.deltaTime * 5f);
+                      // 설정된 속도로 부드럽게 감음
+                      currentRopeLength = Mathf.MoveTowards(currentRopeLength, finalRopeLength, autoWinchSpeed * Time.fixedDeltaTime);
+                      
+                      // 목표 도달하면 종료
+                      if (currentRopeLength <= finalRopeLength + 0.01f)
+                      {
+                           isAutoWinching = false;
+                      }
                  }
-                */
             }
 
             // -------------------------------------------------------------
@@ -536,13 +608,7 @@ public class PlayerHook : MonoBehaviour
 
 
 
-            // [유니] 바닥 마찰 문제 해결: 땅에 있는데 훅을 당기거나 이동하려고 하면 살짝 띄워줌!
-            if (_playerMovement.MoveInput.magnitude > 0.1f && Physics.Raycast(transform.position, Vector3.down, 1.1f, LayerMask.GetMask("Ground", "Wall")))
-            {
-                // 아주 살짝만 들어올려서 마찰(Friction)을 없앰
-                // 힘(Force)으로 하면 잘 안 될 때가 있어서 위치(Position)를 아주 미세하게 보정
-                transform.position += Vector3.up * Time.deltaTime * 0.5f;
-            }
+
 
             // B. 속도 제어 (Velocity Projection) - 줄이 팽팽할 때 바깥으로 나가는 속도 제거
             if (distToAnchor >= currentRopeLength)
@@ -625,6 +691,7 @@ public class PlayerHook : MonoBehaviour
 
         // [유니] 처음 훅이 걸렸을 때의 거리를 유지해줄게! (목줄 효과)
         float currentRopeLength = Vector3.Distance(transform.position, target.position);
+        float currentRopeLengthSqr = currentRopeLength * currentRopeLength;
         float startTime = Time.time; // [유니] 최소 지속 시간 체크용
 
         while (_isHooking && target != null)
@@ -699,7 +766,7 @@ public class PlayerHook : MonoBehaviour
     // ---------------------------------------------------------
     // ⚡ Type C: Zip To Target (적에게 돌진)
     // ---------------------------------------------------------
-    private IEnumerator ZipToTargetRoutine(Transform target)
+    private IEnumerator ZipToTargetRoutine(Transform target, float speedOverride = -1f)
     {
         _playerMovement.AddDashStack(1); // 성공 시 대시 충전
 
@@ -709,7 +776,23 @@ public class PlayerHook : MonoBehaviour
         // 타겟의 중심보다는 살짝 위나 표면을 향하는 게 좋지만, 일단 심플하게!
         
         float startTime = Time.time;
-        float zipSpeed = heavyEnemyPullAcceleration * 2f; // 당기는 힘보다 2배 빠르게 슉!
+        
+        // [유니] 기본 속도는 인스펙터 설정값!
+        float currentZipSpeed = heavyEnemyZipSpeed;
+
+        // [유니] 스피드 오버라이드(Wall Zip 등)가 있으면 그걸 최우선으로!
+        if (speedOverride > 0)
+        {
+            currentZipSpeed = speedOverride;
+        }
+        // [유니] 아니라면, 적에게 개별 설정된 속도가 있는지 확인!
+        else if (target.TryGetComponent(out BaseEnemy enemy))
+        {
+             if (enemy.HookInteractSpeed > 0) 
+             {
+                 currentZipSpeed = enemy.HookInteractSpeed;
+             }
+        }
         
         while (_isHooking && target != null)
         {
@@ -717,12 +800,12 @@ public class PlayerHook : MonoBehaviour
             Vector3 targetPos = target.position; // 타겟 위치 갱신
             
             // 표면 거리 계산
-            float distToSurface = Vector3.Distance(myPos, targetPos);
+            float distToSurfaceSqr = (myPos - targetPos).sqrMagnitude; // [유니] 제곱 거리 사용
             Collider targetCol = target.GetComponent<Collider>();
             if (targetCol != null)
             {
                 Vector3 closest = targetCol.ClosestPoint(myPos);
-                distToSurface = Vector3.Distance(myPos, closest);
+                distToSurfaceSqr = (myPos - closest).sqrMagnitude;
             }
 
             // 1. 방향 계산
@@ -730,10 +813,11 @@ public class PlayerHook : MonoBehaviour
 
             // 2. 이동 (MovePosition으로 물리 뚫고 감)
             // 너무 빠르면 통과해버릴 수 있으니 Rigidbody 이동 사용
-            GetComponent<Rigidbody>().linearVelocity = zipDir * zipSpeed;
+            GetComponent<Rigidbody>().linearVelocity = zipDir * currentZipSpeed;
 
             // 3. 도착 판정
-            if (distToSurface < stopDistance && (Time.time - startTime) > 0.1f)
+            // distance < stopDistance  ==  distSqr < stopDistSqr
+            if (distToSurfaceSqr < stopDistance * stopDistance && (Time.time - startTime) > 0.1f)
             {
                 // 충돌! (여기서 데미지 주거나 밀쳐내기 가능)
                 StopHook();
@@ -747,6 +831,7 @@ public class PlayerHook : MonoBehaviour
         }
         StopHook();
     }
+
 
     // [유니] 투사체 방식이므로 MissHookRoutine은 이제 필요 없음! (ThrowHookRoutine에서 처리)
 }

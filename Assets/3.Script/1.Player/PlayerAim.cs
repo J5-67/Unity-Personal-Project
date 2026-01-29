@@ -12,6 +12,7 @@ public class PlayerAim : MonoBehaviour
     [SerializeField] private LineRenderer lineRenderer;
 
     private Camera _mainCamera;
+    private GameInput _input;
     private Vector2 _mouseScreenPosition;
     private Vector3 _aimWorldPosition;
     private bool _isFire; 
@@ -56,6 +57,7 @@ public class PlayerAim : MonoBehaviour
 
     private void Update()
     {
+        _input = new GameInput();
         UpdateAimPosition();
         DrawAimLine();
     }
