@@ -27,11 +27,17 @@ namespace UI
         {
             // [유니] GetComponent는 무거운 연산이니까 Awake에서 한 번만!
             _tmp = GetComponent<TMP_Text>();
+
+            // [유니] 안전장치! 텍스트 컴포넌트가 없으면 알려주기
+            if (_tmp == null)
+            {
+                Debug.LogError($"[유니] 🚨 {gameObject.name}에 'TextMeshPro - Text (UI)' 컴포넌트가 없어! 타자 효과를 못 낸대! 😭");
+            }
         }
 
         private void Start()
         {
-            if (playOnAwake)
+            if (playOnAwake && _tmp != null)
             {
                 Run(_tmp.text, typingSpeed);
             }
@@ -40,6 +46,20 @@ namespace UI
         // 외부에서 텍스트를 넣고 타이핑 시작!
         public void Run(string textToType, float speedOverride = -1f)
         {
+            // [유니] 혹시라도 Awake가 실행 안 됐거나 컴포넌트가 없으면 여기서 다시 찾기! (안전제일 ⛑️)
+            if (_tmp == null)
+            {
+                _tmp = GetComponent<TMP_Text>();
+                if (_tmp == null)
+                {
+                    Debug.LogError($"[유니] 🚨 {gameObject.name}에 'TextMeshPro - Text (UI)'가 없어! 텍스트를 출력할 수 없어 😭");
+                    return;
+                }
+            }
+
+            // [유니] 코루틴은 꺼진 오브젝트에서 실행할 수 없어! 그래서 강제로 켜줘야 해! ⚡
+            gameObject.SetActive(true);
+
             if (_typeRoutine != null) StopCoroutine(_typeRoutine);
             
             _tmp.text = textToType;

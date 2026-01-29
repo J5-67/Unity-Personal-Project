@@ -40,6 +40,17 @@ namespace UI
 
         public void Show(string message, SpeakerSide side, string name, Sprite portrait)
         {
+            // [유니] UI가 꺼져있을 수도 있으니까 확실하게 켜주기! 💡
+            gameObject.SetActive(true);
+            
+            // [유니] 혹시 부모 캔버스(Canvas)가 꺼져 있으면, 아무리 얘를 켜도 소용없어!
+            // 그래서 부모 캔버스까지 찾아서 확실하게 켜주는 거야! 🫡
+            Canvas parentCanvas = GetComponentInParent<Canvas>(true);
+            if (parentCanvas != null)
+            {
+                parentCanvas.gameObject.SetActive(true);
+            }
+
             dialoguePanel.SetActive(true);
 
             // 1. 화자 설정 (왼쪽/오른쪽)
