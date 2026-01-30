@@ -5598,7 +5598,7 @@ GameObject:
   - component: {fileID: 2037725908}
   - component: {fileID: 2037725907}
   m_Layer: 0
-  m_Name: DialogueTrigger
+  m_Name: $DialogueTrigger
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -5705,7 +5705,7 @@ Transform:
   m_GameObject: {fileID: 2037725906}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 1.41, z: -6.5}
+  m_LocalPosition: {x: 0, y: 1.41, z: -6.84}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -5966,6 +5966,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4663703823521855494}
   - component: {fileID: 6820292525838572067}
+  - component: {fileID: 6996757570809009740}
   - component: {fileID: 2782456915598918454}
   - component: {fileID: 6996757570809009739}
   m_Layer: 5
@@ -6012,7 +6013,7 @@ GameObject:
   - component: {fileID: 5552001161719261755}
   - component: {fileID: 5552001161719261756}
   m_Layer: 0
-  m_Name: Dialogue
+  m_Name: $Dialogue
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -6485,7 +6486,11 @@ MonoBehaviour:
   playTestOnStart: 0
   portraitDatabase:
   - key: Yuni_Smile
-    sprite: {fileID: 21300000, guid: 3089406e4badea04f9fdee0418e10084, type: 3}
+    sprite: {fileID: 21300000, guid: 63aa7be63974c0043847815db4bcba54, type: 3}
+    typingSound: {fileID: 8300000, guid: 4d9b216d3f73bea4c9e384bf6260ba8b, type: 3}
+  - key: Oppa_Normal
+    sprite: {fileID: 21300000, guid: c7aed510f15ed0c4da92149e7f703518, type: 3}
+    typingSound: {fileID: 8300000, guid: 354c9a2e9cd81754cad6514831d75c04, type: 3}
 --- !u!114 &5844780067572425125
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6599,6 +6604,108 @@ MonoBehaviour:
   onComplete:
     m_PersistentCalls:
       m_Calls: []
+  audioSource: {fileID: 6996757570809009740}
+  typingSound: {fileID: 8300000, guid: 354c9a2e9cd81754cad6514831d75c04, type: 3}
+  soundFrequency: 1
+  minPitch: 0.9
+  maxPitch: 1.1
+--- !u!82 &6996757570809009740
+AudioSource:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1255087588452892298}
+  m_Enabled: 1
+  serializedVersion: 4
+  OutputAudioMixerGroup: {fileID: 0}
+  m_audioClip: {fileID: 0}
+  m_Resource: {fileID: 0}
+  m_PlayOnAwake: 0
+  m_Volume: 1
+  m_Pitch: 1
+  Loop: 0
+  Mute: 0
+  Spatialize: 0
+  SpatializePostEffects: 0
+  Priority: 128
+  DopplerLevel: 1
+  MinDistance: 1
+  MaxDistance: 500
+  Pan2D: 0
+  rolloffMode: 0
+  BypassEffects: 0
+  BypassListenerEffects: 0
+  BypassReverbZones: 0
+  rolloffCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  panLevelCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  spreadCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  reverbZoneMixCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
 --- !u!222 &8138733850452153222
 CanvasRenderer:
   m_ObjectHideFlags: 0

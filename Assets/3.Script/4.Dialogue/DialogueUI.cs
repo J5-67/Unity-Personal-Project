@@ -38,7 +38,7 @@ namespace UI
             messageText = typewriter != null ? typewriter.GetComponent<TMP_Text>() : GetComponentInChildren<TMP_Text>();
         }
 
-        public void Show(string message, SpeakerSide side, string name, Sprite portrait)
+        public void Show(string message, SpeakerSide side, string name, Sprite portrait, AudioClip typingSound = null)
         {
             // [유니] UI가 꺼져있을 수도 있으니까 확실하게 켜주기! 💡
             gameObject.SetActive(true);
@@ -59,6 +59,8 @@ namespace UI
             // 2. 텍스트 출력
             if (typewriter != null)
             {
+                // [유니] 화자별 목소리 설정! (없으면 null -> 기본 소리 사용)
+                typewriter.SetTypingSound(typingSound);
                 typewriter.Run(message);
             }
             else

@@ -10,6 +10,7 @@ namespace UI
     {
         public string key; // CSV에 적을 키워드 (예: "Yuni_Smile")
         public Sprite sprite; // 실제 이미지
+        public AudioClip typingSound; // [유니] 대사칠 때 나는 소리 (없으면 기본값)
     }
 
     public class DialogueTester : MonoBehaviour
@@ -26,7 +27,7 @@ namespace UI
         [SerializeField] private List<PortraitInfo> portraitDatabase; // 인스펙터 입력용
         
         // [유니] 검색 속도를 위해 딕셔너리로 변환! (리스트보다 훨씬 빨라!)
-        private Dictionary<string, Sprite> _portraitDic = new Dictionary<string, Sprite>();
+        private Dictionary<string, PortraitInfo> _portraitDic = new Dictionary<string, PortraitInfo>();
 
         private List<DialogueData> _allDialogueList; // [유니] 전체 대본 원본
         private List<DialogueData> _currentQueue;    // [유니] 현재 재생할 구간의 대본
@@ -54,7 +55,7 @@ namespace UI
             {
                 if (!_portraitDic.ContainsKey(info.key))
                 {
-                    _portraitDic.Add(info.key, info.sprite);
+                    _portraitDic.Add(info.key, info);
                 }
             }
         }
@@ -135,9 +136,9 @@ namespace UI
                 DialogueData data = _currentQueue[_currentIndex];
 
                 // [유니] 딕셔너리에서 빠르게 찾아오기!
-                Sprite portrait = GetPortrait(data.portraitKey);
+                PortraitInfo info = GetPortraitInfo(data.portraitKey);
 
-                dialogueUI.Show(data.text, data.side, data.name, portrait);
+                dialogueUI.Show(data.text, data.side, data.name, info.sprite, info.typingSound);
             }
             else
             {
@@ -154,17 +155,18 @@ namespace UI
         }
 
         // [유니] 딕셔너리(Dictionary)를 써서 검색 속도가 엄청 빨라졌어!
-        private Sprite GetPortrait(string key)
+        // [유니] 딕셔너리(Dictionary)를 써서 검색 속도가 엄청 빨라졌어!
+        private PortraitInfo GetPortraitInfo(string key)
         {
-            if (string.IsNullOrEmpty(key)) return null;
+            if (string.IsNullOrEmpty(key)) return new PortraitInfo();
 
-            if (_portraitDic.TryGetValue(key, out Sprite sprite))
+            if (_portraitDic.TryGetValue(key, out PortraitInfo info))
             {
-                return sprite;
+                return info;
             }
             
-            // 못 찾으면 null
-            return null; 
+            // 못 찾으면 빈 껍데기
+            return new PortraitInfo(); 
         }
     }
 }
