@@ -19,22 +19,22 @@ MonoBehaviour:
     textAlignment: 4
     fontStyle: 3
   - keyChar: ///
-    textColor: {r: 1, g: 0, b: 0, a: 1}
-    backgroundColor: {r: 1, g: 0.9203187, b: 0, a: 1}
+    textColor: {r: 0, g: 0, b: 0, a: 1}
+    backgroundColor: {r: 1, g: 0.92156863, b: 0, a: 1}
     textAlignment: 4
     fontStyle: 3
   - keyChar: '#'
-    textColor: {r: 0, g: 0.22264141, b: 0, a: 1}
+    textColor: {r: 0, g: 0, b: 0, a: 1}
     backgroundColor: {r: 0, g: 1, b: 0, a: 1}
     textAlignment: 4
     fontStyle: 3
   - keyChar: '@'
-    textColor: {r: 0, g: 0, b: 1, a: 1}
+    textColor: {r: 0, g: 0, b: 0, a: 1}
     backgroundColor: {r: 0, g: 1, b: 1, a: 1}
     textAlignment: 4
     fontStyle: 3
   - keyChar: '%'
-    textColor: {r: 1, g: 1, b: 0, a: 1}
+    textColor: {r: 1, g: 1, b: 1, a: 1}
     backgroundColor: {r: 0.5903926, g: 0.12967247, b: 0.8867924, a: 1}
     textAlignment: 4
     fontStyle: 3
@@ -49,7 +49,7 @@ MonoBehaviour:
     textAlignment: 4
     fontStyle: 3
   - keyChar: )
-    textColor: {r: 1, g: 1, b: 1, a: 1}
+    textColor: {r: 0, g: 0, b: 0, a: 1}
     backgroundColor: {r: 1, g: 0, b: 0, a: 1}
     textAlignment: 4
     fontStyle: 3

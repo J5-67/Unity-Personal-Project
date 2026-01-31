@@ -40,6 +40,9 @@ namespace UI
 
         public void Show(string message, SpeakerSide side, string name, Sprite portrait, AudioClip typingSound = null)
         {
+            // [유니] 대화 시작 알림! (플레이어 멈추라고)
+            if (Core.GameManager.Instance != null) Core.GameManager.Instance.SetDialogueState(true);
+
             // [유니] UI가 꺼져있을 수도 있으니까 확실하게 켜주기! 💡
             gameObject.SetActive(true);
             
@@ -130,6 +133,9 @@ namespace UI
         public void Hide()
         {
             dialoguePanel.SetActive(false);
+
+            // [유니] 대화 끝났다고 알림! (플레이어 움직여도 돼!)
+            if (Core.GameManager.Instance != null) Core.GameManager.Instance.SetDialogueState(false);
         }
     }
 }

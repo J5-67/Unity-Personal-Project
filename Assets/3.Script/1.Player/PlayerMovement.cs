@@ -98,6 +98,13 @@ public class PlayerMovement : MonoBehaviour
     {
         CheckSurroundings();
 
+        // [유니] 대화 중이면 강제 정지 (선택 사항: 관성 유지하고 싶으면 이거 빼도 돼! 지금은 멈추는 걸로!)
+        if (Core.GameManager.Instance != null && Core.GameManager.Instance.IsDialogueActive)
+        {
+            _moveInput = Vector2.zero;
+            // 중력은 받아야 하니까 리턴은 안 함!
+        }
+
         // [중요] 대시 중일 때는 다른 움직임(이동, 중력, 벽타기) 무시!
         if (_isDashing)
         {
@@ -107,7 +114,7 @@ public class PlayerMovement : MonoBehaviour
         if (_canMove)
         {
             Move();
-          _input = new GameInput();
+            // _input = new GameInput(); // [유니] 최적화: FixedUpdate에서 new 할당은 금지! 삭제함!
             ApplyRotation();
         }
 
@@ -123,13 +130,26 @@ public class PlayerMovement : MonoBehaviour
     // ---------------------------------------------------------
     // 🎮 Input System
     // ---------------------------------------------------------
+    // ---------------------------------------------------------
+    // 🎮 Input System
+    // ---------------------------------------------------------
     public void OnMove(InputAction.CallbackContext context)
     {
+        // [유니] 대화 중이면 입력 무시!
+        if (Core.GameManager.Instance != null && Core.GameManager.Instance.IsDialogueActive)
+        {
+            _moveInput = Vector2.zero;
+            return;
+        }
+
         _moveInput = context.ReadValue<Vector2>();
     }
 
     public void OnJump(InputAction.CallbackContext context)
     {
+        // [유니] 대화 중이면 점프 금지!
+        if (Core.GameManager.Instance != null && Core.GameManager.Instance.IsDialogueActive) return;
+
         // [유니] PassThrough 타입은 started가 안 올 수 있어서 performed도 체크! 그리고 진짜 눌렸는지 확인!
         if (context.started || (context.performed && context.ReadValueAsButton()))
         {
@@ -150,6 +170,9 @@ public class PlayerMovement : MonoBehaviour
     // [대시 입력 추가]
     public void OnDash(InputAction.CallbackContext context)
     {
+        // [유니] 대화 중이면 대시 금지!
+        if (Core.GameManager.Instance != null && Core.GameManager.Instance.IsDialogueActive) return;
+
         if (context.started)
         {
             // 스택이 있고, 이미 대시 중이 아닐 때만 발동
