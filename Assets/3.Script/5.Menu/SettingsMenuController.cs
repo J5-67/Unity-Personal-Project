@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System.Text;
+using Core; // [유니] AudioManager 사용을 위해 추가!
 
 namespace UI
 {
@@ -24,11 +25,10 @@ namespace UI
         [SerializeField] private Slider sfxSlider;
         [SerializeField] private TMP_InputField sfxInput;
 
-        private StringBuilder _sb = new StringBuilder(10); // [유니] 스트링 빌더 미리 생성!
+        private StringBuilder _sb = new StringBuilder(10); 
 
         private void Start()
         {
-            // [유니] 저장된 값 불러오기 및 리스너 등록
             InitSettings();
         }
 
@@ -37,13 +37,10 @@ namespace UI
             // Graphic
             if (graphicDropdown != null)
             {
-                // 디폴트 0: Full Screen, 1: Windowed 라고 가정!
                 int graphicOption = PlayerPrefs.GetInt("FullScreen", 0); 
                 graphicDropdown.value = graphicOption;
                 graphicDropdown.RefreshShownValue();
                 graphicDropdown.onValueChanged.AddListener(OnGraphicChanged);
-                
-                // [유니] 시작할 때도 적용!
                 SetFullScreen(graphicOption);
             }
 
@@ -64,10 +61,8 @@ namespace UI
             SetupControl(sfxSlider, sfxInput, sfx, OnSFXChanged);
         }
 
-        // [유니] 초기 세팅 헬퍼 함수
         private void SetupControl(Slider slider, TMP_InputField input, float value, UnityEngine.Events.UnityAction<float> onSliderChange)
         {
-            // 값 적용
             if(slider) 
             {
                 slider.value = value;
@@ -78,12 +73,10 @@ namespace UI
 
             if(input)
             {
-                // [유니] 인풋필드 입력 종료 시 이벤트 연결
                 input.onEndEdit.AddListener((str) => OnInputSubmitted(str, slider, input, onSliderChange));
             }
         }
 
-        // [유니] 플레이스홀더 텍스트만 변경하는 함수!
         private void UpdatePlaceholder(TMP_InputField input, float value)
         {
             if (input != null && input.placeholder is TMP_Text placeholderText)
@@ -104,14 +97,12 @@ namespace UI
         
         private void SetFullScreen(int index)
         {
-            // 0: FullScreen, 1: Windowed
             bool isFull = (index == 0);
             Screen.fullScreen = isFull;
         }
 
         private void OnMouseChanged(float value)
         {
-            // [유니] 슬라이더 값이 바뀌면 저장하고 플레이스홀더 업데이트!
             PlayerPrefs.SetFloat("Sensitivity", value);
             UpdatePlaceholder(mouseInput, value);
         }
@@ -120,19 +111,36 @@ namespace UI
         {
             PlayerPrefs.SetFloat("MasterVolume", value);
             UpdatePlaceholder(masterInput, value);
-            // [유니] 실제 오디오 믹서 연결은 나중에 여기서 하면 돼!
+            
+            // [유니] AudioManager에 즉시 반영! 📢
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.SetMasterVolume(value);
+            }
         }
 
         private void OnBGMChanged(float value)
         {
             PlayerPrefs.SetFloat("BGMVolume", value);
             UpdatePlaceholder(bgmInput, value);
+
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.SetBGMVolume(value);
+            }
         }
 
         private void OnSFXChanged(float value)
         {
             PlayerPrefs.SetFloat("SFXVolume", value);
             UpdatePlaceholder(sfxInput, value);
+
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.SetSFXVolume(value);
+                // [유니] SFX는 조절할 때마다 소리가 나면 좋겠지? (옵션)
+                // AudioManager.Instance.PlayTestSFX(); 
+            }
         }
 
         // [유니] 인풋필드 입력이 끝났을 때 처리 (공통)

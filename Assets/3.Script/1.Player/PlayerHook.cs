@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using Core; // AudioManager 사용
 
 public class PlayerHook : MonoBehaviour
 {
@@ -9,6 +10,9 @@ public class PlayerHook : MonoBehaviour
     [SerializeField] private float hookAcceleration = 80f; // [NEW] 훅 당기는 가속도 (기존 pullSpeed 대체) - Fallback
     [SerializeField] private float retrieveSpeed = 30f;    // 적을 당겨오는 속도 - Fallback
     [SerializeField] private float throwSpeed = 60f;       // [NEW] 훅이 날아가는 속도
+
+    [Header("🔊 Sound Settings")]
+    [SerializeField] private AudioClip fireSound; // [NEW] 훅 발사 소리 🎵
 
     [Header("🎯 Enemy Hook Settings (Fallback)")]
     [SerializeField] private float lightEnemyRetrieveSpeed = 30f;    // 가벼운 적을 당겨오는 속도
@@ -109,6 +113,12 @@ public class PlayerHook : MonoBehaviour
     private IEnumerator ThrowHookRoutine()
     {
         _isHooking = true;
+        
+        // [유니] 훅 발사 소리 재생! 🔊
+        if (AudioManager.Instance != null && fireSound != null)
+        {
+            AudioManager.Instance.PlaySFX(fireSound);
+        }
         
         Vector3 startPos = transform.position;
         Vector3 currentPos = startPos;

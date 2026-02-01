@@ -2814,6 +2814,7 @@ MonoBehaviour:
   hookAcceleration: 80
   retrieveSpeed: 30
   throwSpeed: 30
+  fireSound: {fileID: 8300000, guid: 95fb3e178be86884f898011acfb4ea05, type: 3}
   lightEnemyRetrieveSpeed: 1
   heavyEnemyPullAcceleration: 5
   heavyEnemyZipSpeed: 120
@@ -5643,6 +5644,51 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1999056549}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1 &2008222694
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2008222697}
+  - component: {fileID: 2008222695}
+  m_Layer: 0
+  m_Name: ///BGM_Controller
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &2008222695
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2008222694}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 475ff55b797d4254eb922fa3e3688c17, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Core.SceneAudioController
+  sceneBGM: {fileID: 8300000, guid: bbc501e612f414141987b9514409c1ce, type: 3}
+--- !u!4 &2008222697
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2008222694}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 1153.6188, y: 348.35117, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2009081883
 GameObject:
   m_ObjectHideFlags: 0
@@ -13536,6 +13582,7 @@ SceneRoots:
   - {fileID: 1129288215}
   - {fileID: 705507995}
   - {fileID: 1234476426}
+  - {fileID: 2008222697}
   - {fileID: 1056764907}
   - {fileID: 1251460399}
   - {fileID: 2052918383}
