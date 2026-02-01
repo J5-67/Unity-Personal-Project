@@ -4,7 +4,7 @@
 
 ---
 
-## 📅 2026-01-31 (오늘의 작업)
+## 📅 2026-01-31
 ### 1. 🖥️ UI - 메인 메뉴 & 설정 (Settings) - [완료]
 *   **메인 메뉴 구조화**:
     *   `MainMenuController` 개선: Play/Settings 버튼과 서브 메뉴(Start/Settings) 연결.
@@ -37,6 +37,21 @@
     *   **Stretch 모드 도입**: 거리에 상관없이 일정한 무늬 간격을 유지하도록 `LineTextureMode.Stretch`와 스크립트 기반 Tiling 계산 적용.
     *   **밀도 분리 제어**: 점선(`Dash Tiling`)과 화살표(`Arrow Tiling`)의 밀도를 각각 조절 가능하도록 변수 분리.
     *   **쉐이더 교체**: `Legacy Shaders/Particles/Alpha Blended`를 사용하여 색상(`TintColor`)과 UV 애니메이션 모두 지원.
+
+---
+
+## 📅 2026-02-01
+### 1. 🎧 오디오 시스템 (Audio System) - [완료]
+*   **AudioManager (Singleton)**:
+    *   **마스터/BGM/SFX 볼륨 관리**: `PlayerPrefs` 저장값과 연동하여 볼륨 개별 조절.
+    *   **싱글톤 패턴**: 씬 전환 시에도 파괴되지 않고 배경음 유지.
+*   **SceneAudioController**:
+    *   **씬별 BGM 자동 재생**: 각 씬에 배치되어 `Start()`에서 해당 씬의 BGM 재생 요청.
+    *   **구조 분리**: `AudioManager`(영구적)와 `SceneAudioController`(씬별)를 분리하여 초기화 충돌 및 사운드 끊김 문제 해결.
+*   **Settings UI 연동**:
+    *   `SettingsMenuController` 슬라이더 조정 시 `AudioManager`를 통해 실시간 볼륨 반영.
+*   **플레이어 SFX**:
+    *   훅 발사 시(`PlayerHook`) `AudioManager`를 통해 효과음 재생 구현.
 
 ---
 
