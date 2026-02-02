@@ -324,7 +324,7 @@ public class PlayerHook : MonoBehaviour
         StopHook();
     }
 
-    private void StopHook()
+    public void StopHook()
     {
         // [유니] 훅이 끝날 때, 만약 잡고 있던 게 순찰 중인 적이었다면 다시 순찰 지시!
         if (_currentHookTarget != null)

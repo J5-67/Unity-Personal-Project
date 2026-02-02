@@ -9,6 +9,9 @@ public class PlayerAim : MonoBehaviour
     [SerializeField] private LayerMask aimLayerMask; 
     [SerializeField] private float aimRadius = 0.5f;
 
+    [Header("🖱️ Controls")]
+    [SerializeField] private float cursorSensitivity = 2.0f; // 마우스 감도 (높을수록 빠름!)
+
     [Header("✨ Visual Settings")]
     [SerializeField] private LineRenderer lineRenderer;
     [SerializeField] private float lineWidth = 0.1f;
@@ -26,7 +29,7 @@ public class PlayerAim : MonoBehaviour
 
     private Camera _mainCamera;
     private GameInput _input; 
-    private Vector2 _mouseScreenPosition;
+    private Vector2 _virtualMousePos; // 가상 커서 위치 (화면 픽셀 단위)
     private Vector3 _aimWorldPosition;
 
     private Texture2D _arrowTexture;        // >
@@ -41,7 +44,7 @@ public class PlayerAim : MonoBehaviour
         _mainCamera = Camera.main;
         _input = new GameInput(); 
         _input.Enable();         
-        _input.Player.Aim.performed += OnAim;
+        // [유니] OnAim 이벤트 구독 제거! (Update에서 직접 처리함)
 
         InitializeLineRenderer();
     }
@@ -49,6 +52,13 @@ public class PlayerAim : MonoBehaviour
     private void Start()
     {
         if (aimLayerMask.value == 0) aimLayerMask = -1;
+
+        // [유니] 실제 마우스 숨기고 가두기! (가상 커서 쓸 거니까)
+        Cursor.visible = false;
+        Cursor.lockState = CursorLockMode.Locked; 
+
+        // 시작 시 커서를 화면 중앙에!
+        _virtualMousePos = new Vector2(Screen.width / 2f, Screen.height / 2f);
     }
 
     private void OnEnable() => _input?.Enable();
@@ -168,13 +178,25 @@ public class PlayerAim : MonoBehaviour
 
     private void Update()
     {
+        // [유니] 대화 중이거나 일시정지 상태면 조준선 업데이트 금지! (멈춰!)
+        if (Core.GameManager.Instance != null && (Core.GameManager.Instance.IsDialogueActive || Core.GameManager.Instance.IsPaused)) return;
+
+        // [유니] 부드러운 움직임을 위해 Update에서 직접 처리! (Polling)
+        Vector2 delta = Vector2.zero;
+        if (Mouse.current != null)
+        {
+            delta = Mouse.current.delta.ReadValue();
+        }
+
+        // 감도 적용!
+        _virtualMousePos += delta * cursorSensitivity;
+
+        // 화면 밖으로 못 나가게 가두기! (Clamp)
+        _virtualMousePos.x = Mathf.Clamp(_virtualMousePos.x, 0f, Screen.width);
+        _virtualMousePos.y = Mathf.Clamp(_virtualMousePos.y, 0f, Screen.height);
+
         UpdateAimPosition();
         DrawAimLine();
-    }
-
-    public void OnAim(InputAction.CallbackContext context)
-    {
-        _mouseScreenPosition = context.ReadValue<Vector2>();
     }
 
     public Vector3 GetAimWorldPosition()
@@ -185,7 +207,9 @@ public class PlayerAim : MonoBehaviour
     private void UpdateAimPosition()
     {
         Plane gameplayPlane = new Plane(Vector3.right, transform.position);
-        Ray ray = _mainCamera.ScreenPointToRay(_mouseScreenPosition);
+        
+        // [유니] 이제 _virtualMousePos를 사용해서 레이를 쏨!
+        Ray ray = _mainCamera.ScreenPointToRay(_virtualMousePos);
 
         if (gameplayPlane.Raycast(ray, out float enterDistance))
         {

@@ -4,6 +4,25 @@
 
 ---
 
+
+## 📅 2026-01-30
+### 1. 💬 대화 시스템 (Dialogue System) - [완료]
+*   **CSV 연동**: 엑셀로 대본을 관리하고 유니티로 불러오는 기능 완성!
+*   **타자기 효과 (TypewriterEffect)**:
+    *   한 글자씩 써지는 연출 구현.
+    *   **사운드 추가**: 글자가 써질 때마다 `Blip` 소리 재생 (빈도, 피치 조절 가능).
+    *   **화자별 목소리**: `DialogueTester`의 `PortraitInfo`에 `AudioClip`을 추가해서, 캐릭터마다 다른 타자 소리를 낼 수 있게 업그레이드! 🎤
+*   **버그 수정**: `TypewriterEffect`에서 첫 글자가 무시되거나 소리가 안 나는 문제 해결 (로직 개선).
+
+### 2. 🖥️ UI 작업 (SlimUI) - [진행 중]
+*   **SlimUI 에셋 도입**: 모던한 메뉴 UI 적용.
+*   **New Input System 마이그레이션**:
+    *   Legacy `Input.GetKeyDown` 코드를 `UnityEngine.InputSystem`의 `Keyboard.current`로 전면 교체 완료! 🛠️
+*   **트러블슈팅**:
+    *   **드롭다운 짤림 문제**: `Dropdown` -> `Template` -> `Viewport`의 앵커 및 크기 설정 문제 확인.
+
+---
+
 ## 📅 2026-01-31
 ### 1. 🖥️ UI - 메인 메뉴 & 설정 (Settings) - [완료]
 *   **메인 메뉴 구조화**:
@@ -55,20 +74,33 @@
 
 ---
 
-## 📅 2026-01-30
-### 1. 💬 대화 시스템 (Dialogue System) - [완료]
-*   **CSV 연동**: 엑셀로 대본을 관리하고 유니티로 불러오는 기능 완성!
-*   **타자기 효과 (TypewriterEffect)**:
-    *   한 글자씩 써지는 연출 구현.
-    *   **사운드 추가**: 글자가 써질 때마다 `Blip` 소리 재생 (빈도, 피치 조절 가능).
-    *   **화자별 목소리**: `DialogueTester`의 `PortraitInfo`에 `AudioClip`을 추가해서, 캐릭터마다 다른 타자 소리를 낼 수 있게 업그레이드! 🎤
-*   **버그 수정**: `TypewriterEffect`에서 첫 글자가 무시되거나 소리가 안 나는 문제 해결 (로직 개선).
+## 📅 2026-02-02
+### 1. ❤️ 플레이어 체력 & 부활 (Player Health & Respawn) - [완료]
+*   **PlayerHealth.cs**:
+    *   **체력 시스템**: 최대 3칸, 피격 시 1칸 감소. 0이 되면 사망.
+    *   **체크포인트(Checkpoint)**: 깃발(Trigger)을 지나면 해당 위치 저장.
+    *   **데드존(DeadZone)**: 구덩이에 빠지면 데미지를 입고 마지막 체크포인트로 복귀.
+*   **적 부활 시스템 (Enemy Respawn)**:
+    *   **이벤트 패턴**: `GameManager.OnPlayerRespawn` 이벤트를 통해 플레이어 부활 시 적들도 `SetActive(true)`로 부활 및 초기화! 🧟‍♂️
 
-### 2. 🖥️ UI 작업 (SlimUI) - [진행 중]
-*   **SlimUI 에셋 도입**: 모던한 메뉴 UI 적용.
-*   **New Input System 마이그레이션**:
-    *   Legacy `Input.GetKeyDown` 코드를 `UnityEngine.InputSystem`의 `Keyboard.current`로 전면 교체 완료! 🛠️
-*   **트러블슈팅**:
-    *   **드롭다운 짤림 문제**: `Dropdown` -> `Template` -> `Viewport`의 앵커 및 크기 설정 문제 확인.
+### 2. 🥊 전투 타격감 폴리싱 (Combat Polish) - [완료]
+*   **히트 스탑 (Hit Stop)**: 피격 순간 `Time.timeScale`을 잠시 멈춰서 "억!" 하는 느낌 구현.
+*   **카메라 쉐이크 (Camera Shake)**: **Cinemachine Impulse**를 활용해 피격 시 화면 지진 효과 구현! 📸🌋
+    *   (Legacy Noise Profile + 9999 Radius 설정으로 확실한 타격감 확보)
+*   **버그 수정**:
+    *   **잔여 운동량 제거**: 부활 직후 튕겨나가는 문제 해결 (Velocity = 0).
+    *   **훅 회수**: 죽었을 때 훅이 연결된 상태면 고무줄처럼 튕기는 문제 해결 (`StopHook` 호출).
+### 3. ❤️ 체력 UI & 무적 시스템 (Health UI & Invincibility) - [완료]
+*   **HealthUI System**:
+    *   **하트 UI**: 평소엔 숨겨져 있다가(Alpha 0), 피격 시 등장(Alpha 1) 후 3초 뒤 서서히 사라지는 페이드 효과 구현.
+    *   **스프라이트 교체**: 체력 상태(1~4칸)에 따라 하트 이미지 실시간 교체 (인덱스 계산 로직 최적화).
+*   **무적 시스템 (Invincibility)**:
+    *   **무적 판정**: 피격 시 1초간 `_isInvincible` 상태로 진입하여 추가 데미지 무시.
+    *   **깜빡임 효과 (Blinking)**: `SpriteRenderer`를 0.1초 간격으로 껐다 켰다 하여 시각적 피드백 제공.
+    *   **안전 장치**: 사망하거나 무트가 끝날 때 렌더러가 꺼진 채로 남지 않도록 강제 활성화 처리.
 
----
+### 4. 🌄 배경 연출 (Parallax Background) - [완료]
+*   **ParallaxEffect.cs**: 카메라 이동에 따라 배경이 다른 속도로 움직이는 원근감 효과 구현.
+*   **Infinite Scrolling**: 배경이 끊기지 않고 무한 반복되도록 위치 리셋 로직 추가.
+*   **축 대응 (Axis Handling)**: 카메라 회전(Y=90)에 맞춰 Z축을 가로 이동으로 인식하도록 커스텀.
+*   **스케일 대응**: 오브젝트의 Scale 값을 계산에 포함하여 리셋 타이밍 오차 해결.

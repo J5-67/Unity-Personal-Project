@@ -12,9 +12,15 @@ namespace Core
         [SerializeField] private bool isPaused = false;
 
         [Header("References")]
+        [Header("References")]
         [SerializeField] private PauseUI pauseUI;
+        [SerializeField] private Unity.Cinemachine.CinemachineImpulseSource impulseSource; // [유니] 시네머신 임펄스 소스 연결!
+        
+        // [유니] 플레이어 부활 시 적들도 되살리기 위한 이벤트!
+        public event System.Action OnPlayerRespawn; 
 
         public bool IsDialogueActive { get; private set; } // [유니] 대화 중인지 확인하는 변수!
+        public bool IsPaused => isPaused; // [유니] 일시정지 상태 공개!
 
         private GameInput _gameInput;
 
@@ -58,6 +64,9 @@ namespace Core
 
         private void OnPausePerformed(InputAction.CallbackContext context)
         {
+            // [유니] 대화 중일 때는 일시정지 금지! 🙅‍♀️
+            if (IsDialogueActive) return;
+
             // [유니] 일시정지 토글!
             TogglePause();
         }
@@ -113,6 +122,42 @@ namespace Core
                     playerInput.SwitchCurrentActionMap("Player");
                 }
             }
+        }
+        // [유니] 히트 스탑 & 카메라 쉐이크 트리거!
+        public void TriggerHitStop(float duration = 0.05f)
+        {
+            StartCoroutine(HitStopRoutine(duration));
+        }
+
+        private System.Collections.IEnumerator HitStopRoutine(float duration)
+        {
+            // 순간적으로 시간 정지!
+            Time.timeScale = 0f;
+            yield return new WaitForSecondsRealtime(duration); // Realtime은 timeScale 0이어도 흐름!
+            Time.timeScale = 1f;
+        }
+
+        // [유니] 카메라 쉐이크 트리거!
+        public void TriggerCameraShake(float intensity = 1f)
+        {
+            if (impulseSource != null)
+            {
+                // [유니] 인스펙터에서 설정한 기본 진동 패턴(Signal)을 기반으로 강도만큼 쉐킷!
+                impulseSource.GenerateImpulse(intensity);
+            }
+            else
+            {
+                 Debug.LogWarning("[유니] CinemachineImpulseSource가 연결되지 않았어! 컴포넌트를 추가해줘! 📸");
+            }
+            
+            // Debug Log는 이제 필요 없으면 주석 처리!
+            // Debug.Log($"[유니] 카메라 흔들림! 강도: {intensity}");
+        }
+
+        // [유니] 플레이어 사망 후 부활할 때 호출하는 함수!
+        public void TriggerPlayerRespawn()
+        {
+            OnPlayerRespawn?.Invoke();
         }
     }
 }
