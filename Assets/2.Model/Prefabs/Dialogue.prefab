@@ -293,6 +293,11 @@ MonoBehaviour:
   onComplete:
     m_PersistentCalls:
       m_Calls: []
+  audioSource: {fileID: 0}
+  typingSound: {fileID: 0}
+  soundFrequency: 2
+  minPitch: 0.9
+  maxPitch: 1.1
 --- !u!1 &1405719024456049467
 GameObject:
   m_ObjectHideFlags: 0
@@ -767,6 +772,7 @@ MonoBehaviour:
   portraitDatabase:
   - key: Yuni_Smile
     sprite: {fileID: 21300000, guid: 3089406e4badea04f9fdee0418e10084, type: 3}
+    typingSound: {fileID: 0}
 --- !u!1 &8271878873350853356
 GameObject:
   m_ObjectHideFlags: 0
