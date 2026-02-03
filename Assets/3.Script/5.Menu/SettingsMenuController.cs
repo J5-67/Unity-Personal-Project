@@ -105,6 +105,18 @@ namespace UI
         {
             PlayerPrefs.SetFloat("Sensitivity", value);
             UpdatePlaceholder(mouseInput, value);
+
+            // [유니] UI 값(0~100)을 실제 감도(0.5 ~ 2.5)로 변환!
+            // 0 -> 0.5
+            // 100 -> 2.5 (0.5 + 2.0)
+            float realSensitivity = 0.5f + (value / 100f) * 2.0f;
+
+            // [유니] 씬에 있는 PlayerAim 찾아서 즉시 적용!
+            PlayerAim playerAim = FindAnyObjectByType<PlayerAim>();
+            if (playerAim != null)
+            {
+                playerAim.SetSensitivity(realSensitivity);
+            }
         }
 
         private void OnMasterChanged(float value)

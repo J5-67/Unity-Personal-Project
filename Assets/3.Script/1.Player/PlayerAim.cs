@@ -12,6 +12,12 @@ public class PlayerAim : MonoBehaviour
     [Header("🖱️ Controls")]
     [SerializeField] private float cursorSensitivity = 2.0f; // 마우스 감도 (높을수록 빠름!)
 
+    // [유니] 외부에서 감도 조절할 수 있는 함수 추가!
+    public void SetSensitivity(float newSensitivity)
+    {
+        cursorSensitivity = newSensitivity;
+    }
+
     [Header("✨ Visual Settings")]
     [SerializeField] private LineRenderer lineRenderer;
     [SerializeField] private float lineWidth = 0.1f;
@@ -59,6 +65,10 @@ public class PlayerAim : MonoBehaviour
 
         // 시작 시 커서를 화면 중앙에!
         _virtualMousePos = new Vector2(Screen.width / 2f, Screen.height / 2f);
+
+        // [유니] 저장된 감도 불러오기! (기본값 100 -> 최대 속도 2.5)
+        float savedValue = PlayerPrefs.GetFloat("Sensitivity", 100f);
+        cursorSensitivity = 0.5f + (savedValue / 100f) * 2.0f;
     }
 
     private void OnEnable() => _input?.Enable();

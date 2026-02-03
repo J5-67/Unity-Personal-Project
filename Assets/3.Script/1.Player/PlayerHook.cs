@@ -175,6 +175,14 @@ public class PlayerHook : MonoBehaviour
             {
                 ropeVisual.DrawRope(transform.position, bestHitPoint);
                 
+                // [유니] 상호작용 가능한 물체인지 확인! (스위치 등) 🕹️
+                if (bestCol.TryGetComponent(out Interaction.IInteractable interactable))
+                {
+                    interactable.OnInteract(gameObject);
+                    StopHook();
+                    yield break;
+                }
+
                 // [Hit Logic]
                 if (bestCol.TryGetComponent(out BaseEnemy enemy) || (bestCol.transform.parent != null && bestCol.transform.parent.TryGetComponent(out enemy)))
                 {
@@ -252,6 +260,16 @@ public class PlayerHook : MonoBehaviour
                 // 충돌 발생! (현재 위치 업데이트)
                 currentPos = hit.point;
                 ropeVisual.DrawRope(transform.position, currentPos);
+
+                // [유니] 상호작용 가능한 물체인지 확인! (스위치 등) 🕹️
+                // 훅이 박히는 순간 작동하고, 훅은 회수됨.
+                if (hit.collider.TryGetComponent(out Interaction.IInteractable interactable))
+                {
+                    ropeVisual.DrawRope(transform.position, hit.point); // 비주얼 한 번 그려주고
+                    interactable.OnInteract(gameObject); // 딸깍!
+                    StopHook(); // 임무 완수!
+                    yield break;
+                }
 
                 // [유니] 먼저 BaseEnemy 컴포넌트가 있는지 확인해볼게!
                 if (hit.collider.TryGetComponent(out BaseEnemy enemy))

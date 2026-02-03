@@ -42,8 +42,8 @@ namespace Core // GameManager와 같은 네임스페이스 사용 (편의상)
             // [추후 확장] 여기에 페이드 아웃 효과나 사운드 재생을 넣으면 좋아!
             // 예: GameManager.Instance.LoadScene(nextSceneName); 로 변경 가능
             
-            // 지금은 바로 이동!
-            SceneManager.LoadScene(nextSceneName);
+            // [유니] 이제 SceneLoader를 통해 비동기 로딩 씬을 거쳐서 이동! 🚀
+            SceneLoader.LoadScene(nextSceneName);
         }
     }
 }

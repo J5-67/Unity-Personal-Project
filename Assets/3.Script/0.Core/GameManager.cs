@@ -18,6 +18,9 @@ namespace Core
         
         // [유니] 플레이어 부활 시 적들도 되살리기 위한 이벤트!
         public event System.Action OnPlayerRespawn; 
+        
+        // [유니] 대화 스킵(강제 종료)을 위한 이벤트!
+        public event System.Action OnSkipDialogue;
 
         public bool IsDialogueActive { get; private set; } // [유니] 대화 중인지 확인하는 변수!
         public bool IsPaused => isPaused; // [유니] 일시정지 상태 공개!
@@ -64,8 +67,12 @@ namespace Core
 
         private void OnPausePerformed(InputAction.CallbackContext context)
         {
-            // [유니] 대화 중일 때는 일시정지 금지! 🙅‍♀️
-            if (IsDialogueActive) return;
+            // [유니] 대화 중일 때 ESC 누르면 -> 대화 스킵! ⏩
+            if (IsDialogueActive)
+            {
+                OnSkipDialogue?.Invoke();
+                return;
+            }
 
             // [유니] 일시정지 토글!
             TogglePause();
@@ -81,6 +88,10 @@ namespace Core
                 Time.timeScale = 0f;
                 if (pauseUI != null) pauseUI.Show();
                 
+                // [유니] 일시정지 때는 마우스 커서 다시 보여주기! 👀
+                Cursor.visible = true;
+                Cursor.lockState = CursorLockMode.None;
+
                 // [유니] 일시정지 때도 UI 조작(ESC 등)만 가능하게 맵 전환!
                 FindAnyObjectByType<PlayerInput>()?.SwitchCurrentActionMap("UI");
             }
@@ -90,6 +101,10 @@ namespace Core
                 Time.timeScale = 1f;
                 if (pauseUI != null) pauseUI.Hide();
                 
+                // [유니] 게임 돌아가면 마우스 커서 숨기기! 🙈
+                Cursor.visible = false;
+                Cursor.lockState = CursorLockMode.Locked;
+
                 // [유니] 일시정지 해제되면 다시 플레이어 조작 가능!
                 FindAnyObjectByType<PlayerInput>()?.SwitchCurrentActionMap("Player");
             }
@@ -115,12 +130,22 @@ namespace Core
                 {
                     // 대화 중일 때는 'UI' 맵으로 전환 (이동, 훅, 점프 등 Player 맵의 입력 차단)
                     playerInput.SwitchCurrentActionMap("UI");
+                    
+                    // [유니] 대화 중에는 마우스 커서 보이게? (선택 사항. 지금은 일단 놔둠)
+                    // 필요하면 여기서 Cursor.visible = true;
                 }
                 else
                 {
                     // 대화가 끝나면 다시 'Player' 맵으로 복귀!
                     playerInput.SwitchCurrentActionMap("Player");
                 }
+            }
+
+            // [유니] PlayerInput 여부와 상관없이, 대화 끝나면 무조건 커서 숨기고 가두기! 🔒🔥
+            if (!isActive)
+            {
+                Cursor.visible = false;
+                Cursor.lockState = CursorLockMode.Locked;
             }
         }
         // [유니] 히트 스탑 & 카메라 쉐이크 트리거!

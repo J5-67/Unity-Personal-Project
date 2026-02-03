@@ -46,8 +46,8 @@ namespace UI
         // [유니] New Game 버튼 (Start 서브 메뉴 내부)
         public void OnClickNewGame()
         {
-            // [유니] 게임 씬 로드! 비동기도 좋지만 일단 간단하게!
-            SceneManager.LoadScene(gameSceneName);
+            // [유니] 이제 비동기 로딩 씬을 거쳐서 게임 시작! 🚀
+            Core.SceneLoader.LoadScene(gameSceneName);
         }
 
         // [유니] Continue 버튼 (나중 구현)

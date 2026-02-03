@@ -38,6 +38,25 @@ namespace UI
             messageText = typewriter != null ? typewriter.GetComponent<TMP_Text>() : GetComponentInChildren<TMP_Text>();
         }
 
+        private void OnEnable()
+        {
+            if (Core.GameManager.Instance != null)
+                Core.GameManager.Instance.OnSkipDialogue += OnSkipDialogue;
+        }
+
+        private void OnDisable()
+        {
+            if (Core.GameManager.Instance != null)
+                Core.GameManager.Instance.OnSkipDialogue -= OnSkipDialogue;
+        }
+
+        private void OnSkipDialogue()
+        {
+            // [유니] 대화 강제 종료 요정이 왔다! 🧚‍♀️
+            SkipTyping(); // 타자기 소리 끄기
+            Hide();       // UI 닫기 & 게임 상태 복구
+        }
+
         public void Show(string message, SpeakerSide side, string name, Sprite portrait, AudioClip typingSound = null)
         {
             // [유니] 대화 시작 알림! (플레이어 멈추라고)
