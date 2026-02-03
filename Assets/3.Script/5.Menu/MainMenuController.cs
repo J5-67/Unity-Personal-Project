@@ -50,10 +50,20 @@ namespace UI
             Core.SceneLoader.LoadScene(gameSceneName);
         }
 
-        // [유니] Continue 버튼 (나중 구현)
+        // [유니] Continue 버튼 (이어하기)
         public void OnClickContinue()
         {
-            Debug.Log("[유니] 이어하기 기능은 아직 준비 중이야! 🚧");
+            if (Core.Data.DataManager.Instance != null)
+            {
+                string sceneName = Core.Data.DataManager.Instance.CurrentData.currentStageSceneName;
+                
+                Debug.Log($"[MainMenu] 이어하기! (이동할 씬: {sceneName})");
+                Core.SceneLoader.LoadScene(sceneName);
+            }
+            else
+            {
+                 Debug.LogWarning("[MainMenu] DataManager가 없어서 이어할 수 없어! 😱 (빈 오브젝트에 DataManager 컴포넌트 추가해줘!)");
+            }
         }
 
         // [유니] 종료 버튼

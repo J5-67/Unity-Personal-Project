@@ -103,4 +103,33 @@
 *   **ParallaxEffect.cs**: 카메라 이동에 따라 배경이 다른 속도로 움직이는 원근감 효과 구현.
 *   **Infinite Scrolling**: 배경이 끊기지 않고 무한 반복되도록 위치 리셋 로직 추가.
 *   **축 대응 (Axis Handling)**: 카메라 회전(Y=90)에 맞춰 Z축을 가로 이동으로 인식하도록 커스텀.
-*   **스케일 대응**: 오브젝트의 Scale 값을 계산에 포함하여 리셋 타이밍 오차 해결.
+
+---
+
+## 📅 2026-02-03
+### 1. ⏩ UI/UX 개선 (Skip & Cursor) - [완료]
+*   **대화 스킵 (Dialogue Skip)**: 대화 중 `ESC` 키 입력 시 `OnSkipDialogue` 이벤트 발동 -> 대화창 즉시 종료.
+*   **가상 커서 최적화**:
+    *   **커서 숨김/잠금 로직 개선**: 대화가 끝나거나 스킵될 때, `GameManager`에서 확실하게 커서를 숨기고 잠그도록(`Locked`) 수정 (에디터/빌드 동작 차이 보완).
+    *   **입력 예외 처리**: `PlayerInput`이 없을 때도 커서 잠금 코드가 실행되도록 안전장치 추가.
+
+### 2. 🧩 퍼즐 & 상호작용 (Switch & Door) - [완료]
+*   **시스템 구조화**: `IInteractable` 인터페이스를 도입하여 훅, 총알 등 다양한 수단으로 상호작용 가능하도록 설계.
+*   **Door & Switch**:
+    *   **Switch**: 타격 시 문(`Door`)에 신호를 보내 열거나 닫음 (`Toggle` 옵션). 3D `MeshRenderer`와 2D `SpriteRenderer` 모두 지원하도록 확장.
+    *   **Door**: `Coroutine`을 사용해 부드럽게 열리고 닫히는 애니메이션 구현. `OnDrawGizmos`로 에디터에서 이동 경로 미리보기 기능 추가.
+*   **PlayerHook 연동**: 훅이 물체에 닿았을 때 `IInteractable` 컴포넌트가 있으면 즉시 상호작용하고 회수되도록 로직 추가.
+
+### 3. 🩸 함정 시스템 (Trap System) - [완료]
+*   **TrapBase**: 플레이어와 충돌(`OnTriggerEnter`) 시 데미지 및 넉백을 주는 기본 함정 클래스 작성.
+*   **함정 종류**:
+    *   **Spike (가시)**: 고정형 함정.
+    *   **Moving Saw (회전 톱날)**: `Mathf.PingPong`을 활용해 설정된 경로를 왕복 이동하며 회전하는 동적 위협 요소 구현.
+
+### 4. 💾 저장 시스템 (Save System) - [완료]
+*   **JSON 데이터 저장**:
+    *   `SaveSystem`: `Application.dataPath` 기반으로 `SaveData/save.json` 파일 생성 및 읽기/쓰기 구현.
+    *   **자동 저장**: 포탈 이동 시(`Portal.cs`) 현재 도착한 씬 이름(`currentStageSceneName`)을 저장.
+*   **이어하기 (Continue)**:
+    *   메인 메뉴의 `Continue` 버튼을 누르면 마지막으로 저장된 씬을 불러와서 게임 재개.
+    *   씬 이름 기반 저장 방식으로 변경하여 유연한 스테이지/레벨 관리 지원.

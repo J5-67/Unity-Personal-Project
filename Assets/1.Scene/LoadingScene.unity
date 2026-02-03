@@ -305,7 +305,7 @@ MonoBehaviour:
   progressBar: {fileID: 644623645}
   progressText: {fileID: 860685573}
   canvasGroup: {fileID: 860685572}
-  minLoadingTime: 5
+  minLoadingTime: 3
 --- !u!4 &462958369
 Transform:
   m_ObjectHideFlags: 0
