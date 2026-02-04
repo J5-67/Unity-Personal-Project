@@ -54,6 +54,7 @@ public class BaseEnemy : MonoBehaviour
         // [유니] 초기 상태 저장 (부활을 위해!)
         _originalTag = gameObject.tag;
         _originalColor = _renderer.material.color; // material.color로 가져옴
+        _originalMaterial = _renderer.sharedMaterial; // [유니] 원본 매테리얼 미리 저장!
         _startPos = transform.position;
         _startRot = transform.rotation;
     }
@@ -99,16 +100,16 @@ public class BaseEnemy : MonoBehaviour
         // 렌더러/쉐이더 복구
         if (_renderer != null)
         {
-            // 글리치 매테리얼 대신 원래 매테리얼로 복구하는 로직이 필요해.
-            // 하지만 지금은 sharedMaterial 방식이라, 
-            // 가장 쉬운 건 얼리기 전의 그 상태(프로퍼티 블록 제거)로 돌리는 거야.
-            _renderer.SetPropertyBlock(null);
+            _renderer.SetPropertyBlock(null); // 프로퍼티 블록 초기화
             
-            // 만약 매테리얼 자체를 바꿨다면 다시 복구해줘야 해.
-            // (이건 Awake에서 originalMaterial을 저장해두는 식으로 개선 가능)
+            // [유니] 중요! 글리치 매테리얼이 적용된 상태라면 원본으로 복구!
+            if (_originalMaterial != null)
+            {
+                _renderer.sharedMaterial = _originalMaterial;
+            }
         }
 
-        if (_patrol != null) _patrol.SetPatrol(true); // 순찰 다시 시작!
+        if (_patrol != null) _patrol.ResetPatrol(); // [유니] 순찰 경로도 처음부터 다시! -> 동기화 문제 해결!
     }
 
     public void Freeze()
@@ -148,9 +149,7 @@ public class BaseEnemy : MonoBehaviour
 
         if (_renderer != null && _sharedGlitchMaterial != null)
         {
-            // 원래 텍스처 및 매테리얼 백업
-            if (_originalMaterial == null) _originalMaterial = _renderer.sharedMaterial;
-            
+            // [유니] 원본 텍스처 찾기 (Universal RP는 BaseMap, Standard는 MainTex)
             Texture originalTex = null;
             if (_originalMaterial.HasProperty(_mainTexId)) originalTex = _originalMaterial.GetTexture(_mainTexId);
             else if (_originalMaterial.HasProperty(_baseMapId)) originalTex = _originalMaterial.GetTexture(_baseMapId);
@@ -171,9 +170,8 @@ public class BaseEnemy : MonoBehaviour
         if (_patrol != null) _patrol.SetPatrol(false);
         if (_rb != null) _rb.isKinematic = true; 
 
-        // 2. 글리치 루프 (쉐이더 프로퍼티 조절)
-        float timer = 0f;
-        while (timer < freezeDuration)
+        // 2. 글리치 루프 (쉐이더 프로퍼티 조절) - 무한 대기!
+        while (true)
         {
             if (_renderer != null)
             {
@@ -192,9 +190,14 @@ public class BaseEnemy : MonoBehaviour
                 _renderer.SetPropertyBlock(_propBlock); 
             }
  
-            timer += Time.deltaTime;
             yield return null;
         }
+    }
+
+    // [유니] Hack 키(Q)를 눌렀을 때 호출되는 함수!
+    public void OnHack()
+    {
+        if (!IsFrozen || _isDestroyed) return; // 얼어있지 않거나 이미 죽었으면 무시
 
         // 4. 파괴 대신 비활성화 (부활을 위해!)
         _isDestroyed = true;

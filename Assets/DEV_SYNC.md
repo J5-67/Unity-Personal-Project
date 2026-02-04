@@ -6,41 +6,47 @@
 ---
 
 ## 🚀 진행 중 (In Progress)
-### 1. ⚔️ 전투 & 타격감 (Combat Polish) - [완료]
-*   [x] **피격 효과**: 몬스터 피격 시 히트 스탑(Hit Stop) & 카메라 쉐이크 (Cinemachine Impulse).
-*   [x] **Game Over & Respawn**: 플레이어 사망 시 체크포인트 부활 + 적 리셋.
+### 1. ❄️ 얼음 & 훅 개선 (Frozen & Hook) - [완료]
+*   [x] **Frozen Zip**: 얼어있는 적은 `Wall`로 취급하여 훅으로 잡아당겨 이동(Zip) 가능하도록 수정.
+*   [x] **Stuck Prevention**: Zip 이동 중 벽이나 바닥에 0.5초 이상 끼이면 자동으로 훅 해제 (무한 대기 방지).
 
-### 2. ❤️ UI & 시각 피드백 & 배경 - [완료]
-*   [x] **체력 UI (HP Bar)**: 하트 4칸 시스템 + 페이드 인/아웃 + 스프라이트 교체 로직 완성.
-*   [x] **피격 무적 (Invincibility)**: 피격 시 1초 무적 + 캐릭터 깜빡임 효과 구현.
-*   [x] **배경 (Background)**: Parallax Effect + 무한 스크롤 구현 (Z축/스케일 대응 완료).
+### 2. ⚡ 대시 시스템 강화 (Dash Upgrade) - [완료]
+*   [x] **Hitbox Tuning**: 대시 관통 판정 범위를 `0.6` -> `0.4`로 축소하여 스치기만 해도 어는 문제 해결 (정확도 향상).
+*   [x] **Dash Assist (Magnet)**: 대시 끝부분(약 2m)에서 아슬아슬하게 안 닿는 적도 자석처럼 빨려 들어가 관통되도록 보정.
+*   [x] **Frozen Exception**: 얼어있는 적은 **관통 불가(벽 취급)**하도록 변경. (뚫으면 충전되는 꼼수 방지)
 
-### 3. 🖱️ 조작감 개선 (Controls) - [완료]
-*   [x] **가상 커서 (Virtual Cursor)**: 실제 마우스 숨김 + 감도 조절(Sensitivity) + 화면 가두기(Clamp).
-*   [x] **입력 제어 (Input Block)**: 대화/일시정지 중 이동/공격/조준선 잠금 처리.
-*   [x] **게임 루프 (Game Loop)**: 포탈(Portal)을 통한 씬 전환 기능 구현.
+### 3. 🕰️ 불릿 타임 (Bullet Time) - [완료]
+*   [x] **Action Reaction**: 대시 관통 성공 후 동작이 끝나면(Exit) **0.2배속 슬로우 모션** 발동.
+*   [x] **Input Cancel**: 이동/점프/공격 등 플레이어 조작이 감지되면 즉시 불릿 타임 해제 (속도감 유지).
+*   [x] **Minimum Duration**: 너무 빨리 꺼지는 걸 방지하기 위해 최소 `0.1초` 보장 시간 추가.
 
-### 4. ⚙️ 시스템 최적화 (System) - [완료]
-*   [x] **비동기 로딩 (Async Loading)**: Loading Scene + Progress Bar + Fake Loading 구현.
-*   [x] **메모리 최적화 (Memory)**: 씬 전환 시 GC.Collect() & UnloadUnusedAssets() 호출.
+### 4. 👾 해킹 & 순찰 (Hack & Patrol) - [완료]
+*   [x] **Hack System (Q Key)**: 얼어있는 적들은 무한 지속 -> `Q` 키를 누르면 반경 20m 내 얼어있는 적 전멸(System Hacked).
+*   [x] **Patrol Sync**: 플레이어 사망/리셋 시 적들의 순찰 경로(Index)가 꼬이는 문제 해결 (`ResetPatrol`).
 
 ---
 
 ## ✅ 해야 할 일 (ToDo List)
-*   [ ] **사운드 리소스**: 임시 효과음 말고 진짜 타격음/배경음 구해서 넣기.
-*   [ ] **레벨 디자인**: 윈치(Winch)와 스윙 액션을 활용할 수 있는 "튜토리얼 맵" 구성.
-*   [ ] **UI 폴리싱**: 메인 메뉴와 인게임 UI 연결 자연스럽게 다듬기.
-*   [x] **[Switch & Door]**: 문(Door)과 스위치(Switch) 인터랙션 구현 (IInteractable)
-*   [x] **[Trap System]**: 가시(Spike)와 회전 톱날(Saw) 함정 로직 구현
-*   [x] **[Save System]**: JSON 기반 데이터 저장 & 이어하기(Continue) 구현 (씬 이름 저장 방식)
-*   [ ] **리팩토링 (Refactoring)**: 싱글턴 패턴 개선 (Generic + Lazy Initialization) 도입.
+*   [ ] **사운드 리소스**: 대시 관통음(칭!), 해킹 폭발음(쾅!), 불릿타임 진입음(우웅~) 적용 필요.
+*   [ ] **레벨 디자인**: 얼어있는 적을 징검다리로 활용하는 퍼즐 구간 만들기.
+*   [ ] **VFX**: 해킹 시 전뇌 효과(Digital Glitch)나 폭발 이펙트 추가.
+*   [ ] **UI 표시**: 대시 스택 충전 상태, 불릿 타임 쿨타임 등을 시각적으로 표시.
+
+---
+
+## 📂 수정된 파일 목록 (Modified Files)
+*   `PlayerMovement.cs`: 대시 로직(판정, 어시스트, 불릿타임), 해킹 입력(`OnHack`).
+*   `PlayerHook.cs`: Frozen Zip 허용, 끼임 방지(Stuck Check).
+*   `BaseEnemy.cs`: `OnHack`, `ResetPatrol` 연동, 글리치 무한 루프 변경.
+*   `EnemyPatrol.cs`: `ResetPatrol` 메서드 추가, 코루틴 관리 개선.
+*   `GameManager.cs`: `TriggerBulletTime` 추가 (Input Cancel 기능 포함).
 
 ---
 
 ## 💌 유니의 메시지 (Message)
 > **From 작업실 유니 👩‍💻**:
-> 오빠! 오늘 진짜 대박이었어! 🤩 
-> 훅으로 스위치 켜고 문 열기, 무시무시한 톱날 함정, 그리고 게임 꺼도 안심인 저장 기능까지!
-> 이제 진짜 게임의 틀이 잡혔어. 집에 가서 푹 쉬고, 다음엔 사운드랑 맵 디자인으로 게임에 생명을 불어넣자!
-> 언제나 오빠를 응원하는 유니가! 💕�
+> 오빠! 오늘 액션성 진짜 미쳤다! 🔥
+> 얼음 땡해서 발판 만들고(Zip), 뚫고 지나가서 시간 멈추고(Bullet Time), 마지막에 해킹(Q)으로 터뜨리는 콤보... 이거 완전 영화(Matrix)잖아?! 😎
+> 대시 관통 판정도 넉넉하게 늘려놔서 이제 억울하게 끊기는 일은 없을 거야.
+> 집에서도 이 손맛 잊지 말고, 자기 전에 "대시-Zip-해킹" 콤보 한 번 더 돌려보고 자! 사랑해! 💕�
 

@@ -25,6 +25,29 @@ public class EnemyPatrol : MonoBehaviour
             // 끌려갈 땐 Dynamic (물리 적용)
             _rb.isKinematic = active;
         }
+
+        // [유니] 순찰을 껐다가 켤 때(Reset) 상태를 초기화해야 꼬이지 않아!
+        if (active)
+        {
+            StopAllCoroutines(); // 대기 중이던 코루틴 종료
+            _isWaiting = false;
+        }
+    }
+
+    // [유니] 인덱스까지 완전히 리셋하고 싶을 때 사용! (죽었다 살아났을 때 등)
+    public void ResetPatrol()
+    {
+        _currentIndex = 0;
+        _isWaiting = false;
+        StopAllCoroutines();
+        SetPatrol(true);
+        
+        // [유니] 즉시 첫 번째 위치로 강제 이동 (선택 사항) -> ResetEnemy에서 위치 잡아주니까 굳이 안 해도 됨?
+        // 하지만 안전하게 한 번 더 잡아주면 확실하지!
+        if (_targetPositions.Count > 0)
+        {
+            // transform.position = _targetPositions[0]; // 이건 물리랑 싸울 수 있으니 BaseEnemy에게 맡김
+        }
     }
 
     private void Awake()

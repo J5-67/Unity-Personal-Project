@@ -472,16 +472,21 @@ public class PlayerHook : MonoBehaviour
             // -------------------------------------------------------------
             if (_playerMovement.ConsumeJumpInput())
             {
-                bool isEnemy = false;
+                bool allowZip = true;
+                
                 // 앵커의 부모(실제 히트 대상)가 적인지 확인
-                if (targetTransform.parent != null && targetTransform.parent.GetComponent<BaseEnemy>() != null)
+                if (targetTransform.parent != null && targetTransform.parent.TryGetComponent(out BaseEnemy zipCheckEnemy))
                 {
-                    isEnemy = true;
+                    // [유니] 적이지만 얼어있다면 Wall 취급 -> Zip 가능! ❄️
+                    // 얼지 않은 적이라면 스윙 유지 (Zip 불가)
+                    if (!zipCheckEnemy.IsFrozen) 
+                    {
+                        allowZip = false;
+                    }
                 }
 
-                // 적이 아닐 때만 발동 (Enemy 레이어 제외, Wall/Ground 등)
-                // [유니] Frozen Enemy도 BaseEnemy 컴포넌트가 있으니 여기서 걸러짐 (스윙 유지)
-                if (!isEnemy)
+                // 적이 아니거나(벽), 적이라도 얼어있다면 Zip 발동!
+                if (allowZip)
                 {
                     // 스윙 중단하고 돌진으로 전환!
                     yield return StartCoroutine(ZipToTargetRoutine(targetTransform, wallZipSpeed));
@@ -794,6 +799,9 @@ public class PlayerHook : MonoBehaviour
     // ---------------------------------------------------------
     // ⚡ Type C: Zip To Target (적에게 돌진)
     // ---------------------------------------------------------
+    // ---------------------------------------------------------
+    // ⚡ Type C: Zip To Target (적에게 돌진)
+    // ---------------------------------------------------------
     private IEnumerator ZipToTargetRoutine(Transform target, float speedOverride = -1f)
     {
         _playerMovement.AddDashStack(1); // 성공 시 대시 충전
@@ -822,6 +830,10 @@ public class PlayerHook : MonoBehaviour
              }
         }
         
+        // [유니] 끼임 감지용 변수 (Stuck Detection)
+        float stuckTimer = 0f;
+        Vector3 lastPos = transform.position;
+
         while (_isHooking && target != null)
         {
             Vector3 myPos = transform.position;
@@ -850,6 +862,23 @@ public class PlayerHook : MonoBehaviour
                 // 충돌! (여기서 데미지 주거나 밀쳐내기 가능)
                 StopHook();
                 yield break;
+            }
+            
+            // [유니] Stuck Detection: 이동하려는데 못 가고 있다면? (벽에 막힘) 🧱
+            float movedDist = Vector3.Distance(myPos, lastPos);
+            if (movedDist < 0.01f) // 거의 못 움직였다면
+            {
+                stuckTimer += Time.fixedDeltaTime;
+                if (stuckTimer > 0.5f) // 0.5초 이상 비비고 있으면
+                {
+                    StopHook(); // 쿨하게 놓아줌
+                    yield break;
+                }
+            }
+            else
+            {
+                stuckTimer = 0f; // 잘 움직이면 타이머 리셋
+                lastPos = myPos;
             }
             
             // [유니] 로프 그리기용 위치 갱신

@@ -15,6 +15,8 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private int maxDashCharges = 2;     // 최대 스택 (2개)
     [SerializeField] private float dashCooldown = 3f;    // 스택 1개 충전 시간
     [SerializeField] private LayerMask dashPassLayer;    // [NEW] 대시 중 통과할 레이어 (적 등)
+    [SerializeField] private float dashBulletTimeScale = 0.2f; // [NEW] 대시 관통 시 시간 느려짐 비율
+    [SerializeField] private float dashBulletTimeDuration = 0.5f; // [NEW] 대시 관통 시 슬로우 지속 시간 (현실 시간)
 
     [Header("🦘 Jump & Gravity")]
     [SerializeField] private float jumpForce = 18f;
@@ -168,6 +170,7 @@ public class PlayerMovement : MonoBehaviour
     }
 
     // [대시 입력 추가]
+    // [대시 입력 추가]
     public void OnDash(InputAction.CallbackContext context)
     {
         // [유니] 대화 중이면 대시 금지!
@@ -179,6 +182,44 @@ public class PlayerMovement : MonoBehaviour
             if (_currentDashCharges > 0 && !_isDashing)
             {
                 StartCoroutine(DashRoutine());
+            }
+        }
+    }
+
+    // [유니] Hack 입력 추가 (Q Key)
+    public void OnHack(InputAction.CallbackContext context)
+    {
+        // [유니] 대화 중이면 해킹 금지!
+        if (Core.GameManager.Instance != null && Core.GameManager.Instance.IsDialogueActive) return;
+
+        if (context.started)
+        {
+            // [유니] 주변(20m)에 얼어있는 적들을 찾아서 터뜨려! 💥
+            float hackRadius = 20f;
+            Collider[] hits = Physics.OverlapSphere(transform.position, hackRadius);
+            
+            bool anyHacked = false;
+            foreach (var hit in hits)
+            {
+                // 부모나 자신에게 BaseEnemy가 있는지 확인
+                if (hit.TryGetComponent(out BaseEnemy enemy) || (hit.transform.parent != null && hit.transform.parent.TryGetComponent(out enemy)))
+                {
+                    if (enemy.IsFrozen)
+                    {
+                        enemy.OnHack(); // 해킹(파괴) 실행!
+                        anyHacked = true;
+                    }
+                }
+            }
+
+            if (anyHacked)
+            {
+                // TODO: 해킹 성공 사운드나 이펙트 추가! 🔊✨
+                // Debug.Log("System Hacked! Enemies destroyed.");
+                if (Core.GameManager.Instance != null)
+                {
+                    Core.GameManager.Instance.TriggerCameraShake(0.5f); // 콰광!
+                }
             }
         }
     }
@@ -216,6 +257,11 @@ public class PlayerMovement : MonoBehaviour
 
         // 3. 대시 지속 시간 대기 + [유니] 적 얼리기 감지 & 고스트 잔상 생성! ❄️👻
         float elapsedTime = 0f;
+        float maxExtensionTime = 0.5f; // [유니] 적을 뚫고 지나갈 때 추가로 주어지는 최대 시간
+        bool isOverlappingEnemy = false;
+        bool hasRecharged = false; // [유니] 이번 대시에서 스택 충전을 받았는지 체크!
+        bool bulletTimeTriggered = false; // [유니] 불릿 타임 중복 발동 방지
+
         Vector3 lastGhostPos = transform.position; // 마지막 잔상 위치
 
         // 첫 잔상 바로 생성
@@ -225,8 +271,12 @@ public class PlayerMovement : MonoBehaviour
             lastGhostPos = transform.position;
         }
 
-        while (elapsedTime < dashDuration)
+        // [유니] 루프 조건 변경: 기본 시간이 끝났더라도, 아직 적이랑 겹쳐있다면(isOverlappingEnemy) 조금 더(maxExtensionTime) 돌진!
+        while (elapsedTime < dashDuration || (isOverlappingEnemy && elapsedTime < dashDuration + maxExtensionTime))
         {
+            // [유니] 안전 장치: 대시 속도 계속 유지 (감속 방지)
+            _rb.linearVelocity = dashDir * dashSpeed;
+
             // [Ghost Effect] 거리 기반으로 잔상 찍기 (훨씬 균일함!)
             if (ghostTrail != null)
             {
@@ -239,17 +289,61 @@ public class PlayerMovement : MonoBehaviour
             }
 
             // 매 프레임마다 내 몸에 닿은 적이 있는지 검사
-            Collider[] hits = Physics.OverlapCapsule(transform.position + Vector3.up * 0.5f, transform.position + Vector3.up * 1.5f, 0.5f, dashPassLayer);
+            isOverlappingEnemy = false; // [유니] 리셋 후 다시 체크
+            // [유니] 판정 범위 재조정 (0.6 -> 0.4): 확실하게 몸이 겹쳐야 관통 인정! (스치기 방지)
+            Collider[] hits = Physics.OverlapCapsule(transform.position + Vector3.up * 0.5f, transform.position + Vector3.up * 1.5f, 0.4f, dashPassLayer);
             foreach (var hit in hits)
             {
                 if (hit.TryGetComponent(out BaseEnemy enemy) || (hit.transform.parent != null && hit.transform.parent.TryGetComponent(out enemy)))
                 {
+                    // [유니] 이미 얼어있는 적은 벽(Wall) 취급! 관통하면 안 돼! 🛑
+                    if (enemy.IsFrozen) continue; 
+
                     enemy.Freeze(); 
+                    isOverlappingEnemy = true; // [유니] 아직 적이랑 겹쳐있어! 더 뚫어야 해!
+
+                    // [유니] 적을 관통했으면 대시 스택 1개 충전! (이번 대시에서 딱 한 번만!)
+                    if (!hasRecharged)
+                    {
+                        AddDashStack(1);
+                        hasRecharged = true;
+                        // TODO: 칭~ 하는 쿨타임 초기화 사운드 넣으면 찰질 듯! 🎵
+                    }
                 }
             }
             
+            // [유니] Dash Assist (편의성): 만약 겹친 적은 없지만, 바로 앞에 적이 있다면?
+            // "아 이게 안 닿아?" 방지용으로 대시를 조금 더 늘려준다! (자석 효과 🧲)
+            if (!isOverlappingEnemy && !hasRecharged)
+            {
+                // 내 앞 2m 정도 체크
+                if (Physics.CapsuleCast(transform.position + Vector3.up * 0.5f, transform.position + Vector3.up * 1.5f, 0.8f, dashDir, out RaycastHit hit, 2.0f, dashPassLayer))
+                {
+                     if (hit.collider.TryGetComponent(out BaseEnemy enemy) || (hit.transform.parent != null && hit.transform.parent.TryGetComponent(out enemy)))
+                     {
+                         // 얼어있는 적은 제외
+                         if (!enemy.IsFrozen)
+                         {
+                             // 마치 겹친 것처럼 처리해서 대시 루프를 연장시킴!
+                             // -> 그러면 다음 프레임에 실제로 내 몸이 다가가서 충돌하게 됨!
+                             isOverlappingEnemy = true;
+                         }
+                     }
+                }
+            }
+
+            // [유니] 불릿 타임 발동 타이밍 개선 (Delay Zero) -> 취소! (유저 피드백: 너무 빠름)
+            // 다시 루프 밖으로 뺌. 대시 동작이 완전히 끝나야 깔끔함.
+            
             elapsedTime += Time.deltaTime;
             yield return null;
+        }
+
+        // [유니] 대시가 끝났는데 혹시 발동 안 됐으면 막차 태우기! (안전장치)
+        // -> 루프 끝나고 발동하는 것이 정배! (관통 -> 대시 종료 -> 불릿타임)
+        if (hasRecharged && !bulletTimeTriggered && Core.GameManager.Instance != null)
+        {
+             Core.GameManager.Instance.TriggerBulletTime(dashBulletTimeDuration, dashBulletTimeScale, true);
         }
 
         // 4. 관성 유지! (속도 초기화 삭제)

@@ -159,7 +159,62 @@ namespace Core
             // 순간적으로 시간 정지!
             Time.timeScale = 0f;
             yield return new WaitForSecondsRealtime(duration); // Realtime은 timeScale 0이어도 흐름!
+            
+            // [유니] 불릿타임과 충돌 방지: 무조건 1이 아니라, 현재 진행 중인 불릿타임이 없다면 1로 복구
+            if (!_isBulletTimeActive) 
+            {
+                Time.timeScale = 1f;
+            }
+            // 만약 불릿타임 중이라면? 그냥 놔둠 (불릿타임 코루틴이 알아서 복구하거나 유지함)
+        }
+
+        // [유니] 불릿 타임 (슬로우 모션) 트리거! 🕰️
+        private bool _isBulletTimeActive = false; // 불릿타임 중인지 체크
+        
+        public void TriggerBulletTime(float duration, float scale, bool cancelOnInput = false)
+        {
+            StopCoroutine(nameof(BulletTimeRoutine)); // 기존 불릿타임 취소 (갱신)
+            StartCoroutine(BulletTimeRoutine(duration, scale, cancelOnInput));
+        }
+
+        private System.Collections.IEnumerator BulletTimeRoutine(float duration, float scale, bool cancelOnInput)
+        {
+            _isBulletTimeActive = true;
+            Time.timeScale = scale;
+            
+            // [유니] 슬로우 모션 지속 (Realtime 기준)
+            // yield return new WaitForSecondsRealtime(duration); <- 이걸 풀어서 입력 체크 루프로 변경!
+
+            float timer = 0f;
+            // [유니] 최소 보장 시간 (이 시간 동안은 입력이 있어도 안 풀림!)
+            // 대시 직후 키를 누르고 있는 경우가 많아서, 바로 풀리면 효과가 안 보임.
+            float minDuration = 0.1f; 
+
+            while (timer < duration)
+            {
+                // [유니] 입력이 들어오면 불릿 타임 조기 종료!
+                // 단, minDuration 지난 후에만 체크!
+                if (cancelOnInput && _gameInput != null && timer > minDuration)
+                {
+                    // 이동, 점프, 훅, 대시, 해킹 중 하나라도 입력되면? 끝!
+                    bool isMoving = _gameInput.Player.Move.ReadValue<Vector2>().sqrMagnitude > 0.01f;
+                    bool isJumping = _gameInput.Player.Jump.IsPressed();
+                    bool isHooking = _gameInput.Player.Hook.IsPressed();
+                    bool isDashing = _gameInput.Player.Dash.IsPressed();
+                    bool isHacking = _gameInput.Player.Hack.IsPressed();
+
+                    if (isMoving || isJumping || isHooking || isDashing || isHacking)
+                    {
+                        break; // 즉시 루프 탈출해서 시간 복구
+                    }
+                }
+
+                yield return null; // 1프레임 대기
+                timer += Time.unscaledDeltaTime; // timeScale 영향을 받지 않는 실제 시간 경과
+            }
+            
             Time.timeScale = 1f;
+            _isBulletTimeActive = false;
         }
 
         // [유니] 카메라 쉐이크 트리거!
