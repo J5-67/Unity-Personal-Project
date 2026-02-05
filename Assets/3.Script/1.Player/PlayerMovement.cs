@@ -290,8 +290,8 @@ public class PlayerMovement : MonoBehaviour
 
             // 매 프레임마다 내 몸에 닿은 적이 있는지 검사
             isOverlappingEnemy = false; // [유니] 리셋 후 다시 체크
-            // [유니] 판정 범위 재조정 (0.6 -> 0.4): 확실하게 몸이 겹쳐야 관통 인정! (스치기 방지)
-            Collider[] hits = Physics.OverlapCapsule(transform.position + Vector3.up * 0.5f, transform.position + Vector3.up * 1.5f, 0.4f, dashPassLayer);
+            // [유니] 판정 범위 다이어트 (0.4 -> 0.25): 이제 '진짜 닿아야' 관통돼! 📏✨
+            Collider[] hits = Physics.OverlapCapsule(transform.position + Vector3.up * 0.5f, transform.position + Vector3.up * 1.5f, 0.25f, dashPassLayer);
             foreach (var hit in hits)
             {
                 if (hit.TryGetComponent(out BaseEnemy enemy) || (hit.transform.parent != null && hit.transform.parent.TryGetComponent(out enemy)))
@@ -300,33 +300,34 @@ public class PlayerMovement : MonoBehaviour
                     if (enemy.IsFrozen) continue; 
 
                     enemy.Freeze(); 
-                    isOverlappingEnemy = true; // [유니] 아직 적이랑 겹쳐있어! 더 뚫어야 해!
+                    isOverlappingEnemy = true; // [유니] 아직 적이랑 겹쳐있어!
 
-                    // [유니] 적을 관통했으면 대시 스택 1개 충전! (이번 대시에서 딱 한 번만!)
+                    // [유니] 적을 실제로 관통했으면 스택 1개 충전!
                     if (!hasRecharged)
                     {
                         AddDashStack(1);
                         hasRecharged = true;
-                        // TODO: 칭~ 하는 쿨타임 초기화 사운드 넣으면 찰질 듯! 🎵
                     }
                 }
             }
             
-            // [유니] Dash Assist (편의성): 만약 겹친 적은 없지만, 바로 앞에 적이 있다면?
-            // "아 이게 안 닿아?" 방지용으로 대시를 조금 더 늘려준다! (자석 효과 🧲)
+            // [유니] Dash Assist (편의성): 적이 아슬아슬하게 앞에 있을 때 대시 연장! (자석 효과 🧲)
             if (!isOverlappingEnemy && !hasRecharged)
             {
-                // 내 앞 2m 정도 체크
-                if (Physics.CapsuleCast(transform.position + Vector3.up * 0.5f, transform.position + Vector3.up * 1.5f, 0.8f, dashDir, out RaycastHit hit, 2.0f, dashPassLayer))
+                // [유니] 보정 범위 축소 (0.8 -> 0.4), 거리 단축 (2.0 -> 1.5)
+                // 그리고 벽(wallLayer)까지 체크해서 적이 벽 뒤에 있으면 무시! 🧱🛑
+                LayerMask combinedMask = dashPassLayer | wallLayer;
+                if (Physics.CapsuleCast(transform.position + Vector3.up * 0.5f, transform.position + Vector3.up * 1.5f, 0.4f, dashDir, out RaycastHit hit, 1.5f, combinedMask))
                 {
-                     if (hit.collider.TryGetComponent(out BaseEnemy enemy) || (hit.transform.parent != null && hit.transform.parent.TryGetComponent(out enemy)))
+                     // 만약 맞은 게 벽이 아니라 '적(dashPassLayer)'일 때만 연장!
+                     if (((1 << hit.collider.gameObject.layer) & dashPassLayer.value) != 0)
                      {
-                         // 얼어있는 적은 제외
-                         if (!enemy.IsFrozen)
+                         if (hit.collider.TryGetComponent(out BaseEnemy enemy) || (hit.transform.parent != null && hit.transform.parent.TryGetComponent(out enemy)))
                          {
-                             // 마치 겹친 것처럼 처리해서 대시 루프를 연장시킴!
-                             // -> 그러면 다음 프레임에 실제로 내 몸이 다가가서 충돌하게 됨!
-                             isOverlappingEnemy = true;
+                             if (!enemy.IsFrozen)
+                             {
+                                 isOverlappingEnemy = true;
+                             }
                          }
                      }
                 }
