@@ -1,6 +1,6 @@
 using System.Collections;
 using UnityEngine;
-using TMPro; // TMP 기능 사용 필수!
+using TMPro;
 using UnityEngine.Events;
 
 namespace UI
@@ -9,17 +9,17 @@ namespace UI
     public class TypewriterEffect : MonoBehaviour
     {
         [Header("🖨️ Settings")]
-        [SerializeField] private float typingSpeed = 0.05f; // 글자당 출력 시간
+        [SerializeField] private float typingSpeed = 0.05f;
         [SerializeField] private bool playOnAwake = false;
 
         [Header("🔊 Events")]
-        public UnityEvent onType;     // 글자가 찍힐 때 (타자 소리용)
-        public UnityEvent onComplete; // 출력이 끝났을 때
+        public UnityEvent onType;
+        public UnityEvent onComplete;
 
         [Header("🔊 Audio Settings")]
         [SerializeField] private AudioSource audioSource;
         [SerializeField] private AudioClip typingSound;
-        [Tooltip("몇 글자마다 소리를 낼지 설정 (1 = 매 글자마다)")]
+        [Tooltip("Frequency of sound (1 = every chat)")]
         [Range(1, 10)] [SerializeField] private int soundFrequency = 2; 
         [Range(0.5f, 2f)] [SerializeField] private float minPitch = 0.9f;
         [Range(0.5f, 2f)] [SerializeField] private float maxPitch = 1.1f;
@@ -27,14 +27,13 @@ namespace UI
         private TMP_Text _tmp;
         private Coroutine _typeRoutine;
         private bool _isSkipping = false;
-        private WaitForSeconds _cachedWait; // [유니] GC(가비지 컬렉션) 방지를 위해 대기 시간 캐싱!
-        private AudioClip _defaultTypingSound; // [유니] 기본 소리 저장용
+        private WaitForSeconds _cachedWait;
+        private AudioClip _defaultTypingSound;
 
-        public bool IsTyping => _typeRoutine != null; // 현재 타이핑 중인지 확인
+        public bool IsTyping => _typeRoutine != null;
 
         private void Awake()
         {
-            // [유니] GetComponent는 무거운 연산이니까 Awake에서 한 번만!
             _tmp = GetComponent<TMP_Text>();
 
             if (audioSource == null)
@@ -42,16 +41,14 @@ namespace UI
                 TryGetComponent(out audioSource);
             }
             
-            // [유니] 처음에 설정된 소리를 기본값으로 저장!
             if (typingSound != null)
             {
                 _defaultTypingSound = typingSound;
             }
 
-            // [유니] 안전장치! 텍스트 컴포넌트가 없으면 알려주기
             if (_tmp == null)
             {
-                Debug.LogError($"[유니] 🚨 {gameObject.name}에 'TextMeshPro - Text (UI)' 컴포넌트가 없어! 타자 효과를 못 낸대! 😭");
+                Debug.LogError($"Error: No TMP_Text on {gameObject.name}");
             }
         }
 
@@ -63,7 +60,6 @@ namespace UI
             }
         }
 
-        // [유니] 외부에서 타자 소리를 바꿀 수 있게! (null이면 기본 소리로 복구)
         public void SetTypingSound(AudioClip sound)
         {
             if (sound != null)
@@ -72,11 +68,10 @@ namespace UI
             }
             else
             {
-                typingSound = _defaultTypingSound; // 원래 소리로 복귀
+                typingSound = _defaultTypingSound;
             }
         }
 
-        // 외부에서 텍스트를 넣고 타이핑 시작!
         public void Run(string textToType, float speedOverride = -1f)
         {
 
@@ -85,7 +80,7 @@ namespace UI
                 _tmp = GetComponent<TMP_Text>();
                 if (_tmp == null)
                 {
-                    Debug.LogError($"[유니] 🚨 {gameObject.name}에 'TextMeshPro - Text (UI)'가 없어! 텍스트를 출력할 수 없어 😭");
+                    Debug.LogError($"Error: No TMP_Text on {gameObject.name}");
                     return;
                 }
             }
@@ -139,8 +134,6 @@ namespace UI
 
                 _tmp.maxVisibleCharacters = i + 1;
 
-                // [유니] 공백이 아닐 때만 타자 소리 & 이벤트 발생!
-                // IsVisibleCharacter가 가끔 이상할 때가 있어서, 공백 체크도 같이 함!
                 if (IsVisibleCharacter(i) || !char.IsWhiteSpace(textInfo.characterInfo[i].character))
                 {
                     if (i % soundFrequency == 0)
@@ -170,26 +163,22 @@ namespace UI
         {
             if (audioSource == null) 
             {
-                Debug.LogError("[유니] 🚨 AudioSource가 null이야!");
                 return;
             }
             if (typingSound == null) 
             {
-                Debug.LogError("[유니] 🚨 AudioClip이 null이야!");
                 return;
             }
 
-            // [유니] 피치를 랜덤하게 바꿔서 기계적인 느낌을 줄이고 자연스럽게! 🎵
             audioSource.pitch = Random.Range(minPitch, maxPitch);
             audioSource.PlayOneShot(typingSound);
         }
 
         private void OnEnable()
         {
-             // [유니] 오디오 리스너 체크 (오빠가 혹시 실수했을까봐!)
              if (FindObjectOfType<AudioListener>() == null)
              {
-                 Debug.LogError("[유니] 🚨 씬에 'Audio Listener'가 없어! 소리를 들을 귀가 없는 상태야! Main Camera에 컴포넌트를 확인해줘!");
+                 Debug.LogError("Error: No AudioListener in scene.");
              }
         }
     }

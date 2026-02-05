@@ -1,6 +1,6 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
-using DG.Tweening; // [유니] 도트윈(DOTween) 필수! ✨
+using DG.Tweening;
 
 namespace UI
 {
@@ -19,7 +19,6 @@ namespace UI
         {
             _originalScale = transform.localScale;
             
-            // [유니] 오디오 소스 찾거나 만들기
             _audioSource = GetComponent<AudioSource>();
             if (_audioSource == null)
             {
@@ -30,9 +29,8 @@ namespace UI
 
         public void OnPointerEnter(PointerEventData eventData)
         {
-            // [유니] 마우스 올리면 커지게! 🎈
             transform.DOScale(_originalScale * hoverScale, duration)
-                .SetEase(Ease.OutBack); // 띠요옹~ 하는 느낌
+                .SetEase(Ease.OutBack);
 
             if (hoverSound != null)
             {
@@ -42,14 +40,12 @@ namespace UI
 
         public void OnPointerExit(PointerEventData eventData)
         {
-            // [유니] 떼면 원래대로!
             transform.DOScale(_originalScale, duration)
                 .SetEase(Ease.OutQuad);
         }
 
-        public void OnPointerClick(PointerEventData eventData) // [유니] 이름 실수! Handler -> Click
+        public void OnPointerClick(PointerEventData eventData)
         {
-            // [유니] 클릭할 때 살짝 눌리는 느낌!
             transform.DOScale(_originalScale * 0.9f, 0.1f)
                 .SetEase(Ease.OutQuad)
                 .OnComplete(() => transform.DOScale(_originalScale, 0.1f));

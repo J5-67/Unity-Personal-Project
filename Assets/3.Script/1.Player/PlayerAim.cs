@@ -10,9 +10,8 @@ public class PlayerAim : MonoBehaviour
     [SerializeField] private float aimRadius = 0.5f;
 
     [Header("🖱️ Controls")]
-    [SerializeField] private float cursorSensitivity = 2.0f; // 마우스 감도 (높을수록 빠름!)
+    [SerializeField] private float cursorSensitivity = 2.0f;
 
-    // [유니] 외부에서 감도 조절할 수 있는 함수 추가!
     public void SetSensitivity(float newSensitivity)
     {
         cursorSensitivity = newSensitivity;
@@ -29,18 +28,18 @@ public class PlayerAim : MonoBehaviour
     [SerializeField] private float heavyArrowTiling = 0.5f; 
 
     [Header("🎨 Colors")]
-    [SerializeField] private Color defaultColor = new Color(0f, 1f, 0.82f); // 민트색
-    [SerializeField] private Color lightEnemyColor = Color.green;           // 가벼운 적
-    [SerializeField] private Color heavyEnemyColor = Color.red;             // 무거운 적
+    [SerializeField] private Color defaultColor = new Color(0f, 1f, 0.82f);
+    [SerializeField] private Color lightEnemyColor = Color.green;
+    [SerializeField] private Color heavyEnemyColor = Color.red;
 
     private Camera _mainCamera;
     private GameInput _input; 
-    private Vector2 _virtualMousePos; // 가상 커서 위치 (화면 픽셀 단위)
+    private Vector2 _virtualMousePos;
     private Vector3 _aimWorldPosition;
 
-    private Texture2D _arrowTexture;        // >
-    private Texture2D _arrowTextureReverse; // <
-    private Texture2D _dashTexture;         // -
+    private Texture2D _arrowTexture;
+    private Texture2D _arrowTextureReverse;
+    private Texture2D _dashTexture;
     
     private Material _lineMaterial;
     private float _currentTextureOffset = 0f;
@@ -50,7 +49,6 @@ public class PlayerAim : MonoBehaviour
         _mainCamera = Camera.main;
         _input = new GameInput(); 
         _input.Enable();         
-        // [유니] OnAim 이벤트 구독 제거! (Update에서 직접 처리함)
 
         InitializeLineRenderer();
     }
@@ -59,14 +57,11 @@ public class PlayerAim : MonoBehaviour
     {
         if (aimLayerMask.value == 0) aimLayerMask = -1;
 
-        // [유니] 실제 마우스 숨기고 가두기! (가상 커서 쓸 거니까)
         Cursor.visible = false;
         Cursor.lockState = CursorLockMode.Locked; 
 
-        // 시작 시 커서를 화면 중앙에!
         _virtualMousePos = new Vector2(Screen.width / 2f, Screen.height / 2f);
 
-        // [유니] 저장된 감도 불러오기! (기본값 100 -> 최대 속도 2.5)
         float savedValue = PlayerPrefs.GetFloat("Sensitivity", 100f);
         cursorSensitivity = 0.5f + (savedValue / 100f) * 2.0f;
     }
@@ -113,9 +108,6 @@ public class PlayerAim : MonoBehaviour
         lineRenderer.endWidth = lineWidth;
         lineRenderer.positionCount = 2;
         
-        // [유니] Stretch 모드로 변경! 
-        // 우리가 코드로 (거리 * tiling)을 계산해서 넣어줄 거니까, Unity는 0~1로 펴주기만 하면 됨!
-        // Tile 모드면 Unity가 멋대로 반복해서 우리의 계산이랑 충돌남.
         lineRenderer.textureMode = LineTextureMode.Stretch; 
         lineRenderer.enabled = true;
     }
@@ -188,20 +180,16 @@ public class PlayerAim : MonoBehaviour
 
     private void Update()
     {
-        // [유니] 대화 중이거나 일시정지 상태면 조준선 업데이트 금지! (멈춰!)
         if (Core.GameManager.Instance != null && (Core.GameManager.Instance.IsDialogueActive || Core.GameManager.Instance.IsPaused)) return;
 
-        // [유니] 부드러운 움직임을 위해 Update에서 직접 처리! (Polling)
         Vector2 delta = Vector2.zero;
         if (Mouse.current != null)
         {
             delta = Mouse.current.delta.ReadValue();
         }
 
-        // 감도 적용!
         _virtualMousePos += delta * cursorSensitivity;
 
-        // 화면 밖으로 못 나가게 가두기! (Clamp)
         _virtualMousePos.x = Mathf.Clamp(_virtualMousePos.x, 0f, Screen.width);
         _virtualMousePos.y = Mathf.Clamp(_virtualMousePos.y, 0f, Screen.height);
 
@@ -218,14 +206,13 @@ public class PlayerAim : MonoBehaviour
     {
         Plane gameplayPlane = new Plane(Vector3.right, transform.position);
         
-        // [유니] 이제 _virtualMousePos를 사용해서 레이를 쏨!
         Ray ray = _mainCamera.ScreenPointToRay(_virtualMousePos);
 
         if (gameplayPlane.Raycast(ray, out float enterDistance))
         {
             _aimWorldPosition = ray.GetPoint(enterDistance);
             _aimWorldPosition.x = transform.position.x; 
-
+            
             if (crosshairTransform != null)
             {
                 crosshairTransform.position = _aimWorldPosition;
@@ -332,8 +319,6 @@ public class PlayerAim : MonoBehaviour
 
             float distance = Vector3.Distance(startPos, endPos);
             
-            // [유니] 이제 Stretch 모드이므로, 우리가 직접 계산한 (거리 * tiling)이 곧 전체 반복 횟수가 됨!
-            // 거리가 멀면 -> 반복 횟수가 많아짐 -> 간격 일정함!
             _lineMaterial.mainTextureScale = new Vector2(distance * currentTiling, 1f);
 
             _currentTextureOffset += currentFlowSpeed * Time.deltaTime;

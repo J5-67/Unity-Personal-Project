@@ -6,8 +6,8 @@ namespace Interaction
     public class Door : MonoBehaviour
     {
         [Header("Settings")]
-        [SerializeField] private Vector3 moveOffset = new Vector3(0, 3, 0); // 열릴 때 이동할 방향과 거리
-        [SerializeField] private float duration = 1.0f; // 열리는 데 걸리는 시간
+        [SerializeField] private Vector3 moveOffset = new Vector3(0, 3, 0);
+        [SerializeField] private float duration = 1.0f;
         [SerializeField] private bool isOpen = false;
 
         private Vector3 _closedPosition;
@@ -19,7 +19,6 @@ namespace Interaction
             _closedPosition = transform.position;
             _openPosition = _closedPosition + moveOffset;
 
-            // 시작부터 열려있다면 위치 이동
             if (isOpen) transform.position = _openPosition;
         }
 
@@ -59,7 +58,6 @@ namespace Interaction
                 elapsed += Time.deltaTime;
                 float t = elapsed / duration;
                 
-                // [유니] SmoothStep을 쓰면 처음과 끝이 부드러워져! (Ease-In-Out)
                 t = t * t * (3f - 2f * t); 
 
                 transform.position = Vector3.Lerp(startPos, targetPos, t);
@@ -70,20 +68,15 @@ namespace Interaction
             _currentCoroutine = null;
         }
 
-        // [유니] 에디터에서 이동 경로 미리보기! 👀
         private void OnDrawGizmosSelected()
         {
             Gizmos.color = Color.green;
 
-            // 현재 위치 (닫힌 상태)
             Vector3 start = transform.position;
-            // 목표 위치 (열린 상태)
             Vector3 end = start + moveOffset;
 
-            // 1. 이동 경로 선 그리기
             Gizmos.DrawLine(start, end);
 
-            // 2. 목표 지점에 박스(문 크기) 그리기
             Vector3 size = Vector3.one;
             if (TryGetComponent(out Collider col))
             {

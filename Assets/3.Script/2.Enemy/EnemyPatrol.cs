@@ -6,14 +6,14 @@ using UnityEngine;
 public class EnemyPatrol : MonoBehaviour
 {
     [Header("📍 Patrol Settings")]
-    [SerializeField] private List<Transform> waypoints; // 순찰할 지점들 (빈 오브젝트 사용)
-    [SerializeField] private float moveSpeed = 3f;      // 이동 속도
-    [SerializeField] private float waitTime = 1f;       // 각 지점 대기 시간
+    [SerializeField] private List<Transform> waypoints;
+    [SerializeField] private float moveSpeed = 3f;
+    [SerializeField] private float waitTime = 1f;
 
     private Rigidbody _rb;
     private int _currentIndex = 0;
     private bool _isWaiting = false;
-    private bool _isPatrolling = true; // [유니] 순찰 활성화 상태
+    private bool _isPatrolling = true;
     private List<Vector3> _targetPositions; 
 
     public void SetPatrol(bool active)
@@ -21,20 +21,16 @@ public class EnemyPatrol : MonoBehaviour
         _isPatrolling = active;
         if (_rb != null)
         {
-            // 순찰 중일 땐 Kinematic (플랫폼 역할)
-            // 끌려갈 땐 Dynamic (물리 적용)
             _rb.isKinematic = active;
         }
 
-        // [유니] 순찰을 껐다가 켤 때(Reset) 상태를 초기화해야 꼬이지 않아!
         if (active)
         {
-            StopAllCoroutines(); // 대기 중이던 코루틴 종료
+            StopAllCoroutines();
             _isWaiting = false;
         }
     }
 
-    // [유니] 인덱스까지 완전히 리셋하고 싶을 때 사용! (죽었다 살아났을 때 등)
     public void ResetPatrol()
     {
         _currentIndex = 0;
@@ -42,24 +38,16 @@ public class EnemyPatrol : MonoBehaviour
         StopAllCoroutines();
         SetPatrol(true);
         
-        // [유니] 즉시 첫 번째 위치로 강제 이동 (선택 사항) -> ResetEnemy에서 위치 잡아주니까 굳이 안 해도 됨?
-        // 하지만 안전하게 한 번 더 잡아주면 확실하지!
         if (_targetPositions.Count > 0)
         {
-            // transform.position = _targetPositions[0]; // 이건 물리랑 싸울 수 있으니 BaseEnemy에게 맡김
         }
     }
 
     private void Awake()
     {
         _rb = GetComponent<Rigidbody>();
-        // [유니] 순찰 중에는 정해진 궤도를 따라가야 하니까 Kinematic 권장!
-        // Heavy Enemy의 경우 움직이는 플랫폼 역할을 하려면 Kinematic이어야 흔들리지 않음.
         _rb.isKinematic = true; 
 
-        // [유니] 중요! 웨이포인트를 적의 자식으로 넣었을 때, 
-        // 적이 움직이면 웨이포인트도 같이 움직이는 문제 해결!
-        // 게임 시작 시점의 '월드 좌표'만 딱 기억해두고, 그 좌표로 이동하게 함.
         _targetPositions = new List<Vector3>();
         if (waypoints != null)
         {
@@ -72,10 +60,8 @@ public class EnemyPatrol : MonoBehaviour
 
     private void FixedUpdate()
     {
-        // 웨이포인트가 없으면 작동 안 함
         if (waypoints == null || waypoints.Count == 0) return;
         
-        // 대시 중이거나 순찰이 꺼져있으면 중단
         if (_isWaiting || !_isPatrolling) return;
 
         MoveToTarget();
@@ -83,31 +69,23 @@ public class EnemyPatrol : MonoBehaviour
 
     private void MoveToTarget()
     {
-        // 타겟 좌표가 없으면 중단
         if (_targetPositions.Count == 0) return;
 
         Vector3 currentPos = transform.position;
-        // [유니] Transform 대신 기억해둔 좌표 사용!
         Vector3 targetPos = _targetPositions[_currentIndex];
 
-        // 1. 방향 및 거리 계산
         Vector3 dir = (targetPos - currentPos).normalized;
-        float distSqr = (currentPos - targetPos).sqrMagnitude; // [유니] 제곱 거리 사용
+        float distSqr = (currentPos - targetPos).sqrMagnitude;
         
-        // 2. 이동 (MovePosition 사용)
-        // 이번 프레임에 이동할 거리
         float moveStep = moveSpeed * Time.fixedDeltaTime;
 
-        // dist <= moveStep  ==  distSqr <= moveStep * moveStep
         if (distSqr <= moveStep * moveStep)
         {
-            // 도착! (정확히 위치 맞춤)
             _rb.MovePosition(targetPos);
             StartCoroutine(WaitRoutine());
         }
         else
         {
-            // 이동 중
             _rb.MovePosition(currentPos + dir * moveStep);
         }
     }
@@ -117,17 +95,14 @@ public class EnemyPatrol : MonoBehaviour
         _isWaiting = true;
         yield return new WaitForSeconds(waitTime);
 
-        // 다음 웨이포인트 선택 (Loop)
         _currentIndex = (_currentIndex + 1) % _targetPositions.Count;
         _isWaiting = false;
     }
 
-    // [유니] 유니티 에디터에서 웨이포인트 경로 보여주기 (디버깅용) ✨
     private void OnDrawGizmos()
     {
         Gizmos.color = Color.yellow;
 
-        // [게임 중] 기억해둔 고정 좌표 표시
         if (Application.isPlaying && _targetPositions != null)
         {
             for (int i = 0; i < _targetPositions.Count; i++)
@@ -139,7 +114,6 @@ public class EnemyPatrol : MonoBehaviour
                 Gizmos.DrawSphere(p1, 0.2f);
             }
         }
-        // [에디터] 기존 Transform 연결 표시
         else if (waypoints != null && waypoints.Count >= 2)
         {
             for (int i = 0; i < waypoints.Count; i++)

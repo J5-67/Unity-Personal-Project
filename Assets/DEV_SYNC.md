@@ -24,6 +24,9 @@
 *   [x] **Hack System (Q Key)**: 얼어있는 적들은 무한 지속 -> `Q` 키를 누르면 반경 20m 내 얼어있는 적 전멸(System Hacked).
 *   [x] **Patrol Sync**: 플레이어 사망/리셋 시 적들의 순찰 경로(Index)가 꼬이는 문제 해결 (`ResetPatrol`).
 
+### 5. 🧹 코드 청소 (Code Cleanup) - [완료]
+*   [x] **주석 제거 완료**: 오빠의 요청대로 Assets/3.Script 폴더 내의 **모든 스크립트(총 39개)**에서 주석을 깔끔하게 제거했어! (Core, Player, Enemy, Platform, Dialogue, Menu, Interaction, Trap, ETC 전구역 청소 완료! ✨)
+
 ---
 
 ## ✅ 해야 할 일 (ToDo List)
