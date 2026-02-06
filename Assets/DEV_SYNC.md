@@ -8,7 +8,9 @@
 ## 🚀 진행 중 (In Progress)
 ### 1. ❄️ 얼음 & 훅 개선 (Frozen & Hook) - [완료]
 *   [x] **Frozen Zip**: 얼어있는 적은 `Wall`로 취급하여 훅으로 잡아당겨 이동(Zip) 가능하도록 수정.
+*   [x] **Frozen Zip**: 얼어있는 적은 `Wall`로 취급하여 훅으로 잡아당겨 이동(Zip) 가능하도록 수정.
 *   [x] **Stuck Prevention**: Zip 이동 중 벽이나 바닥에 0.5초 이상 끼이면 자동으로 훅 해제 (무한 대기 방지).
+*   [x] **Rope Break**: 훅 줄이 지형지물(Floor/Wall)에 가려지면 즉시 끊어지도록 물리 체크 추가 (뚫음 방지).
 
 ### 2. ⚡ 대시 시스템 강화 (Dash Upgrade) - [완료]
 *   [x] **Hitbox Tuning**: 대시 관통 판정을 `0.25`, 보정 범위를 `0.4`로 더 정밀하게 축소.
@@ -23,6 +25,7 @@
 ### 4. 👾 해킹 & 순찰 (Hack & Patrol) - [완료]
 *   [x] **Hack System (Q Key)**: 얼어있는 적들은 무한 지속 -> `Q` 키를 누르면 반경 20m 내 얼어있는 적 전멸(System Hacked).
 *   [x] **Patrol Sync**: 플레이어 사망/리셋 시 적들의 순찰 경로(Index)가 꼬이는 문제 해결 (`ResetPatrol`).
+*   [x] **Hack VFX**: 해킹 시 전뇌 폭발 파티클(Particle)과 화면 흔들림(Shake) 연동 완료 (`HackVFXManager`).
 
 ### 5. 🧹 코드 청소 (Code Cleanup) - [완료]
 *   [x] **주석 제거 완료**: 오빠의 요청대로 Assets/3.Script 폴더 내의 **모든 스크립트(총 39개)**에서 주석을 깔끔하게 제거했어! (Core, Player, Enemy, Platform, Dialogue, Menu, Interaction, Trap, ETC 전구역 청소 완료! ✨)
@@ -32,7 +35,7 @@
 ## ✅ 해야 할 일 (ToDo List)
 *   [ ] **사운드 리소스**: 대시 관통음(칭!), 해킹 폭발음(쾅!), 불릿타임 진입음(우웅~) 적용 필요.
 *   [ ] **레벨 디자인**: 얼어있는 적을 징검다리로 활용하는 퍼즐 구간 만들기.
-*   [ ] **VFX**: 해킹 시 전뇌 효과(Digital Glitch)나 폭발 이펙트 추가.
+*   [ ] **VFX Polishing**: 오빠가 에디터에서 `PF_HackExplosion` 파티클 쉐이더(색감, 노이즈) 조금 더 다듬기.
 *   [ ] **UI 표시**: 대시 스택 충전 상태, 불릿 타임 쿨타임 등을 시각적으로 표시.
 
 ---

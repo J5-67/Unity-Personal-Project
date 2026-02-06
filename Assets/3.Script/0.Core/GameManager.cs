@@ -86,7 +86,15 @@ namespace Core
             }
             else
             {
-                Time.timeScale = 1f;
+                if (_isBulletTimeActive)
+                {
+                    Time.timeScale = _currentBulletTimeScale;
+                }
+                else
+                {
+                    Time.timeScale = 1f;
+                }
+                
                 if (pauseUI != null) pauseUI.Hide();
                 
                 Cursor.visible = false;
@@ -142,7 +150,8 @@ namespace Core
         }
 
         private bool _isBulletTimeActive = false; 
-        
+        private float _currentBulletTimeScale = 1f;
+
         public void TriggerBulletTime(float duration, float scale, bool cancelOnInput = false)
         {
             StopCoroutine(nameof(BulletTimeRoutine)); 
@@ -152,6 +161,7 @@ namespace Core
         private System.Collections.IEnumerator BulletTimeRoutine(float duration, float scale, bool cancelOnInput)
         {
             _isBulletTimeActive = true;
+            _currentBulletTimeScale = scale;
             Time.timeScale = scale;
             
             float timer = 0f;

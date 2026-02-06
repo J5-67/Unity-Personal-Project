@@ -102,7 +102,7 @@ public class GhostTrail : MonoBehaviour
 
                 MeshFilter ghostFilter = ghostObj.GetComponent<MeshFilter>();
                 
-                ghostFilter.mesh = filter.sharedMesh;
+                ghostFilter.mesh = filter.sharedMesh; // 여기가 복구됨!
                 
                 ghostObj.GetComponent<GhostEffect>().StartFade();
             }

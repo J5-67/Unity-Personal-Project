@@ -59,13 +59,19 @@ namespace UI
         private void OnEnable()
         {
             _inputAction.UI.Enable(); 
-            _inputAction.UI.NextDialogue.performed += OnNextDialogue; 
+            _inputAction.UI.NextDialogue.performed += OnNextDialogue;
+            
+            if (Core.GameManager.Instance != null)
+                Core.GameManager.Instance.OnSkipDialogue += EndDialogue;
         }
 
         private void OnDisable()
         {
             _inputAction.UI.Disable();
             _inputAction.UI.NextDialogue.performed -= OnNextDialogue;
+            
+            if (Core.GameManager.Instance != null)
+                Core.GameManager.Instance.OnSkipDialogue -= EndDialogue;
         }
 
         private void Start()

@@ -5,7 +5,7 @@ public class PlayerAim : MonoBehaviour
 {
     [Header("🎯 Aim Settings")]
     [SerializeField] private Transform crosshairTransform;
-    [SerializeField] private float maxHookDistance = 15f;
+    [SerializeField] private float maxHookDistance = 15f; 
     [SerializeField] private LayerMask aimLayerMask; 
     [SerializeField] private float aimRadius = 0.5f;
 
@@ -44,11 +44,15 @@ public class PlayerAim : MonoBehaviour
     private Material _lineMaterial;
     private float _currentTextureOffset = 0f;
 
+    private PlayerHook _playerHook;
+
     private void Awake()
     {
         _mainCamera = Camera.main;
         _input = new GameInput(); 
         _input.Enable();         
+
+        _playerHook = GetComponent<PlayerHook>();
 
         InitializeLineRenderer();
     }
@@ -223,9 +227,12 @@ public class PlayerAim : MonoBehaviour
 
     private void DrawAimLine()
     {
+        float currentMaxDistance = maxHookDistance;
+        if (_playerHook != null) currentMaxDistance = _playerHook.MaxDistance;
+
         Vector3 startPos = transform.position;
         Vector3 direction = (_aimWorldPosition - startPos).normalized;
-        Vector3 endPos = startPos + (direction * maxHookDistance);
+        Vector3 endPos = startPos + (direction * currentMaxDistance);
         
         Color targetColor = defaultColor; 
         Texture2D targetTexture = _dashTexture; 
@@ -233,10 +240,10 @@ public class PlayerAim : MonoBehaviour
         float currentTiling = dashTiling; 
 
         RaycastHit obstructionHit;
-        bool hasObstruction = Physics.Raycast(startPos, direction, out obstructionHit, maxHookDistance, aimLayerMask);
+        bool hasObstruction = Physics.Raycast(startPos, direction, out obstructionHit, currentMaxDistance, aimLayerMask);
         if (hasObstruction) endPos = obstructionHit.point;
 
-        RaycastHit[] hits = Physics.SphereCastAll(startPos, aimRadius, direction, maxHookDistance, aimLayerMask);
+        RaycastHit[] hits = Physics.SphereCastAll(startPos, aimRadius, direction, currentMaxDistance, aimLayerMask);
         Collider bestTarget = null;
         float maxScore = -100.0f;
 

@@ -2718,6 +2718,53 @@ Transform:
   m_Children: []
   m_Father: {fileID: 318263189}
   m_LocalEulerAnglesHint: {x: 90, y: 0, z: 0}
+--- !u!1 &791008417
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 791008419}
+  - component: {fileID: 791008418}
+  m_Layer: 0
+  m_Name: ///VFX
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &791008418
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 791008417}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 822e12eb76c5df642b4782693f5b08c5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::VFX.HackVFXManager
+  hackExplosionPrefab: {fileID: 2973053798361328068, guid: feb68f2ab294e4f409daf67426d9e22b, type: 3}
+  poolSize: 10
+  shakeIntensity: 2
+--- !u!4 &791008419
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 791008417}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -86.87548, y: 0, z: -11.6677}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &795754927
 GameObject:
   m_ObjectHideFlags: 0
@@ -3564,7 +3611,7 @@ MonoBehaviour:
     m_Bits: 1
   m_VolumeTrigger: {fileID: 0}
   m_VolumeFrameworkUpdateModeOption: 2
-  m_RenderPostProcessing: 0
+  m_RenderPostProcessing: 1
   m_Antialiasing: 0
   m_AntialiasingQuality: 2
   m_StopNaN: 0
@@ -4143,6 +4190,55 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 318263189}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1114967553
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1114967555}
+  - component: {fileID: 1114967554}
+  m_Layer: 0
+  m_Name: Global Volume
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1114967554
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1114967553}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 172515602e62fb746b5d573b38a5fe58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.RenderPipelines.Core.Runtime::UnityEngine.Rendering.Volume
+  m_IsGlobal: 1
+  priority: 0
+  blendDistance: 0
+  weight: 1
+  sharedProfile: {fileID: 11400000, guid: 999f29cf3cfae0949ad128543eb53274, type: 2}
+--- !u!4 &1114967555
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1114967553}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -19.30183, y: 5.1570044, z: -3.4808512}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1121458885
 GameObject:
@@ -4967,6 +5063,8 @@ GameObject:
   - component: {fileID: 1234476426}
   - component: {fileID: 1234476427}
   - component: {fileID: 1234476428}
+  - component: {fileID: 1234476429}
+  - component: {fileID: 1234476430}
   m_Layer: 0
   m_Name: ///GameManager
   m_TagString: Untagged
@@ -5057,6 +5155,32 @@ MonoBehaviour:
     DissipationDistance: 9999
     PropagationSpeed: 343
   DefaultVelocity: {x: 1, y: 1, z: 0}
+--- !u!114 &1234476429
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1234476425}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 120a20952b3fdc04997001986abafdd8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Core.PostProcessManager
+  globalVolume: {fileID: 1114967554}
+--- !u!114 &1234476430
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1234476425}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5a75cbc17c8616c4da03f62cec06a6c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Core.CameraEffectManager
+  virtualCamera: {fileID: 0}
 --- !u!1 &1343960567
 GameObject:
   m_ObjectHideFlags: 0
@@ -9486,9 +9610,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerHook
   maxDistance: 15
-  hookAcceleration: 80
+  hookAcceleration: 100
   retrieveSpeed: 30
-  throwSpeed: 30
+  throwSpeed: 50
   fireSound: {fileID: 8300000, guid: 95fb3e178be86884f898011acfb4ea05, type: 3}
   lightEnemyRetrieveSpeed: 1
   heavyEnemyPullAcceleration: 5
@@ -9507,7 +9631,7 @@ MonoBehaviour:
   heavyEnemyTag: Heavy
   frozenEnemyTag: FrozenEnemy
   lightEnemyTag: Light
-  autoWinchAmount: 0.25
+  autoWinchAmount: 0.5
   autoWinchSpeed: 5
   ropeVisual: {fileID: 0}
   waveStrength: 0.1
@@ -11258,8 +11382,10 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 64
   playerAim: {fileID: 6437442989113161009}
-  ghostTrail: {fileID: 0}
+  ghostTrail: {fileID: 9080203435550356467}
   ghostSpacing: 0.5
+  dashFovAmount: 1
+  dashFovDuration: 0.3
 --- !u!114 &3516498667314770692
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -11463,7 +11589,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::HookRopeVisual
   resolution: 100
   textureScrollSpeed: 2
-  electricJitter: 0.1
+  electricJitter: 0
   ropeGradient:
     serializedVersion: 2
     key0: {r: 1, g: 1, b: 1, a: 1}
@@ -16890,6 +17016,7 @@ SceneRoots:
   - {fileID: 1234476426}
   - {fileID: 5330700718080132161}
   - {fileID: 2008222697}
+  - {fileID: 791008419}
   - {fileID: 3749907581084448319}
   - {fileID: 28922581077052590}
   - {fileID: 2052918383}
@@ -16898,3 +17025,4 @@ SceneRoots:
   - {fileID: 480709438321474171}
   - {fileID: 1343960571}
   - {fileID: 467304413}
+  - {fileID: 1114967555}

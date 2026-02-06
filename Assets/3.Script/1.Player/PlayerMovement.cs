@@ -45,12 +45,16 @@ public class PlayerMovement : MonoBehaviour
     [Header("✨ Visuals")]
     [SerializeField] private GhostTrail ghostTrail;   
     [SerializeField] private float ghostSpacing = 0.5f; 
+    [SerializeField] private float dashFovAmount = 10f;  
+    [SerializeField] private float dashFovDuration = 0.3f; 
 
     private Rigidbody _rb;
     private Collider _playerCollider;
     private GameInput _input;
     private Vector2 _moveInput;
     public Vector2 MoveInput => _moveInput; 
+    public LayerMask GroundLayer => groundLayer;
+    public LayerMask WallLayer => wallLayer;
 
     private bool _isGrounded;
     public bool IsGrounded => _isGrounded; 
@@ -186,7 +190,11 @@ public class PlayerMovement : MonoBehaviour
 
             if (anyHacked)
             {
-                if (Core.GameManager.Instance != null)
+                if (VFX.HackVFXManager.Instance != null)
+                {
+                    VFX.HackVFXManager.Instance.TriggerMassiveGlitch();
+                }
+                else if (Core.GameManager.Instance != null)
                 {
                     Core.GameManager.Instance.TriggerCameraShake(0.5f); 
                 }
@@ -228,6 +236,18 @@ public class PlayerMovement : MonoBehaviour
         {
             ghostTrail.ShowGhost();
             lastGhostPos = transform.position;
+        }
+
+        // 색수차 효과 (대시 시작 시 한 번만 호출)
+        if (Core.PostProcessManager.Instance != null)
+        {
+            Core.PostProcessManager.Instance.TriggerChromaticAberration(1.0f, 0.5f); 
+        }
+
+        // FOV 킥 (카메라 줌아웃 효과)
+        if (Core.CameraEffectManager.Instance != null)
+        {
+            Core.CameraEffectManager.Instance.PunchFOV(dashFovAmount, dashFovDuration); 
         }
 
         while (elapsedTime < dashDuration || (isOverlappingEnemy && elapsedTime < dashDuration + maxExtensionTime))
@@ -360,7 +380,7 @@ public class PlayerMovement : MonoBehaviour
             _canMove = false; 
             _rb.useGravity = true; 
             
-            _rb.linearDamping = 1.0f;
+            _rb.linearDamping = 0.05f;
         }
         else
         {

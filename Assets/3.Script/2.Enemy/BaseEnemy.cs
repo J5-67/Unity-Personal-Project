@@ -169,6 +169,11 @@ public class BaseEnemy : MonoBehaviour
     {
         if (!IsFrozen || _isDestroyed) return;
 
+        if (VFX.HackVFXManager.Instance != null)
+        {
+            VFX.HackVFXManager.Instance.PlayHackEffect(transform.position);
+        }
+
         _isDestroyed = true;
         gameObject.SetActive(false);
         

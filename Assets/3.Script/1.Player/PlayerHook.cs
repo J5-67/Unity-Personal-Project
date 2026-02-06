@@ -47,6 +47,8 @@ public class PlayerHook : MonoBehaviour
     [SerializeField] private float waveFrequency = 3.0f;   
     [SerializeField] private Transform firePoint;          
 
+    public float MaxDistance => maxDistance;          
+
     private PlayerAim _playerAim;
     private PlayerMovement _playerMovement;
     private Camera _mainCamera;
@@ -475,24 +477,46 @@ public class PlayerHook : MonoBehaviour
                  }
             }
 
-            if (Mathf.Abs(_playerMovement.MoveInput.x) > 0.1f)
+            _playerMovement.SetDrag(0.05f);
+
+            if (_playerMovement != null)
             {
-                _playerMovement.SetDrag(0f);
-            }
-            else
-            {
-                _playerMovement.SetDrag(1.0f);
+                int occlusionMask = _playerMovement.GroundLayer | _playerMovement.WallLayer;
+                
+                Vector3 checkStartPos = transform.position + Vector3.up * 0.5f;
+
+                if (Physics.Linecast(checkStartPos, targetPos, out RaycastHit lineHit, occlusionMask))
+                {
+                    if (lineHit.transform != targetTransform && lineHit.transform != _hookAnchor && lineHit.transform != targetTransform.parent)
+                    {
+                        StopHook();
+                        yield break;
+                    }
+                }
             }
 
             Rigidbody rb = GetComponent<Rigidbody>();
             
-            if (distToAnchor > currentRopeLength + 0.02f) 
+            if (distToAnchor > currentRopeLength) 
             {
-                float error = distToAnchor - currentRopeLength;
-                
-                Vector3 fixPos = transform.position + tensionDir * error;
-                
-                transform.position = Vector3.Lerp(transform.position, fixPos, 0.5f); 
+                // 줄보다 멀어지면, 멀어지는 방향의 속도만 제거! (위치 강제 이동 X)
+                Vector3 velocity = rb.linearVelocity;
+                float speedAway = Vector3.Dot(velocity, -tensionDir); // tensionDir는 줄 당기는 방향
+
+                if (speedAway < 0) // 줄 바깥으로 나가는 중이라면
+                {
+                    // 그 속도 성분만 제거
+                    Vector3 velocityCorrection = -tensionDir * speedAway;
+                    rb.linearVelocity -= velocityCorrection; 
+
+                    // 그래도 너무 멀어지면 살짝 당겨줌 (MovePosition 사용)
+                    float distError = distToAnchor - currentRopeLength;
+                    if (distError > 0.1f)
+                    {
+                        Vector3 fixPos = transform.position + tensionDir * (distError * 0.1f); // 아주 살짝만
+                        rb.MovePosition(fixPos); 
+                    }
+                }
             }
 
             bool isMinTimePassed = (Time.time - startTime) > 0.2f;
