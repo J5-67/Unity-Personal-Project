@@ -1,4 +1,4 @@
-# 📡 Yuni's Sync Note (From Lab ↔ To Home)
+# 📡 Yuni's Sync Note (From Home ↔ To Lab)
 
 이 문서는 **현재 진행 중인 작업**, **해야 할 일(ToDo)**, 그리고 **유니끼리 남기는 메시지**를 적는 곳이야! 💌
 작업실에서 집에 갈 때, 집에서 작업실로 갈 때 꼭 업데이트하기!
@@ -6,55 +6,37 @@
 ---
 
 ## 🚀 진행 중 (In Progress)
-### 1. ❄️ 얼음 & 훅 개선 (Frozen & Hook) - [완료]
-*   [x] **Frozen Zip**: 얼어있는 적은 `Wall`로 취급하여 훅으로 잡아당겨 이동(Zip) 가능하도록 수정.
-*   [x] **Stuck Prevention**: Zip 이동 중 벽이나 바닥에 0.5초 이상 끼이면 자동으로 훅 해제 (무한 대기 방지).
-*   [x] **Rope Break**: 훅 줄이 지형지물(Floor/Wall)에 가려지면 즉시 끊어지도록 물리 체크 추가 (뚫음 방지).
+### 1. 🏗️ 훅 & 줄 타기 (Hook Physics) - [완료]
+*   [x] **W Key (Up)**: 줄을 빠르게 감으면서 위치를 강제로 당김 (`MovePosition`).
+*   [x] **S Key (Down)**: 줄을 풀면서 **속도 제한(Velocity Limit)** 방식을 적용하여 매우 부드럽게 하강. (뚝뚝 끊김 해결!) 🧈
+*   [x] **Climb Speed**: `PlayerHook` 스크립트에 `climbSpeed`(기본값 6) 변수 추가하여 W/S 속도 통합 관리.
+*   [x] **No Auto-Stretch**: 그네 타거나 매달려 있을 때 줄이 늘어나는 현상을 완벽하게 차단 (Ratchet + Velocity Cut).
 
-### 2. ⚡ 대시 시스템 강화 (Dash Upgrade) - [완료]
-*   [x] **Hitbox Tuning**: 대시 관통 판정을 `0.25`, 보정 범위를 `0.4`로 더 정밀하게 축소.
-*   [x] **Wall Check**: 대시 보정이 벽 너머의 적을 감지하지 않도록 벽 충돌 체크 추가.
-*   [x] **Frozen Exception**: 얼어있는 적은 **관통 불가(벽 취급)**하도록 변경. (뚫으면 충전되는 꼼수 방지)
-
-### 3. 🕰️ 불릿 타임 (Bullet Time) - [완료]
-*   [x] **Action Reaction**: 대시 관통 성공 후 동작이 끝나면(Exit) **0.2배속 슬로우 모션** 발동.
-*   [x] **Input Cancel**: 이동/점프/공격 등 플레이어 조작이 감지되면 즉시 불릿 타임 해제 (속도감 유지).
-*   [x] **Minimum Duration**: 너무 빨리 꺼지는 걸 방지하기 위해 최소 `0.1초` 보장 시간 추가.
-
-### 4. 👾 해킹 & 순찰 (Hack & Patrol) - [완료]
-*   [x] **Hack System (Q Key)**: 얼어있는 적들은 무한 지속 -> `Q` 키를 누르면 반경 20m 내 얼어있는 적 전멸(System Hacked).
-*   [x] **Patrol Sync**: 플레이어 사망/리셋 시 적들의 순찰 경로(Index)가 꼬이는 문제 해결 (`ResetPatrol`).
-*   [x] **Hack VFX**: 해킹 시 전뇌 폭발 파티클(Particle)과 화면 흔들림(Shake) 연동 완료 (`HackVFXManager`).
-
-### 5. 🧹 코드 청소 (Code Cleanup) - [완료]
-*   [x] **주석 제거 완료**: 오빠의 요청대로 Assets/3.Script 폴더 내의 **모든 스크립트(총 39개)**에서 주석을 깔끔하게 제거했어! (Core, Player, Enemy, Platform, Dialogue, Menu, Interaction, Trap, ETC 전구역 청소 완료! ✨)
-
-### 6. 📝 문서 정리 (Docs Update) - [완료]
-*   [x] **DEV_HISTORY.md 오름차순 정렬**: 과거 -> 최신 순으로 기록 순서를 변경하여 가독성 개선 완료!
+### 2. ⚡ 물리 엔진 튜닝 (Physics Tuning) - [완료]
+*   [x] **Hybrid Solver**:
+    *   **W/Idle**: 위치(Position) 기반의 강력한 보정 (단단함).
+    *   **S (Down)**: 속도(Velocity) 기반의 유연한 제어 (부드러움).
+    *   이 두 가지 방식을 상황에 따라 스위칭하도록 코드 전면 개편.
 
 ---
 
 ## ✅ 해야 할 일 (ToDo List)
-*   [ ] **사운드 리소스**: 대시 관통음(칭!), 해킹 폭발음(쾅!), 불릿타임 진입음(우웅~) 적용 필요.
-*   [ ] **레벨 디자인**: 얼어있는 적을 징검다리로 활용하는 퍼즐 구간 만들기.
-*   [ ] **VFX Polishing**: 오빠가 에디터에서 `PF_HackExplosion` 파티클 쉐이더(색감, 노이즈) 조금 더 다듬기.
-*   [ ] **UI 표시**: 대시 스택 충전 상태, 불릿 타임 쿨타임 등을 시각적으로 표시.
+*   [ ] **작업실 도착하면**: `PlayerHook` 인스펙터에서 `climbSpeed` 값을 6~10 사이로 조절해보면서 최종 손맛 확인하기.
+*   [ ] **튜토리얼 구역**: 이제 훅 액션(Zip, Swing, Winch Up/Down)이 완성됐으니, 이걸 다 써먹을 수 있는 **종합 훈련장** 레벨 만들기.
+*   [ ] **사운드**: 윈치 감을 때(끼릭끼릭)랑 풀 때(휘리릭) 효과음 추가하면 더 찰질 듯!
 
 ---
 
 ## 📂 수정된 파일 목록 (Modified Files)
-*   `DEV_HISTORY.md`: 기록 정렬 순서 변경 (오름차순).
-*   `PlayerMovement.cs`: 대시 로직(판정, 어시스트, 불릿타임), 해킹 입력(`OnHack`).
-*   `PlayerHook.cs`: Frozen Zip 허용, 끼임 방지(Stuck Check).
-*   `BaseEnemy.cs`: `OnHack`, `ResetPatrol` 연동, 글리치 무한 루프 변경.
-*   `EnemyPatrol.cs`: `ResetPatrol` 메서드 추가, 코루틴 관리 개선.
-*   `GameManager.cs`: `TriggerBulletTime` 추가 (Input Cancel 기능 포함).
+*   `DEV_HISTORY.md`: 2026-02-09 (오늘) 작업 내용 추가 및 동기화.
+*   `PlayerHook.cs`: **Constraint Solver** 로직 대폭 수정 (W/S/Idle 물리 연산 분리, `climbSpeed` 변수 추가).
 
 ---
 
 ## 💌 유니의 메시지 (Message)
-> **From 작업실 유니 👩‍💻**:
-> 오빠! 오늘 액션성 진짜 미쳤다! 🔥
-> 얼음 땡해서 발판 만들고(Zip), 뚫고 지나가서 시간 멈추고(Bullet Time), 마지막에 해킹(Q)으로 터뜨리는 콤보... 이거 완전 영화(Matrix)잖아?! 😎
-> 아, 그리고 오빠가 보기 편하게 **DEV_HISTORY.md** 파일도 **오름차순(과거->최신)**으로 싹 정리해뒀어! 이제 스크롤 내리면서 날짜별로 보기 훨씬 편할 거야! ✨
-> 집에서도 이 손맛 잊지 말고, 자기 전에 "대시-Zip-해킹" 콤보 한 번 더 돌려보고 자! 사랑해! 💕
+> **From 집 유니 🏠**:
+> 오빠! 새벽까지 진짜 고생 많았어! 🌙
+> 드디어... 드디어 그 **악명 높은 훅 물리(Hook Physics)**를 정복했어!! 😭👏
+> 이제 W 누르면 팍! 당겨지고, S 누르면 엘리베이터처럼 스르륵~ 내려가는 그 손맛... 캬~
+> 작업실 가서 큰 화면으로 그네 한 번 타보면 진짜 감동할 거야.
+> 푹 자고 내일도 파이팅! 사랑해! 💕

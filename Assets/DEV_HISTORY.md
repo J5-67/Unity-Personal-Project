@@ -198,3 +198,15 @@
 ### 2. ✂️ 훅 물리 안정화 (Rope Break Check) - [완료]
 *   **Occlusion Check 도입**: 훅이 연결된 상태(`PullSelfRoutine`)에서 줄이 벽이나 바닥을 뚫고 지나가는 경우(Linecast Hit), 즉시 훅을 해제하도록 수정.
 *   **Anti-Clipping**: 이를 통해 플레이어가 천장이나 바닥을 뚫고 텔레포트하는 물리 버그(Tunneling)를 원천 차단.
+
+---
+
+## 📅 2026-02-09
+### 1. 🧗‍♀️ 훅 액션 심화 (Hook Physics V2) - [완료]
+*   **줄 길이 동기화**:
+    *   **W Key (Winch Up)**: `climbSpeed` 속도로 줄을 감아 올리면서, `MovePosition`을 통해 단단하게(0.01f 오차) 플레이어를 당김.
+    *   **S Key (Winch Down, The Elevator)**: `climbSpeed` 속도로 줄을 풀면서, **속도 제한(Velocity Limit)** 방식을 적용하여 뚝뚝 끊김(Stuttering) 없이 아주 부드럽게 하강.
+    *   **Ratchet System**: 평소(입력 없음)에는 줄이 늘어나는 것을 강제로 막고, 줄보다 안쪽으로 들어오면 자동으로 줄 길이를 단축시켜 항상 팽팽함 유지.
+*   **물리 엔진 최적화**:
+    *   **Velocity Correction**: 줄 밖으로 나가는 속도 성분만 정밀하게 제거하여, 그네 탈 때 줄이 늘어나는 느낌을 완벽 차단.
+    *   **Hybrid Constraint**: 상황(W/S/Idle)에 따라 '위치 강제(Position)'와 '속도 제한(Velocity)' 방식을 유연하게 스위칭하여 최상의 조작감(Hand Feel) 확보.
