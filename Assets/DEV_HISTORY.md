@@ -4,20 +4,6 @@
 
 ---
 
-## 📅 2026-02-06
-### 1. 💥 해킹 비주얼 강화 (Hack VFX) - [완료]
-*   **HackVFXManager**:
-    *   해킹 이펙트(`ParticleSystem`)를 전담 관리하는 **싱글톤 & 오브젝트 풀링** 시스템 구축.
-    *   **Object Pooling**: 파티클 생성/파괴 비용 절감을 위해 풀링 적용 (`poolSize`: 10).
-*   **전뇌 폭발 (Digital Explosion)**:
-    *   `BaseEnemy`: `OnHack` 시 `PlayHackEffect`를 호출하여 적 위치에서 파티클 폭발.
-    *   **Screen Shake**: 해킹 성공 시 `CameraShake` 강도를 높여(`2.0f`) 강력한 타격감 전달.
-    
-### 2. ✂️ 훅 물리 안정화 (Rope Break Check) - [완료]
-*   **Occlusion Check 도입**: 훅이 연결된 상태(`PullSelfRoutine`)에서 줄이 벽이나 바닥을 뚫고 지나가는 경우(Linecast Hit), 즉시 훅을 해제하도록 수정.
-*   **Anti-Clipping**: 이를 통해 플레이어가 천장이나 바닥을 뚫고 텔레포트하는 물리 버그(Tunneling)를 원천 차단.
-
-
 ## 📅 2026-01-30
 ### 1. 💬 대화 시스템 (Dialogue System) - [완료]
 *   **CSV 연동**: 엑셀로 대본을 관리하고 유니티로 불러오는 기능 완성!
@@ -197,3 +183,18 @@
     - **Assist**: `0.8f` -> `0.4f` (보정 범위 축소).
     - **Distance**: `2.0f` -> `1.5f` (자석 유효 거리 단축).
 *   **Wall Exclusion**: 대시 보정 시 벽(`wallLayer`) 체크를 추가하여, 벽 뒤에 있는 적 때문에 대시가 불필요하게 연장되는 문제 해결.
+
+---
+
+## 📅 2026-02-08
+### 1. 💥 해킹 비주얼 강화 (Hack VFX) - [완료]
+*   **HackVFXManager**:
+    *   해킹 이펙트(`ParticleSystem`)를 전담 관리하는 **싱글톤 & 오브젝트 풀링** 시스템 구축.
+    *   **Object Pooling**: 파티클 생성/파괴 비용 절감을 위해 풀링 적용 (`poolSize`: 10).
+*   **전뇌 폭발 (Digital Explosion)**:
+    *   `BaseEnemy`: `OnHack` 시 `PlayHackEffect`를 호출하여 적 위치에서 파티클 폭발.
+    *   **Screen Shake**: 해킹 성공 시 `CameraShake` 강도를 높여(`2.0f`) 강력한 타격감 전달.
+    
+### 2. ✂️ 훅 물리 안정화 (Rope Break Check) - [완료]
+*   **Occlusion Check 도입**: 훅이 연결된 상태(`PullSelfRoutine`)에서 줄이 벽이나 바닥을 뚫고 지나가는 경우(Linecast Hit), 즉시 훅을 해제하도록 수정.
+*   **Anti-Clipping**: 이를 통해 플레이어가 천장이나 바닥을 뚫고 텔레포트하는 물리 버그(Tunneling)를 원천 차단.

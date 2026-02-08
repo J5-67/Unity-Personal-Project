@@ -25,7 +25,8 @@ public class PlayerHook : MonoBehaviour
     [SerializeField] [Range(0, 180)] private float swingAngleLimit = 80f; 
 
     [SerializeField] private float winchUpForce = 0.8f;    
-    [SerializeField] private float winchDownForce = 0.5f;  
+    [SerializeField] private float winchDownForce = 0.5f;
+    [SerializeField] private float climbSpeed = 6f; // W, S 키 줄 조절 속도 (통일)  
     
     [SerializeField] private float stopDistance = 0.5f;    
     [SerializeField] private float hookRadius = 0.5f;      
@@ -438,14 +439,18 @@ public class PlayerHook : MonoBehaviour
 
             if (Mathf.Abs(inputY) > 0.1f)
             {
+                // 공통 조절 속도 적용
+                float changeAmount = climbSpeed * Time.fixedDeltaTime;
+
                 if (inputY > 0)
                 {
+                    // W: 줄 감기
                     Vector3 pullForce = tensionDir * currentAccel * inputY * winchUpForce; 
                     _playerMovement.AddHookForce(pullForce);
 
-                    float reduceAmount = 5f * Time.fixedDeltaTime; 
-                    currentRopeLength = Mathf.Max(currentRopeLength - reduceAmount, 1f); 
+                    currentRopeLength -= changeAmount;
                     
+                    // 래칫: 이미 줄보다 안쪽이면 줄 길이를 거리에 맞춤 (느슨함 방지)
                     if (distToAnchor < currentRopeLength)
                     {
                         currentRopeLength = distToAnchor;
@@ -453,19 +458,17 @@ public class PlayerHook : MonoBehaviour
                 }
                 else 
                 {
-                    Vector3 pushForce = -tensionDir * currentAccel * Mathf.Abs(inputY) * winchDownForce;
-                    _playerMovement.AddHookForce(pushForce);
-
-                    if (distToAnchor > currentRopeLength)
-                    {
-                        currentRopeLength = distToAnchor;
-                    }
+                    // S: 줄 풀기 (Winch Down)
+                    currentRopeLength += changeAmount; // 줄 길이만 늘려줌 (물리는 아래 Solver에서 처리)
                 }
-                
-                currentRopeLength = Mathf.Max(currentRopeLength, 1f); 
+
+                // 최소/최대 길이 제한
+                currentRopeLength = Mathf.Clamp(currentRopeLength, 1f, maxDistance);
             }
             else
             {
+                 // 입력이 없을 때:
+                 // 1. 오토 윈치 (땅에 있을 때 짧아짐)
                  if (isAutoWinching)
                  {
                       currentRopeLength = Mathf.MoveTowards(currentRopeLength, finalRopeLength, autoWinchSpeed * Time.fixedDeltaTime);
@@ -473,6 +476,16 @@ public class PlayerHook : MonoBehaviour
                       if (currentRopeLength <= finalRopeLength + 0.01f)
                       {
                            isAutoWinching = false;
+                      }
+                 }
+                 // 2. 공중에 있을 때 (래칫 로직 적용)
+                 else
+                 {
+                      // 줄 안쪽으로 들어오면 (반동 등으로 인해), 줄 길이를 그만큼 줄여버림!
+                      // 이렇게 해야 다시 밖으로 나갈 때 줄이 늘어나 있지 않음.
+                      if (distToAnchor < currentRopeLength)
+                      {
+                          currentRopeLength = distToAnchor;
                       }
                  }
             }
@@ -497,23 +510,53 @@ public class PlayerHook : MonoBehaviour
 
             Rigidbody rb = GetComponent<Rigidbody>();
             
+            // ---------------------------------------------------------
+            // ⛓️ CRITICAL: Rope Constraint Solver (통합 & 수정됨)
+            // ---------------------------------------------------------
             if (distToAnchor > currentRopeLength) 
             {
-                // 줄보다 멀어지면, 멀어지는 방향의 속도만 제거! (위치 강제 이동 X)
+                // 1. Velocity Correction (줄 밖으로 나가는 속도 제거)
                 Vector3 velocity = rb.linearVelocity;
-                float speedAway = Vector3.Dot(velocity, -tensionDir); // tensionDir는 줄 당기는 방향
+                float speedAway = Vector3.Dot(velocity, -tensionDir); // -tensionDir = Anchor -> Player 방향 (Away)
 
-                if (speedAway < 0) // 줄 바깥으로 나가는 중이라면
+                // [수정] Winch Down (S키) 중일 때는 속도 제한(Velocity Limit)만으로 제어하고,
+                // 위치 강제 이동(MovePosition)은 끕니다. (MovePosition이 덜덜거림/렉의 주범)
+                
+                bool isWinchingDown = (_playerMovement.MoveInput.y < -0.1f);
+                
+                float limitSpeed = 0f;
+                if (isWinchingDown) 
                 {
-                    // 그 속도 성분만 제거
-                    Vector3 velocityCorrection = -tensionDir * speedAway;
-                    rb.linearVelocity -= velocityCorrection; 
+                    limitSpeed = climbSpeed; // 내려가는 속도만큼 허용
+                }
 
-                    // 그래도 너무 멀어지면 살짝 당겨줌 (MovePosition 사용)
-                    float distError = distToAnchor - currentRopeLength;
-                    if (distError > 0.1f)
+                if (speedAway > limitSpeed) 
+                {
+                    // 허용 속도보다 빠를 때만 그 차이만큼 제거 (브레이크)
+                    // 예: 중력 때문에 20으로 떨어지려 하는데, climbSpeed가 6이면 -> 6으로 고정됨. 아주 부드러움.
+                    Vector3 velocityCorrection = -tensionDir * (speedAway - limitSpeed);
+                    rb.linearVelocity -= velocityCorrection; 
+                }
+
+                // 2. Position Correction (위치 강제 보정)
+                float distError = distToAnchor - currentRopeLength;
+                
+                // W키(당기기)나 가만히 있을 때는 단단하게 고정 (0.01f)
+                // S키(풀기) 때는 위치 보정을 끎! (Velocity가 잡아주므로 굳이 텔레포트 시킬 필요 없음)
+                if (!isWinchingDown)
+                {
+                    if (distError > 0.01f) 
                     {
-                        Vector3 fixPos = transform.position + tensionDir * (distError * 0.1f); // 아주 살짝만
+                        Vector3 fixPos = transform.position + tensionDir * distError; 
+                        rb.MovePosition(fixPos); 
+                    }
+                }
+                else
+                {
+                    // 혹시나 물리 연산이 뚫려서 너무 멀어지면 안전장치로 한번 당겨줌
+                    if (distError > 1.0f)
+                    {
+                        Vector3 fixPos = transform.position + tensionDir * distError; 
                         rb.MovePosition(fixPos); 
                     }
                 }
@@ -527,19 +570,6 @@ public class PlayerHook : MonoBehaviour
                 {
                     StopHook();
                     yield break;
-                }
-            }
-
-            if (distToAnchor >= currentRopeLength)
-            {
-                Vector3 velocity = rb.linearVelocity;
-                float speedTowardsTarget = Vector3.Dot(velocity, tensionDir);
-                
-                if (speedTowardsTarget < 0)
-                {
-                    Vector3 velocityAway = tensionDir * speedTowardsTarget; 
-                    
-                    rb.linearVelocity -= velocityAway; 
                 }
             }
 
