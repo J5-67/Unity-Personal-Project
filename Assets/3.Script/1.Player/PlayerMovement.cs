@@ -108,7 +108,7 @@ public class PlayerMovement : MonoBehaviour
             return;
         }
 
-        if (_canMove)
+        if (_canMove || (_isHookingState && _isGrounded))
         {
             Move();
             ApplyRotation();
@@ -339,7 +339,9 @@ public class PlayerMovement : MonoBehaviour
     {
         float targetSpeedZ = _moveInput.x * moveSpeed;
 
-        if (_isGrounded && !_isHookingState)
+        // [Fix] 훅을 걸고 있더라도(_isHookingState) 땅에 발이 닿아있다면(_isGrounded)
+        // 정상적인 지상 이동(Ground Movement)이 가능해야 함. (미끄러짐 방지 & A/D 이동 허용)
+        if (_isGrounded)
         {
             _rb.linearVelocity = new Vector3(0f, _rb.linearVelocity.y, targetSpeedZ);
         }

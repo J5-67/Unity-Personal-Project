@@ -25,7 +25,7 @@ public class PlayerHook : MonoBehaviour
     [SerializeField] [Range(0, 180)] private float swingAngleLimit = 80f; 
 
     [SerializeField] private float winchUpForce = 0.8f;    
-    [SerializeField] private float winchDownForce = 0.5f;
+    [SerializeField] private float winchDownForce = 0.2f;
     [SerializeField] private float climbSpeed = 6f; // W, S 키 줄 조절 속도 (통일)  
     
     [SerializeField] private float stopDistance = 0.5f;    
@@ -371,6 +371,9 @@ public class PlayerHook : MonoBehaviour
         float finalRopeLength = currentRopeLength;
         bool isAutoWinching = false;
 
+        // [Fix] 루프 내 곳곳에서 쓰이는 Rigidbody를 미리 캐싱하여 선언 순서 문제 해결
+        Rigidbody rb = GetComponent<Rigidbody>();
+
         if (_playerMovement.IsGrounded)
         {
              finalRopeLength = Mathf.Max(currentRopeLength - autoWinchAmount, 1.0f); 
@@ -442,6 +445,25 @@ public class PlayerHook : MonoBehaviour
                 // 공통 조절 속도 적용
                 float changeAmount = climbSpeed * Time.fixedDeltaTime;
 
+                // [Fix] 땅에 닿아있을 때(IsGrounded) S키(Winch Down)를 누르면
+                // 훅 물리 연산이 캐릭터를 미끄러지게 하거나 이동을 방해하는 문제 해결.
+                // 땅에 있을 때는 줄 길이만 늘려주고, 물리 힘(AddForce)이나 제어는 하지 않음.
+                if (_playerMovement.IsGrounded && inputY < -0.1f)
+                {
+                    currentRopeLength += changeAmount;
+                    currentRopeLength = Mathf.Clamp(currentRopeLength, 1f, maxDistance);
+                    
+                    // [Critical Fix] continue를 사용하면 while 루프의 마지막에 있는 yield return new WaitForFixedUpdate()를 건너뛰어
+                    // 한 프레임 내에서 무한 반복(Infinite Loop)이 발생하여 유니티 에디터가 멈춤(Freeze).
+                    // 반드시 yield return을 호출하거나 continue 대신 아래 로직을 스킵하도록 구조를 변경해야 함.
+                    
+                    // [ADD] 땅에 있을 때는 마찰력(Drag)을 0으로 돌려서 미끄러짐 방지!
+                    _playerMovement.SetDrag(0f);
+                    
+                    yield return new WaitForFixedUpdate(); 
+                    continue; 
+                }
+
                 if (inputY > 0)
                 {
                     // W: 줄 감기
@@ -459,7 +481,45 @@ public class PlayerHook : MonoBehaviour
                 else 
                 {
                     // S: 줄 풀기 (Winch Down)
-                    currentRopeLength += changeAmount; // 줄 길이만 늘려줌 (물리는 아래 Solver에서 처리)
+
+                    // [Final Fix] 줄 풀기를 시작할 때, 설정된 로프 길이(currentRopeLength)가 실제 거리(distToAnchor)보다 짧다면
+                    // 현재 물리적 위치에 맞춰서 길이를 동기화(Snap)해줘야 튐 현상이 없음.
+                    if (distToAnchor > currentRopeLength)
+                    {
+                         currentRopeLength = distToAnchor;
+                    }
+
+                    // [Final Fix] 줄 끝까지 닿았으면(maxDistance 근접) 더 이상 줄 늘리기 로직을 타지 않음.
+                    if (distToAnchor >= maxDistance - 0.1f)
+                    {
+                        currentRopeLength = maxDistance;
+                        
+                        // [Anti-RubberBand] 줄 끝에 왔는데도 중력/속도로 인해 계속 내려가려 하면
+                        // 줄이 늘어났다가 순간이동하는 현상이 발생함.
+                        // 따라서 줄 밖으로 나가는 속도 성분(Outgoing Velocity)을 강제로 0으로 만들어야 함.
+                        
+                        // [Anti-RubberBand] 줄 끝에 왔는데도 계속 내려가려는 속도(Outgoing Velocity) 제거
+                        Vector3 vel = rb.linearVelocity;
+                        
+                        // tensionDir = Anchor쪽. -tensionDir = 바깥쪽(Away).
+                        float outgoingSpeed = Vector3.Dot(vel, -tensionDir);
+                        if (outgoingSpeed > 0)
+                        {
+                            rb.linearVelocity -= (-tensionDir * outgoingSpeed);
+                        }
+                    }
+                    else
+                    {
+                         // [Critical Fix V2] 부동소수점 오차 및 덜덜거림 방지 이중 체크
+                         if (currentRopeLength < maxDistance - 0.1f)
+                         {
+                             // [Feeling Fix] 밀고 내려가는 힘 추가
+                             Vector3 pushForce = -tensionDir * currentAccel * Mathf.Abs(inputY) * winchDownForce;
+                             _playerMovement.AddHookForce(pushForce);
+
+                             currentRopeLength += changeAmount; 
+                         }
+                    }
                 }
 
                 // 최소/최대 길이 제한
@@ -508,8 +568,6 @@ public class PlayerHook : MonoBehaviour
                 }
             }
 
-            Rigidbody rb = GetComponent<Rigidbody>();
-            
             // ---------------------------------------------------------
             // ⛓️ CRITICAL: Rope Constraint Solver (통합 & 수정됨)
             // ---------------------------------------------------------
@@ -521,13 +579,16 @@ public class PlayerHook : MonoBehaviour
 
                 // [수정] Winch Down (S키) 중일 때는 속도 제한(Velocity Limit)만으로 제어하고,
                 // 위치 강제 이동(MovePosition)은 끕니다. (MovePosition이 덜덜거림/렉의 주범)
-                
-                bool isWinchingDown = (_playerMovement.MoveInput.y < -0.1f);
+                // [Fix] 단, 줄 끝(Max Distance)이면 S키 눌러도 Winch Down 아님 (엄격한 고정 필요)
+                bool isAtMaxDist = (currentRopeLength >= maxDistance - 0.05f);
+                bool isWinchingDown = (_playerMovement.MoveInput.y < -0.1f) && !isAtMaxDist;
                 
                 float limitSpeed = 0f;
                 if (isWinchingDown) 
                 {
-                    limitSpeed = climbSpeed; // 내려가는 속도만큼 허용
+                    // [Speed Fix] 내려갈 때 중력 가속도가 붙어 너무 빨라지므로,
+                    // 올라가는 속도(climbSpeed)의 절반 정도로 제한을 걸어줌. (스윙 속도 영향 없음)
+                    limitSpeed = climbSpeed * 0.5f; 
                 }
 
                 if (speedAway > limitSpeed) 

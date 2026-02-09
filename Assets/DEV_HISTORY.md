@@ -199,10 +199,7 @@
 *   **Occlusion Check 도입**: 훅이 연결된 상태(`PullSelfRoutine`)에서 줄이 벽이나 바닥을 뚫고 지나가는 경우(Linecast Hit), 즉시 훅을 해제하도록 수정.
 *   **Anti-Clipping**: 이를 통해 플레이어가 천장이나 바닥을 뚫고 텔레포트하는 물리 버그(Tunneling)를 원천 차단.
 
----
-
-## 📅 2026-02-09
-### 1. 🧗‍♀️ 훅 액션 심화 (Hook Physics V2) - [완료]
+### 3. 🧗‍♀️ 훅 액션 심화 (Hook Physics V2) - [완료]
 *   **줄 길이 동기화**:
     *   **W Key (Winch Up)**: `climbSpeed` 속도로 줄을 감아 올리면서, `MovePosition`을 통해 단단하게(0.01f 오차) 플레이어를 당김.
     *   **S Key (Winch Down, The Elevator)**: `climbSpeed` 속도로 줄을 풀면서, **속도 제한(Velocity Limit)** 방식을 적용하여 뚝뚝 끊김(Stuttering) 없이 아주 부드럽게 하강.
@@ -210,3 +207,36 @@
 *   **물리 엔진 최적화**:
     *   **Velocity Correction**: 줄 밖으로 나가는 속도 성분만 정밀하게 제거하여, 그네 탈 때 줄이 늘어나는 느낌을 완벽 차단.
     *   **Hybrid Constraint**: 상황(W/S/Idle)에 따라 '위치 강제(Position)'와 '속도 제한(Velocity)' 방식을 유연하게 스위칭하여 최상의 조작감(Hand Feel) 확보.
+
+---
+
+## 📅 2026-02-09
+### 1. 🪝 훅(Winch) 메카니즘 고도화
+*   **Winch Down (S Key) 안정화**:
+    *   최대 길이(`maxDistance`) 도달 시 **덜덜거림(Jittering)** 및 **무한 추락** 버그 수정.
+    *   줄 끝에서는 **Rope Solver**가 엄격하게 작동하도록 하여 **늘어짐(Rubber Banding)** 방지.
+*   **Winch Down 속도 밸런싱**:
+    *   **문제**: `S` 키 하강 시 중력 가속도가 더해져 너무 빨라짐.
+    *   **해결 시도 1 (Rollback)**: `Drag`를 높였으나 스윙 속도까지 느려져 폐기.
+    *   **해결 시도 2 (Current)**: `Rope Solver` 내부에서 하강 속도(`limitSpeed`)를 `climbSpeed * 0.5`로 제한.
+    *   **[TODO]**: 여전히 중력과 윈치 속도 간의 자연스러운 느낌 조율 필요. `PlayerHook.cs`의 `climbSpeed * 0.5f` 계수 튜닝 요망.
+
+### 2. 🎨 비주얼 폴리싱 & 레벨 디자인 툴 (Visual Polish & Tools)
+*   **Dynamic Camera (Look Ahead)**:
+    *   **Aim Shift**: 기존의 속도 기반 시야 이동(Dynamic LookAhead)이 덜컹거리는 문제 해결을 위해, **마우스 커서(조준) 방향**으로 부드럽게 이동하는 방식으로 변경.
+    *   **Follow Offset Control**: `CinemachineFollow` 컴포넌트의 오프셋 값을 직접 제어하여, 조준 방향으로 미리 시야를 확보해줌. (훅 조준이 훨씬 편해짐!)
+*   **Speed Effects (Juice)**:
+    *   **Ghost Trail**: 고속 이동 시 플레이어 뒤에 잔상이 남도록 자동 활성화.
+    *   **Speed Line (집중선)**: Main Camera 하위에 `Stretched Billboard` 파티클을 Local Space로 배치하여, 만화처럼 화면이 빨려 들어가는 연출 구현.
+*   **Level Builder Tool**:
+    *   **Grid Snapper**: `[ExecuteInEditMode]`를 활용하여, 에디터에서 오브젝트 이동 시 **1m 그리드**에 자동으로 딱딱 붙도록 스냅 기능 구현. (레벨 디자인 속도 3배 증가 예상 🚀)
+
+### 3. 🗺️ 튜토리얼 맵 설계 (Level Design)
+*   **Concept**: "Training Ground 01" - 어두운 사이버펑크 폐허.
+*   **Key Sections**:
+    1.  **Basic Move**: 점프 & 벽타기.
+    2.  **Hook Gap**: 천장 훅 걸고 건너기.
+    3.  **Winch Tunnel (핵심)**: 좁은 수직 통로에 가시(Spike) 배치. 훅을 걸고 **S키(Winch Down)**로 천천히 하강하며 장애물 피하기 학습.
+    4.  **Swing**: 연속 스윙.
+    5.  **Combat Area**: 대시(Freeze) & 해킹(Hack) 콤보 연습.
+*   **Note**: 스파이크(Spike)는 충돌 시 플레이어를 밀어냄(Knockback). 천장 가시는 아래로, 바닥 가시는 위로 튕겨냄을 확인.
