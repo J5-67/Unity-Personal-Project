@@ -57,11 +57,17 @@ public class PlayerHook : MonoBehaviour
     private Transform _currentHookTarget; 
     private Transform _hookAnchor;       
     private Vector3 _flyingHookPosition; 
+    
+    private Collider _myCollider;
+    private Collider _ignoredCollider; 
 
     private void Awake()
     {
         _playerAim = GetComponent<PlayerAim>();
         _playerMovement = GetComponent<PlayerMovement>();
+        _playerAim = GetComponent<PlayerAim>();
+        _playerMovement = GetComponent<PlayerMovement>();
+        _myCollider = GetComponent<Collider>();
         _mainCamera = Camera.main;
 
         if (!TryGetComponent(out ropeVisual))
@@ -105,9 +111,20 @@ public class PlayerHook : MonoBehaviour
         
         Vector3 startPos = transform.position;
         Vector3 currentPos = startPos;
-        Vector3 aimPos = _playerAim.GetAimWorldPosition();
-        Vector3 dir = (aimPos - startPos).normalized;
+        
+        Vector3 dir;
+        // 조준 보정: 락온된 타겟이 있으면 그쪽으로 발사
+        if (_playerAim.LockedTarget != null)
+        {
+            dir = (_playerAim.LockedTarget.position - startPos).normalized;
+        }
+        else
+        {
+            Vector3 aimPos = _playerAim.GetAimWorldPosition();
+            dir = (aimPos - startPos).normalized;
+        }
 
+        // 2.5D 게임이므로 X축(깊이) 고정
         dir = new Vector3(0, dir.y, dir.z).normalized;
 
         Collider[] overlaps = Physics.OverlapSphere(currentPos, hookRadius, hookableLayer);
@@ -333,6 +350,12 @@ public class PlayerHook : MonoBehaviour
         }
         _currentHookTarget = null;
 
+        if (_ignoredCollider != null && _myCollider != null)
+        {
+            Physics.IgnoreCollision(_myCollider, _ignoredCollider, false);
+            _ignoredCollider = null;
+        }
+
         ropeVisual.ClearRope();
         StopAllCoroutines(); 
     }
@@ -538,16 +561,13 @@ public class PlayerHook : MonoBehaviour
                            isAutoWinching = false;
                       }
                  }
-                 // 2. 공중에 있을 때 (래칫 로직 적용)
-                 else
-                 {
-                      // 줄 안쪽으로 들어오면 (반동 등으로 인해), 줄 길이를 그만큼 줄여버림!
-                      // 이렇게 해야 다시 밖으로 나갈 때 줄이 늘어나 있지 않음.
-                      if (distToAnchor < currentRopeLength)
-                      {
-                          currentRopeLength = distToAnchor;
-                      }
-                 }
+                  // 2. 공중에 있을 때
+                  else
+                  {
+                       // [Change] 줄이 자동으로 짧아지는(Ratchet) 로직 제거.
+                       // 대시나 넉백으로 위로 올라갔다가 다시 내려올 때, 줄이 짧아져서 턱 걸리는 문제 해결.
+                       // 이제 줄 길이는 W키를 누를 때만 짧아짐.
+                  }
             }
 
             _playerMovement.SetDrag(0.05f);
@@ -677,6 +697,13 @@ public class PlayerHook : MonoBehaviour
             float currentDist = 0f;
             Collider targetCol = target.GetComponent<Collider>();
             
+            // [Fix] 끌려오는 적이 플레이어와 충돌해서 튕겨나가는 문제 해결
+            if (targetCol != null && _myCollider != null && _ignoredCollider != targetCol)
+            {
+                _ignoredCollider = targetCol;
+                Physics.IgnoreCollision(_myCollider, targetCol, true);
+            }
+            
             if (targetCol != null)
             {
                 Vector3 closestPoint = targetCol.ClosestPoint(myPos);
@@ -700,6 +727,14 @@ public class PlayerHook : MonoBehaviour
 
             if (enemyInfo != null)
             {
+                if (enemyInfo.IsFrozen)
+                {
+                     // [Fix] 끌려오던 적이 얼어버리면 즉시 훅을 중단하고 놔줌.
+                     // 계속 당기면 물리 충돌이나 위치 강제 이동으로 인해 
+                     // 얼음 상태인데도 날아가거나 바닥으로 떨어지는 버그 발생.
+                     StopHook();
+                     yield break;
+                }
                 currentRetrieveSpeed = enemyInfo.HookInteractSpeed;
             }
 
@@ -711,6 +746,11 @@ public class PlayerHook : MonoBehaviour
             {
                 target.position += pullDir * currentRetrieveSpeed * Time.deltaTime;
             }
+            
+            // [New] 적만 끌려오는 게 아니라, 플레이어도 적 쪽으로 살짝 끌려가게 함 (상호 작용).
+            // 대시 관통 거리 확보 및 타격감 향상.
+            float playerApproachSpeed = 15f; 
+            _playerMovement.AddHookForce(playerToTarget.normalized * playerApproachSpeed);
 
             if (currentDist < currentRopeLength)
             {

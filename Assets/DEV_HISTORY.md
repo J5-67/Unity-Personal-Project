@@ -239,4 +239,45 @@
     3.  **Winch Tunnel (핵심)**: 좁은 수직 통로에 가시(Spike) 배치. 훅을 걸고 **S키(Winch Down)**로 천천히 하강하며 장애물 피하기 학습.
     4.  **Swing**: 연속 스윙.
     5.  **Combat Area**: 대시(Freeze) & 해킹(Hack) 콤보 연습.
-*   **Note**: 스파이크(Spike)는 충돌 시 플레이어를 밀어냄(Knockback). 천장 가시는 아래로, 바닥 가시는 위로 튕겨냄을 확인.
+*   **Note**: 스파이크(Spike)는 충돌 시 플레이어를 밀어내는(Knockback) 방향이 충돌 지점의 법선 벡터(Normal)를 따르도록 개선됨.
+
+---
+
+## 📅 2026-02-10
+### 1. ⚔️ 전투 및 레벨 시스템 고도화 (Combat & Level Polish)
+*   **Room Clear Mechanics (BattleZone)**:
+    *   **Door Integration**: 적 전멸 시 방문이 자동으로 열리는 시스템 구현 (`Interaction.Door` 스크립트 연동).
+    *   **Inspector Reference Fix**: `Door` 스크립트 연결이 Play Mode에서 끊기는 문제 해결을 위해 `GameObject` 참조 방식으로 변경 및 `Start`에서 컴포넌트 캐싱.
+    *   **Logic Optimization**: `OnDeath` 이벤트를 활용하여 매 프레임 검사 없이 효율적으로 클리어 체크.
+*   **Trap Logic Fix**:
+    *   **Spike Knockback**: 가시(Spike)가 플레이어를 밀어낼 때, 항상 위(Up)가 아니라 **충돌 면의 반대 방향**으로 정확하게 밀어내도록 `Collider.ClosestPoint` 로직 적용.
+
+### 2. 🎯 조준 및 훅 메카니즘 개선 (Aim Assist & Homing)
+*   **Homing Hook (유도 훅)**:
+    *   **Smart Targeting**: 조준선(PlayerAim)이 적을 인식했을 때, 훅 발사 시 마우스 위치가 아니라 **해당 적의 중심**으로 유도되어 발사되도록 개선. (빗나감 방지)
+    *   **Static Object Filtering**: 벽이나 바닥 같은 거대한 정적 오브젝트는 유도(Lock-on) 대상에서 제외하여, 훅이 의도치 않게 벽의 중심점(Pivot)으로 날아가는 현상 수정.
+
+### 3. 💬 다이얼로그 가독성 (Dialogue UI)
+*   **Line Break**: 입력 데이터의 `\n` 이스케이프 문자를 실제 줄바꿈으로 파싱하는 로직 추가 (`String.Replace`).
+
+---
+
+## 📅 2026-02-11
+### 1. 🪝 소형 적 상호작용 개선 (Small Enemy Hook Fixes)
+*   **Physics Explosion Fix**:
+    *   **Collision Ignore**: 적을 끌어올 때(`PullTargetRoutine`) 플레이어와 충돌하여 서로 튕겨나가는 현상을 방지하기 위해, 당기는 동안 `Physics.IgnoreCollision` 적용.
+*   **Frozen Stability (얼음 상태 고정)**:
+    *   **Double Lock**: 적이 얼었을 때(`IsFrozen`) 훅이 계속 당기거나 물리 엔진의 잔여 힘으로 인해 바닥으로 구르거나 날아가는 버그 수정.
+    *   **Strict KinematicCheck**: `BaseEnemy`의 `FixedUpdate`에서 얼음 상태면 매 프레임 속도를 0으로 초기화하고 물리(Kinematic)를 강제로 잠금.
+    *   **Hook Abort**: 적이 끌려오는 도중 얼어버리면 즉시 훅을 중단(`StopHook`)하여 물리 충돌 방지.
+*   **Mutual Pull (상호 당기기)**:
+    *   **Approach Logic**: 소형 적을 당길 때 플레이어도 15f 속도로 적을 향해 살짝 끌려가도록 수정.
+    *   **Effect**: 이로 인해 대시 관통(Dash Penetration) 거리가 부족해도 쉽게 적을 뚫고 지나갈 수 있게 됨 (타격감 & 조작감 향상). ⚡️
+
+### 2. 🐛 버그 수정 및 최적화 (Bug Fix & Polish)
+*   **Hook Ratchet Removed**:
+    *   **Problem**: 천장에 매달린 채 위로 대시하거나 넉백당하면 줄 길이가 자동으로 짧아져(Ratchet), 다시 내려오지 못하고 턱 걸리는 문제.
+    *   **Solution**: 자동 감기 로직을 삭제하고, 오직 **W키(줄 감기)**를 누를 때만 줄이 짧아지도록 변경. 이제 자유롭게 튀어 올랐다 내려올 수 있음.
+*   **Bullet Time + Pause**:
+    *   **TimeScale Logic**: 일시정지(`Pause`) 상태에서도 불릿타임 타이머가 흘러가거나, 불릿타임 종료 시 강제로 `TimeScale=1`로 만들어 일시정지가 풀리는 치명적 버그 수정.
+

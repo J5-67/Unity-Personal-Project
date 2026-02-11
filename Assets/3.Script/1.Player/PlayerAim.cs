@@ -225,6 +225,8 @@ public class PlayerAim : MonoBehaviour
         }
     }
 
+    public Transform LockedTarget { get; private set; }
+
     private void DrawAimLine()
     {
         float currentMaxDistance = maxHookDistance;
@@ -255,18 +257,18 @@ public class PlayerAim : MonoBehaviour
 
             BaseEnemy enemy = hit.collider.GetComponentInParent<BaseEnemy>();
             float dot = Vector3.Dot(direction, (hit.point - startPos).normalized);
+            // 후방에 있는 적 제외 (Dot < 0)
             if (dot < 0.0f) continue;
 
             float score = dot;
             if (enemy != null)
             {
-                score += 5.0f;
-                if (hasObstruction && (obstructionHit.collider == hit.collider || obstructionHit.collider.transform.root == hit.collider.transform.root))
-                    score += 5.0f;
+                score += 5.0f; // 적 우선순위 높임
+                // 장애물 뒤의 적이라도 조준선에 걸리면 점수 부여 (단, 장애물보다 가까우면 확실히 잡힘)
             }
             else
             {
-                score -= hit.distance * 0.1f;
+                score -= hit.distance * 0.1f; // 거리가 멀수록 감점
             }
 
             if (score > maxScore)
@@ -275,6 +277,24 @@ public class PlayerAim : MonoBehaviour
                 bestTarget = hit.collider;
                 if (enemy != null) endPos = hit.point; 
             }
+        }
+        
+        // 락온 타겟 업데이트 (적일 때만!)
+        if (bestTarget != null)
+        {
+             BaseEnemy targetEnemy = bestTarget.GetComponentInParent<BaseEnemy>();
+             if (targetEnemy != null)
+             {
+                 LockedTarget = bestTarget.transform;
+             }
+             else
+             {
+                 LockedTarget = null; // 벽이나 바닥은 락온하지 않음 (중심점으로 날아가는 문제 방지)
+             }
+        }
+        else
+        {
+             LockedTarget = null;
         }
 
         if (bestTarget != null)

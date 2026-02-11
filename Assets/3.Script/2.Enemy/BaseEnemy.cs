@@ -66,6 +66,20 @@ public class BaseEnemy : MonoBehaviour
         }
     }
 
+    private void FixedUpdate()
+    {
+        // [Safety Net] 얼음 상태일 때는 물리적으로 절대 움직이지 못하도록 강제함 (이중 잠금)
+        if (IsFrozen)
+        {
+            if (_rb != null)
+            {
+                if (!_rb.isKinematic) _rb.isKinematic = true;
+                _rb.linearVelocity = Vector3.zero;
+                _rb.angularVelocity = Vector3.zero;
+            }
+        }
+    }
+
     private void ResetEnemy()
     {
         StopAllCoroutines();
@@ -143,7 +157,13 @@ public class BaseEnemy : MonoBehaviour
 
         try { gameObject.tag = "FrozenEnemy"; } catch {}
         if (_patrol != null) _patrol.SetPatrol(false);
-        if (_rb != null) _rb.isKinematic = true; 
+        
+        if (_rb != null)
+        { 
+            _rb.linearVelocity = Vector3.zero;
+            _rb.angularVelocity = Vector3.zero;
+            _rb.isKinematic = true; 
+        } 
 
         while (true)
         {
@@ -165,6 +185,8 @@ public class BaseEnemy : MonoBehaviour
         }
     }
 
+    public event System.Action<BaseEnemy> OnDeath;
+
     public void OnHack()
     {
         if (!IsFrozen || _isDestroyed) return;
@@ -175,6 +197,8 @@ public class BaseEnemy : MonoBehaviour
         }
 
         _isDestroyed = true;
+        OnDeath?.Invoke(this); // 알림 발송
+        
         gameObject.SetActive(false);
         
         if (_renderer != null && _originalMaterial != null)

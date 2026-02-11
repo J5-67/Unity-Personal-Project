@@ -1,6 +1,10 @@
 ﻿ID,Name,Side,Portrait,Text
-1,유니,Left,Yuni_Smile,오빠! CSV로 대화 시스템을 만들다니 정말 대단해!
-2,종오,Right,Oppa_Normal ,이게 다 유니 덕분이지.
-3,유니,Left,Yuni_Smile,히히 맞아! 이제 엑셀로 대사를 마구마구 추가할 수 있어!
-4,종오,Right,Oppa_Normal ,코딩할 필요 없이 데이터만 바꾸면 되니까 편하네.
-5,유니,Left,Yuni_Smile,그치? 이제 본격적인 스토리도 넣어보자구!
+1,유니,Left,Yuni_Smile,A / D = 좌 / 우 이동\nSPACE = 점프\nS + SPACE =플랫폼 아래로
+2,유니,Left,Yuni_Smile,벽점프 = 벽을 보고 점프
+3,유니,Left,Yuni_Smile,마우스 왼쪽 클릭 = 훅 발사\nW / S  = 훅 길이 줄이기 / 늘리기
+4,유니,Left,Yuni_Smile,훅을 건 상태에서 점프 = 훅 길이 빠르게 줄이기
+5,유니,Left,Yuni_Smile,마우스 오른쪽 클릭 = 대쉬
+6,유니,Left,Yuni_Smile,소형 적에게 훅 적중 시 끌어옵니다\n대형 적에게 훅 적중 시 끌려갑니다
+7,유니,Left,Yuni_Smile,적을 대쉬로 관통할 시 적은 [정지] 상태가 됩니다
+8,유니,Left,Yuni_Smile,[정지] 상태의 적은 벽으로 판정되며\n[Q]를 눌러 처형할 수 있습니다
+9,유니,Left,Yuni_Smile,모든 적을 처치시 문이 열립니다.

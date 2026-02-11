@@ -169,6 +169,13 @@ namespace Core
 
             while (timer < duration)
             {
+                // [Fix] 일시정지 상태면 타이머 흐르지 않게 대기
+                if (isPaused)
+                {
+                    yield return null;
+                    continue;
+                }
+
                 if (cancelOnInput && _gameInput != null && timer > minDuration)
                 {
                     bool isMoving = _gameInput.Player.Move.ReadValue<Vector2>().sqrMagnitude > 0.01f;
@@ -187,8 +194,13 @@ namespace Core
                 timer += Time.unscaledDeltaTime; 
             }
             
-            Time.timeScale = 1f;
             _isBulletTimeActive = false;
+            
+            // [Fix] 불릿타임이 끝났는데 아직 일시정지 중이라면, 시간을 1로 돌리면 안 됨!
+            if (!isPaused)
+            {
+                Time.timeScale = 1f;
+            }
         }
 
         public void TriggerCameraShake(float intensity = 1f)
