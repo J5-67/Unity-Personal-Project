@@ -281,3 +281,18 @@
 *   **Bullet Time + Pause**:
     *   **TimeScale Logic**: 일시정지(`Pause`) 상태에서도 불릿타임 타이머가 흘러가거나, 불릿타임 종료 시 강제로 `TimeScale=1`로 만들어 일시정지가 풀리는 치명적 버그 수정.
 
+
+---
+
+## 📅 2026-02-12
+### 1. 🚀 적 패턴 고도화 (Advanced Enemy Patterns) - [완료]
+*   **소형 적 (Light Enemy) - 레이저 사수 (Shooter)**:
+    *   **Aim Stability**: 조준 중 추락하는 물리 버그 해결 (`Kinematic` forced).
+    *   **Visual Cue (Blinking)**: 조준 레이저가 발사 직전에 점멸 속도가 빨라지도록 개선 (긴장감 조성).
+    *   **Hive Mind Fix**: 모든 적이 동시에 사격하는 현상 방지를 위해 시작 딜레이 랜덤화.
+    *   **Kamikaze (자폭)**: 훅에 걸린 적이 일정 시간 후 플레이어를 추적하며 자폭하는 패턴 추가.
+*   **대형 적 (Heavy Enemy) - 방패병 (Shield & Missile)**:
+    *   **Reflector Shield**: 정면 대시를 튕겨내는(Bounce) 방패 시스템 구현. 배후 공격이나 얼음 상태일 때는 관통 가능.
+    *   **Homing Missile**: 초반 유도 -> 후반 직진하는 스마트 미사일 패턴 구현.
+    *   **Self-Hit Fix**: 미사일이 발사자나 방패에 충돌하지 않도록 예외 처리.
+    *   **Model Fix**: 적 모델의 메쉬 방향(Y축 180도) 수정 가이드.

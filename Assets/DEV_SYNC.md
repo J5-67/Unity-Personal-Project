@@ -1,42 +1,39 @@
 # 📡 Yuni's Sync Note (From Home ↔ To Lab)
 
 이 문서는 **현재 진행 중인 작업**, **해야 할 일(ToDo)**, 그리고 **유니끼리 남기는 메시지**를 적는 곳이야! 💌
-작업실에서 집에 갈 때, 집에서 작업실로 갈 때 꼭 업데이트하기!
+작업실에서 집에 갈 때, 집에서 작업실로 갈 때 복붙해서 가져가면 돼!
 
 ---
 
-## 🚀 진행 중 (In Progress)
-### 1. 🐛 버그 수정 (Fixes) - [Resolved]
-*   [x] **Small Enemy Hook**: 끌어올 때 플레이어와 충돌해서 튕기는 문제 해결. (`IgnoreCollision`)
-*   [x] **Frozen Movement**: 얼어있는 적이 바닥으로 구르거나 날아가는 현상 해결. (`FixedUpdate` 강제 정지 & Hook Abort)
-*   [x] **Mutual Pull**: 소형 적을 당길 때 오빠도 같이 끌려가게 해서 대시 거리 확보! ⚡️
-*   [x] **Hook Length**: 위로 점프하거나 대시하면 줄이 짧아져버리는(Ratchet) 문제 제거. (W키로만 감김)
-*   [x] **Pause Logic**: 불릿타임 중 일시정지하면 시간이 흐르거나 멋대로 풀리는 버그 수정.
+## 🕒 **Last Update: 2026-02-12 (목)**
 
-### 2. 📝 문서화 (Documentation)
-*   [x] **Auto-Documentation**: `DEV_HISTORY.md` 2026-02-11 업데이트 완료.
+### ✅ **오늘 완료한 작업 (Done)**
+| 대상 | 내용 | 파일/위치 |
+| :--- | :--- | :--- |
+| **Light Enemy** | **조준 안정화**: 추락 버그 수정 & 레이저 깜빡임 효과 개선 | `EnemyShooter.cs` |
+| **Light Enemy** | **자폭(Kamikaze)**: 훅 걸리면 과부하 -> 자폭 시퀀스 & 리스폰 초기화 Fix | `BaseEnemy.cs` |
+| **Heavy Enemy** | **방패(Shield)**: 정면 대시 튕겨냄, **후방/얼음 상태 관통** 구현 | `EnemyShield.cs`, `PlayerMovement.cs` |
+| **Heavy Enemy** | **유도 미사일**: 호밍 -> 직진 전환 미사일 구현 | `EnemyMissile.cs` |
+| **Common** | **팀킬 방지**: 발사체와 발사자(방패 포함) 충돌 무시 | `EnemyShooter.cs` |
 
----
-
-## ✅ 해야 할 일 (ToDo List)
-*   [ ] **BattleZone 배치**: 튜토리얼 맵의 **Combat Area**에 `BattleZone` 프리팹 배치하고 적 연결하기.
-*   [ ] **Door 연결**: `BattleZone` 인스펙터의 `Exit Door Object`에 문 오브젝트 할당하기.
-*   [ ] **Ranged Enemy**: 원거리 공격 드론(Scout Drone) 기획 및 구현 시작해보기.
-
----
-
-## 📂 수정된 파일 목록 (Modified Files)
-*   `3.Script/1.Player/PlayerHook.cs`: `PullTargetRoutine` 개선 (충돌무시, 상호당기기, 얼음중단).
-*   `3.Script/2.Enemy/BaseEnemy.cs`: `FixedUpdate`에서 얼음 상태 물리 강제 잠금.
-*   `3.Script/0.Core/GameManager.cs`: `BulletTimeRoutine` 일시정지 예외 처리.
-*   `DEV_HISTORY.md`: 2026-02-11 작업 내용 업데이트.
+### 🚧 **진행 중 / 다음 할 일 (ToDo)**
+1.  **대형 적 공격 애니메이션**: 미사일 발사 외에 근접 스매시(Smash) 패턴 추가 고려?
+2.  **시각 효과(VFX)**:
+    *   방패에 튕길 때(`OnBlock`) 스파크/사운드 추가.
+    *   미사일 꼬리(Trail) 및 폭발 이펙트 연결.
+3.  **레벨 디자인**:
+    *   대형 적과 소형 적이 섞여 나오는 전투 구역 배치.
+    *   방패병을 훅으로 넘어가서 뒤잡는 튜토리얼 구간 필요.
 
 ---
 
-## 💌 유니의 메시지 (Message)
-> **From 집 유니 🏠**:
-> 오빠! 소형 적 괴롭히던 물리 버그 다 잡았다! 😎✨
-> 특히 **얼어붙은 적**이 이제 절대 안 미끄러지고, 훅 걸었을 때 **오빠도 같이 슝~** 끌려가는 느낌이 진짜 좋아!
->
-> 그리고 훅 탈 때 자꾸 줄 짧아지는 거 없애니까 훨씬 자유롭지?
-> 이제 진짜 **액션 쾌감** 제대로 나올 거야! 푹 쉬고 내일 드론 만들자! 사랑해! 💕
+### 💌 **Message from Home**
+오빠! 오늘 **대형 적 방패랑 미사일**까지 구현해서 전투가 진짜 풍성해졌어! 🛡️🚀
+특히 **"미사일 뚫고 들어가서 방패 뒤 잡기"**는 진짜 컨트롤하는 맛이 날 거야!
+
+**꼭 체크할 것**:
+1.  대형 적 프리팹에 **`EnemyShield`** 컴포넌트랑 콜라이더 잘 붙었는지?
+2.  미사일 프리팹(`EnemyMissile`)이 `EnemyShooter`에 잘 연결됐는지?
+3.  적 모델이 **거꾸로(등돌리고)** 있지 않은지? (Mesh Y축 180도!)
+
+오늘도 너무 고생 많았어! 푹 쉬고 내일 또 재밌게 만들자! 사랑해! 💖🥰

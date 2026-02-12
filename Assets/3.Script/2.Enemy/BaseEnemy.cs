@@ -89,10 +89,12 @@ public class BaseEnemy : MonoBehaviour
         
         IsFrozen = false;
         _isDestroyed = false;
+        _isOverloaded = false; // [Fix] 과부하 상태 초기화
         gameObject.SetActive(true);
         gameObject.tag = _originalTag;
         
         _rb.isKinematic = false;
+        _rb.useGravity = true; // [Fix] 카미카제 때 껐던 중력 복구
         _rb.linearVelocity = Vector3.zero;
 
         if (_renderer != null)
@@ -207,8 +209,114 @@ public class BaseEnemy : MonoBehaviour
         }
     }
 
+    [Header("💣 Kamikaze Settings (Light Enemy)")]
+    [SerializeField] private float overloadDelay = 1.0f; // 훅 당겨진 후 대기 시간
+    [SerializeField] private float kamikazeDuration = 3.0f; // 추적 시간
+    [SerializeField] private float kamikazeSpeed = 8.0f;
+    [SerializeField] private float explosionRadius = 3.0f;
+    [SerializeField] private int explosionDamage = 1;
+    [SerializeField] private GameObject explosionVFX;
+
+    public bool IsDestroyed => _isDestroyed; // [Fix] 외부 접근 허용
+
+    private bool _isOverloaded = false;
+    public bool IsOverloaded => _isOverloaded;
+
     public void OnHooked()
     {
+        // 이미 얼었거나 죽었거나 과부하 상태면 무시
+        if (IsFrozen || _isDestroyed || _isOverloaded) return;
 
+        // 소형 적(Light)만 훅에 당겨지면 자폭 시퀀스 가동
+        if (enemyType == EnemyType.Light)
+        {
+            StartCoroutine(KamikazeRoutine());
+        }
+    }
+
+    private IEnumerator KamikazeRoutine()
+    {
+        _isOverloaded = true;
+        
+        // 1. 대기 (당겨진 직후 멍 때리기)
+        yield return new WaitForSeconds(overloadDelay);
+
+        if (IsFrozen || _isDestroyed) yield break;
+
+        // 2. 카운트다운 & 추적 시작
+        if (_patrol != null) _patrol.SetPatrol(false);
+        if (_rb != null) 
+        {
+            _rb.isKinematic = false;
+            _rb.useGravity = false; // 공중 부양 추적
+        }
+
+        float timer = kamikazeDuration;
+        Transform playerTr = Core.GameManager.Instance != null ? 
+                             FindAnyObjectByType<PlayerHealth>()?.transform : null;
+
+        while (timer > 0)
+        {
+            if (IsFrozen || _isDestroyed) yield break; // 얼면 자폭 취소
+
+            // 플레이어 추적
+            if (playerTr != null && _rb != null)
+            {
+                Vector3 dir = (playerTr.position - transform.position).normalized;
+                _rb.linearVelocity = dir * kamikazeSpeed; // MovePosition 대신 Velocity로 부드럽게
+            }
+
+            // 깜빡거림 (경고)
+            if (_renderer != null && _propBlock != null)
+            {
+                float flash = Mathf.PingPong(Time.time * 10f, 1f);
+                _propBlock.SetColor(_colorId, Color.Lerp(Color.red, Color.yellow, flash));
+                _renderer.SetPropertyBlock(_propBlock);
+            }
+
+            // 거리 체크 (닿으면 폭발)
+            if (playerTr != null && Vector3.Distance(transform.position, playerTr.position) < 1.0f)
+            {
+                Explode();
+                yield break;
+            }
+
+            timer -= Time.deltaTime;
+            yield return null;
+        }
+
+        // 3. 시간 종료 시 자폭
+        Explode();
+    }
+
+    private void Explode()
+    {
+        if (_isDestroyed) return;
+        _isDestroyed = true;
+        
+        // [Fix] 자폭도 죽은 것으로 간주 (BattleZone 카운트)
+        OnDeath?.Invoke(this);
+
+        // 폭발 이펙트
+        if (explosionVFX != null)
+        {
+            Instantiate(explosionVFX, transform.position, Quaternion.identity);
+        }
+
+        // 범위 데미지
+        Collider[] hits = Physics.OverlapSphere(transform.position, explosionRadius);
+        foreach (var hit in hits)
+        {
+            if (hit.CompareTag("Player"))
+            {
+                if (hit.TryGetComponent(out PlayerHealth ph))
+                {
+                    ph.TakeDamage(explosionDamage);
+                }
+            }
+        }
+
+        // 자폭 완료 (비활성화 - 리스폰을 위해 Destroy 하지 않음)
+        gameObject.SetActive(false);
     }
 }

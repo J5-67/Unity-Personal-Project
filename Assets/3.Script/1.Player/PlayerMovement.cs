@@ -268,6 +268,31 @@ public class PlayerMovement : MonoBehaviour
             Collider[] hits = Physics.OverlapCapsule(transform.position + Vector3.up * 0.5f, transform.position + Vector3.up * 1.5f, 0.25f, dashPassLayer);
             foreach (var hit in hits)
             {
+                // [Fix] 방패(Shield)에 부딪히면 튕겨나감 (대시 관통 불가)
+                if (hit.TryGetComponent(out EnemyShield shield))
+                {
+                    // 1. 적이 이미 얼어있으면 방패 무시 (관통 허용)
+                    // 부모나 자신에서 BaseEnemy 찾기
+                    BaseEnemy shieldOwner = shield.GetComponentInParent<BaseEnemy>();
+                    if (shieldOwner != null && shieldOwner.IsFrozen) continue;
+
+                    // 2. 뒤에서 때리면 방패 무시 (백어택 허용)
+                    // 내 진행 방향(dashDir)과 방패 앞면(forward)이 같은 방향(Dot > 0)이면 뒤에서 때린 것
+                    // 반대 방향(Dot < 0)이면 정면 충돌
+                    if (Vector3.Dot(dashDir, shield.transform.forward) > 0)
+                    {
+                        continue; // 뒤에서 때림 -> 통과
+                    }
+
+                    Vector3 bounceDir = (transform.position - shield.transform.position).normalized;
+                    _rb.linearVelocity = bounceDir * shield.BounceForce;
+                    shield.OnBlock(transform.position); 
+                    
+                    _isDashing = false;
+                    _currentDashCharges = 0; 
+                    yield break;
+                }
+
                 if (hit.TryGetComponent(out BaseEnemy enemy) || (hit.transform.parent != null && hit.transform.parent.TryGetComponent(out enemy)))
                 {
                     if (enemy.IsFrozen) continue; 
