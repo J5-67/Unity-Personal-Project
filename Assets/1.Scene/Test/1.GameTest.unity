@@ -2340,7 +2340,7 @@ MonoBehaviour:
   fireRate: 5
   aimDuration: 1
   firePoint: {fileID: 719213003}
-  projectilePrefab: {fileID: -7443331504655036545, guid: d992310b16d63db4eae4247df238834f, type: 3}
+  projectilePrefab: {fileID: 0}
   aimLaser: {fileID: 719213010}
 --- !u!1 &738291763
 GameObject:
@@ -2720,7 +2720,7 @@ MonoBehaviour:
   fireRate: 2
   aimDuration: 1
   firePoint: {fileID: 770700452}
-  projectilePrefab: {fileID: -7443331504655036545, guid: d992310b16d63db4eae4247df238834f, type: 3}
+  projectilePrefab: {fileID: 0}
   aimLaser: {fileID: 770700459}
 --- !u!1 &781375691
 GameObject:
@@ -6884,7 +6884,7 @@ MonoBehaviour:
   fireRate: 2
   aimDuration: 1
   firePoint: {fileID: 1402813687}
-  projectilePrefab: {fileID: -7443331504655036545, guid: d992310b16d63db4eae4247df238834f, type: 3}
+  projectilePrefab: {fileID: -2968088040466605204, guid: d992310b16d63db4eae4247df238834f, type: 3}
   aimLaser: {fileID: 1402813694}
 --- !u!1 &1413134347
 GameObject:
@@ -9009,7 +9009,7 @@ MonoBehaviour:
   fireRate: 2
   aimDuration: 1
   firePoint: {fileID: 1740420866}
-  projectilePrefab: {fileID: -7443331504655036545, guid: d992310b16d63db4eae4247df238834f, type: 3}
+  projectilePrefab: {fileID: 0}
   aimLaser: {fileID: 1740420873}
 --- !u!1 &1747412579
 GameObject:
@@ -9710,7 +9710,7 @@ MonoBehaviour:
   fireRate: 2
   aimDuration: 1
   firePoint: {fileID: 1786824556}
-  projectilePrefab: {fileID: -7443331504655036545, guid: d992310b16d63db4eae4247df238834f, type: 3}
+  projectilePrefab: {fileID: -2968088040466605204, guid: d992310b16d63db4eae4247df238834f, type: 3}
   aimLaser: {fileID: 1786824559}
 --- !u!120 &1786824559
 LineRenderer:
@@ -10706,7 +10706,7 @@ MonoBehaviour:
   fireRate: 2
   aimDuration: 1
   firePoint: {fileID: 1981354354}
-  projectilePrefab: {fileID: -7443331504655036545, guid: d992310b16d63db4eae4247df238834f, type: 3}
+  projectilePrefab: {fileID: 0}
   aimLaser: {fileID: 1981354361}
 --- !u!1 &1984343783
 GameObject:
@@ -19968,7 +19968,7 @@ MonoBehaviour:
   dashCooldown: 2
   dashPassLayer:
     serializedVersion: 2
-    m_Bits: 256
+    m_Bits: 768
   dashBulletTimeScale: 0.1
   dashBulletTimeDuration: 2
   jumpForce: 10
@@ -20007,7 +20007,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 90dfca206b4d7d548bbb360db6c6bc67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerHealth
-  maxHealth: 4
+  maxHealth: 604
   currentHealth: 0
   healthUI: {fileID: 3938766582665825374}
   lastCheckpointPos: {x: 0, y: 0, z: 0}

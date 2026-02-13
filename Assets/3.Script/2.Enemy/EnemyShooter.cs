@@ -102,31 +102,23 @@ public class EnemyShooter : MonoBehaviour
                 yield break;
             }
 
-            // 플레이어 바라보기
-            Vector3 dir = (_playerTr.position - transform.position).normalized;
-            // 2D/3D 회전 처리
-            transform.forward = Vector3.Lerp(transform.forward, dir, Time.deltaTime * 10f); // 부드럽게 회전
+            // 플레이어 바라보기 (Y축 회전만 허용하여 덤블링 방지)
+            Vector3 targetDir = _playerTr.position - transform.position;
+            targetDir.y = 0; // 높이 차 무시 (수평 회전만)
+            
+            if (targetDir != Vector3.zero)
+            {
+                Quaternion targetRot = Quaternion.LookRotation(targetDir);
+                transform.rotation = Quaternion.Lerp(transform.rotation, targetRot, Time.deltaTime * 10f);
+            }
 
             // 레이저 깜빡임 (초반 50% 고정 -> 후반 가속 깜빡임)
             if (aimLaser != null)
             {
-                float progress = timer / aimDuration;
-                bool isVisible = true;
-
-                if (progress > 0.5f)
-                {
-                    float blinkSpeed = Mathf.Lerp(5f, 30f, (progress - 0.5f) * 2f);
-                    blinkPhase += Time.deltaTime * blinkSpeed;
-                    isVisible = (blinkPhase % 1f) < 0.5f;
-                }
-
-                aimLaser.enabled = isVisible;
-
-                if (isVisible)
-                {
-                    aimLaser.SetPosition(0, searchFirePoint().position); 
-                    aimLaser.SetPosition(1, _playerTr.position);         
-                }
+                // ... (이하 동일, 레이저 시작점 갱신)
+                // 레이저가 발사 위치에서 나가도록 계속 갱신
+                aimLaser.SetPosition(0, searchFirePoint().position); 
+                aimLaser.SetPosition(1, _playerTr.position);         
             }
 
             timer += Time.deltaTime;

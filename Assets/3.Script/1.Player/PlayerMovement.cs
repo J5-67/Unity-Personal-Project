@@ -209,6 +209,14 @@ public class PlayerMovement : MonoBehaviour
         _dashRechargeTimer = 0f; 
 
         int playerLayer = gameObject.layer;
+        
+        // [New] Projectile 레이어 명시적 무시 (대시 중에는 미사일에 맞으면 안 됨)
+        int projectileLayer = LayerMask.NameToLayer("Projectile");
+        if (projectileLayer != -1)
+        {
+             Physics.IgnoreLayerCollision(playerLayer, projectileLayer, true);
+        }
+
         for (int i = 0; i < 32; i++)
         {
             if ((dashPassLayer.value & (1 << i)) != 0)
@@ -293,6 +301,20 @@ public class PlayerMovement : MonoBehaviour
                     yield break;
                 }
 
+                // [New] 미사일(투사체)도 뚫고 지나가면서 얼리기!
+                if (hit.TryGetComponent(out EnemyMissile missile) || (hit.transform.parent != null && hit.transform.parent.TryGetComponent(out missile)))
+                {
+                    missile.SetFrozen(true);
+                    isOverlappingEnemy = true; // 적을 뚫은 것으로 간주 (불릿타임 발동)
+
+                    if (!hasRecharged)
+                    {
+                        AddDashStack(1); // 미사일 뚫어도 대시 충전! (혜자 판정)
+                        hasRecharged = true;
+                    }
+                    continue; 
+                }
+
                 if (hit.TryGetComponent(out BaseEnemy enemy) || (hit.transform.parent != null && hit.transform.parent.TryGetComponent(out enemy)))
                 {
                     if (enemy.IsFrozen) continue; 
@@ -333,6 +355,12 @@ public class PlayerMovement : MonoBehaviour
         if (hasRecharged && !bulletTimeTriggered && Core.GameManager.Instance != null)
         {
              Core.GameManager.Instance.TriggerBulletTime(dashBulletTimeDuration, dashBulletTimeScale, true);
+        }
+
+        int projectileLayerEnd = LayerMask.NameToLayer("Projectile");
+         if (projectileLayerEnd != -1)
+        {
+             Physics.IgnoreLayerCollision(playerLayer, projectileLayerEnd, false);
         }
 
         for (int i = 0; i < 32; i++)
