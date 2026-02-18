@@ -193,9 +193,9 @@ public class BaseEnemy : MonoBehaviour
     {
         if (!IsFrozen || _isDestroyed) return;
 
-        if (VFX.HackVFXManager.Instance != null)
+        if (Core.VFXManager.Instance != null)
         {
-            VFX.HackVFXManager.Instance.PlayHackEffect(transform.position);
+            Core.VFXManager.Instance.PlayHackExplosion(transform.position);
         }
 
         _isDestroyed = true;
@@ -215,7 +215,6 @@ public class BaseEnemy : MonoBehaviour
     [SerializeField] private float kamikazeSpeed = 8.0f;
     [SerializeField] private float explosionRadius = 3.0f;
     [SerializeField] private int explosionDamage = 1;
-    [SerializeField] private GameObject explosionVFX;
 
     public bool IsDestroyed => _isDestroyed; // [Fix] 외부 접근 허용
 
@@ -297,10 +296,10 @@ public class BaseEnemy : MonoBehaviour
         // [Fix] 자폭도 죽은 것으로 간주 (BattleZone 카운트)
         OnDeath?.Invoke(this);
 
-        // 폭발 이펙트
-        if (explosionVFX != null)
+        // 폭발 이펙트 (중앙 관리)
+        if (Core.VFXManager.Instance != null)
         {
-            Instantiate(explosionVFX, transform.position, Quaternion.identity);
+            Core.VFXManager.Instance.PlayKamikazeExplosion(transform.position);
         }
 
         // 범위 데미지

@@ -176,8 +176,24 @@ public class PlayerMovement : MonoBehaviour
             Collider[] hits = Physics.OverlapSphere(transform.position, hackRadius);
             
             bool anyHacked = false;
+            
+            // [New] 해킹 시 타겟 찾기 (우선순위: 보스 -> 일반 적)
+            Transform hackTarget = null;
+            
+            // 1. 보스 찾기
+            BossHealth boss = FindAnyObjectByType<BossHealth>();
+            if (boss != null) hackTarget = boss.transform;
+
+            // 2. 보스 없으면 일반 적 찾기 (가장 가까운)
+            if (hackTarget == null)
+            {
+                BaseEnemy randomEnemy = FindAnyObjectByType<BaseEnemy>();
+                if (randomEnemy != null) hackTarget = randomEnemy.transform;
+            }
+
             foreach (var hit in hits)
             {
+                // 1. 일반 적 해킹 (기존 로직)
                 if (hit.TryGetComponent(out BaseEnemy enemy) || (hit.transform.parent != null && hit.transform.parent.TryGetComponent(out enemy)))
                 {
                     if (enemy.IsFrozen)
@@ -186,18 +202,42 @@ public class PlayerMovement : MonoBehaviour
                         anyHacked = true;
                     }
                 }
+
+                // 2. [New] 미사일 해킹
+                if (hit.TryGetComponent(out EnemyMissile missile) || (hit.transform.parent != null && hit.transform.parent.TryGetComponent(out missile)))
+                {
+                    // [Fix] 얼어있는 미사일만 해킹 가능 & 이미 해킹된 건 무시
+                    if (!missile.IsFrozen) continue;
+
+                    // 타겟이 있어야 해킹 의미가 있음
+                    if (hackTarget != null) 
+                    {
+                        missile.HackReverse(hackTarget);
+                        anyHacked = true;
+
+                        // 해킹 이펙트
+                        if (Core.VFXManager.Instance != null)
+                        {
+                             Core.VFXManager.Instance.PlayHackExplosion(missile.transform.position);
+                        }
+                    }
+                    else
+                    {
+                        // 타겟이 아예 없으면 그냥 제자리 폭발 (자폭)
+                        if (Core.VFXManager.Instance != null)
+                        {
+                             Core.VFXManager.Instance.PlayHackExplosion(missile.transform.position);
+                        }
+                        Destroy(missile.gameObject);
+                        anyHacked = true;
+                    }
+                }
             }
 
             if (anyHacked)
             {
-                if (VFX.HackVFXManager.Instance != null)
-                {
-                    VFX.HackVFXManager.Instance.TriggerMassiveGlitch();
-                }
-                else if (Core.GameManager.Instance != null)
-                {
-                    Core.GameManager.Instance.TriggerCameraShake(0.5f); 
-                }
+                // [Fix] VFXManager에서 쉐이크까지 처리하므로 여기서는 호출 안 함
+                // if (Core.GameManager.Instance != null && !anyHacked) -> 해킹된 게 없으면 피드백 줄 수도 있지만 일단 생략
             }
         }
     }

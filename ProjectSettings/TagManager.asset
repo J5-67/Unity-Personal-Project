@@ -8,6 +8,9 @@ TagManager:
   - Heavy
   - Light
   - FrozenEnemy
+  - Enemy
+  - Boss
+  - PlayerProjectile
   layers:
   - Default
   - TransparentFX
