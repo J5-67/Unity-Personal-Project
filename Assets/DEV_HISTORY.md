@@ -326,3 +326,49 @@
 *   **해킹/글리치 VFX**:
     *   미사일이 얼었을 때 `BaseEnemy`와 동일한 `Glitch Shader` 효과 적용. ✨
     *   머티리얼 교체 및 쉐이더 프로퍼티 애니메이션 코루틴 구현.
+
+---
+
+## 📅 2026-02-15
+### 1. 🛠️ 최적화 시스템 구축 (Optimization System) - [완료]
+*   **VFX Manager (Object Pooling)**:
+    *   **문제 해결**: 잦은 `Instantiate/Destroy`로 인한 메모리 할당(Garbage Collection) 및 프레임 드랍 방지.
+    *   **통합 관리**: `Core.VFXManager` 싱글톤을 생성하여 게임 내 모든 파티클(폭발, 해킹, 타격 등)을 중앙 제어.
+    *   **자동 반환**: 파티클 재생이 끝나면 자동으로 비활성화되어 풀(Pool)로 돌아가는 순환 구조 완성. ♻️
+*   **폭발 효과 적용**:
+    *   **Kamikaze Explosion**: 자폭병의 폭발 효과를 풀링 시스템으로 교체.
+    *   **Hack Explosion**: 해킹 이펙트 또한 `HackVFXManager`를 제거하고 통합 매니저로 이관 준비.
+
+---
+
+## 📅 2026-02-18
+### 1. 👹 보스전 패턴 구현 (Boss Pattern V1) - [완료]
+*   **BossMissileLauncher**:
+    *   **Multi-Shot**: 부채꼴 모양으로 3~5발의 미사일을 동시 발사하는 확산형 패턴 구현. 🚀🚀🚀
+    *   **3D Homing**: 보스가 쏘는 미사일은 횡스크롤(2D) 한계를 넘어, 3D 공간을 활용해 플레이어를 입체적으로 추적하도록 업그레이드.
+*   **System Integration**:
+    *   `HackVFXManager`를 완전히 삭제하고 `Core.VFXManager`로 통합 완료.
+    *   `BaseEnemy`가 `VFXManager`를 직접 참조하여 피격/사망/해킹 시 이펙트를 호출하도록 구조 개선.
+
+---
+
+## 📅 2026-02-19
+### 1. 🐛 치명적 버그 수정 (Critical Bug Fixes) - [완료]
+*   **무한 데미지 버그 (Infinite Damage Glitch)**:
+    *   **원인**: 미사일을 해킹(`Q`)할 때, 이미 해킹된 미사일이 또 해킹되면서 데미지 로직이 중복 실행되어 보스가 순식간에 사망(Insta-kill).
+    *   **해결**: `EnemyMissile.cs`에 `IsFrozen` 체크를 추가하고, 해킹 시 `Unfreeze`(얼음 해제) 상태로 전환하여 중복 해킹을 원천 차단. 🛑
+    *   **타겟팅 개선**: 보스가 없을 때 해킹한 미사일이 허공을 맴돌지 않고 일반 적(Enemy)을 찾아가도록 `Fallback` 로직 추가.
+
+### 2. 🎮 조작감 개선 (Input Polish) - [완료]
+*   **Input Action Mapping**:
+    *   해킹(`Hack`) 액션에 키보드 `Q`와 `E`를 모두 할당하여 플레이어 편의성 증대.
+
+### 3. 🩸 보스 UI 시스템 (Boss Health UI) - [완료]
+*   **UI/UX 디자인**:
+    *   화면 하단 중앙(`Bottom Center`)에 고정된 전용 체력바 구현. 
+    *   **이중 슬라이더(Dual Slider)**: 실제 체력(Red)이 먼저 줄어들고, 잔상(White Ease)이 부드럽게 따라오며 피격량을 시각화.
+*   **타격감 연출 (Juice)**:
+    *   **Shake Effect**: 피격 시 체력바 전체가 지진 난 것처럼 흔들림 (`CanvasGroup` 기반 연출). 🫨
+    *   **Flash Effect**: 체력바 색상이 순간적으로 하얗게 번쩍(White Flash)이며 강렬한 타격감 전달. ⚡
+*   **옵저버 패턴 (Observer Pattern)**:
+    *   `BossHealth.cs`에서 `OnHealthChanged`, `OnDamageTaken` 이벤트를 발행하고, UI가 이를 구독하는 방식으로 결합도 낮춤.
