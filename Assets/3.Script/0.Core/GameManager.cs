@@ -143,9 +143,16 @@ namespace Core
             Time.timeScale = 0f;
             yield return new WaitForSecondsRealtime(duration); 
             
-            if (!_isBulletTimeActive) 
+            if (!isPaused)
             {
-                Time.timeScale = 1f;
+                if (!_isBulletTimeActive) 
+                {
+                    Time.timeScale = 1f;
+                }
+                else
+                {
+                    Time.timeScale = _currentBulletTimeScale;
+                }
             }
         }
 

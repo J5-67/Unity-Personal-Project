@@ -63,7 +63,11 @@ namespace UI
                     // 얼어있거나, 이미 해킹해서 보스한테 날아가는 내 편 미사일은 위협이 알림 안 띄움!
                     if (!m.IsFrozen && !m.IsHacked)
                     {
-                        _threats.Add(m.transform);
+                        // [Fix] 시간이 정지되었을 때는 위협으로 추가하지 않음
+                        if (Time.timeScale > 0f)
+                        {
+                            _threats.Add(m.transform);
+                        }
                     }
                 }
 
@@ -71,9 +75,13 @@ namespace UI
                 var enemies = FindObjectsByType<BaseEnemy>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
                 foreach (var e in enemies)
                 {
-                    if (e.IsOverloaded && !e.IsDestroyed) 
+                    if (e.IsOverloaded && !e.IsDestroyed && !e.IsFrozen) // [Fix] 얼어있는 카미카제는 경고 안 띄움
                     {
-                        _threats.Add(e.transform);
+                        // [Fix] 시간이 정지되었을 때는 위협으로 추가하지 않음
+                        if (Time.timeScale > 0f)
+                        {
+                            _threats.Add(e.transform);
+                        }
                         continue; // 자폭 카운트에 들어갔으면 조준 체크는 건너뜀 (중복 방지)
                     }
 
@@ -82,7 +90,11 @@ namespace UI
                     {
                         if (shooter.IsAiming && !e.IsDestroyed && !e.IsFrozen)
                         {
-                            _threats.Add(e.transform);
+                            // [Fix] 시간이 정지되었을 때는 위협으로 추가하지 않음
+                            if (Time.timeScale > 0f)
+                            {
+                                _threats.Add(e.transform);
+                            }
                         }
                     }
                 }

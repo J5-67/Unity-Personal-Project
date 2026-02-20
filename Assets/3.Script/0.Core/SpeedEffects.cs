@@ -49,15 +49,15 @@ namespace Core
                 }
             }
 
-            UpdateVisuals();
-
             // [New] 다이나믹 모션 블러 (속도에 비례해서 증가!)
+            float maxSpeed = 40f; // 최대 속도 (대시 스피드 등 감안)
+            // 현재 속도 비율 (0.0 ~ 1.0)
+            float speedRatio = Mathf.Clamp01((speed - (activationSpeed * 0.5f)) / (maxSpeed - (activationSpeed * 0.5f))); 
+
+            UpdateVisuals(speedRatio);
+
             if (Core.PostProcessManager.Instance != null)
             {
-                float maxSpeed = 40f; // 최대 속도 (대시 스피드 등 감안)
-                // 현재 속도 비율 (0.0 ~ 1.0)
-                float speedRatio = Mathf.Clamp01((speed - (activationSpeed * 0.5f)) / (maxSpeed - (activationSpeed * 0.5f))); 
-                
                 // 모션 블러 강도 부드럽게 적용 (0 ~ 1.5 범위 내)
                 Core.PostProcessManager.Instance.SetMotionBlur(speedRatio * 1.5f); // URP Motion Blur Intensity
             }
@@ -66,29 +66,41 @@ namespace Core
             if (Core.CameraEffectManager.Instance != null)
             {
                 // 속도가 느릴 땐 0, 빠를 땐 20까지 FOV가 쭈~욱 늘어남!
-                float maxSpeed = 40f; 
-                float speedRatio = Mathf.Clamp01((speed - (activationSpeed * 0.5f)) / (maxSpeed - (activationSpeed * 0.5f))); 
                 Core.CameraEffectManager.Instance.SetVelocityFOV(speedRatio * 20f);
             }
         }
 
-        private void UpdateVisuals()
+        private void UpdateVisuals(float speedRatio)
         {
-            // 1. Speed Lines (Particle)
+            // 1. Speed Lines (Particle) 다이내믹 튜닝 복구!
             if (speedLines != null)
             {
                 var emission = speedLines.emission;
-                emission.enabled = _isEffectActive;
+                
+                if (_isEffectActive)
+                {
+                    emission.enabled = true;
+                }
+                else
+                {
+                    // 서서히 끄기 위해 Emission만 끔 (남아있는 파티클은 자연스럽게 사라짐)
+                    emission.enabled = false;
+                }
             }
 
-            // 2. Ghost Trail
+            // 2. Ghost Trail 최적화 적용
             if (_isEffectActive && ghostTrail != null)
             {
+                // [Fix] 속도가 빠를수록 잔상 간격을 비례해서 촘촘하게 남김 (대시할 때 훨씬 멋짐!)
+                float currentInterval = Mathf.Lerp(ghostInterval, ghostInterval * 0.2f, speedRatio);
+                
                 _ghostTimer += Time.deltaTime;
-                if (_ghostTimer >= ghostInterval)
+                if (_ghostTimer >= currentInterval)
                 {
                     ghostTrail.ShowGhost();
-                    _ghostTimer = 0f;
+                    // [최적화 방어] 오버슈팅 방지를 위해 남은 시간 처리
+                    _ghostTimer -= currentInterval; 
+                    if (_ghostTimer > currentInterval) _ghostTimer = 0f;
                 }
             }
         }
