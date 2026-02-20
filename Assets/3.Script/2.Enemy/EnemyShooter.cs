@@ -20,6 +20,7 @@ public class EnemyShooter : MonoBehaviour
     private Transform _playerTr;
     private float _nextFireTime;
     private bool _isAiming = false;
+    public bool IsAiming => _isAiming; // [New] 레이더 탐지용 프로퍼티
 
     private void Awake()
     {

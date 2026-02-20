@@ -46,6 +46,7 @@ public class BaseEnemy : MonoBehaviour
         _originalTag = gameObject.tag;
         _originalColor = _renderer.material.color;
         _originalMaterial = _renderer.sharedMaterial;
+        _propBlock = new MaterialPropertyBlock(); // [Fix] 자폭 깜빡임 등에서도 쓸 수 있게 미리 할당
         _startPos = transform.position;
         _startRot = transform.rotation;
     }
@@ -127,6 +128,7 @@ public class BaseEnemy : MonoBehaviour
     private static int _glitchPowerId = Shader.PropertyToID("_GlitchPower");
     private static int _noiseSpeedId = Shader.PropertyToID("_NoiseSpeed");
     private static int _colorId = Shader.PropertyToID("_Color"); 
+    private static int _baseColorId = Shader.PropertyToID("_BaseColor"); // [New] URP 대응용
     
     private MaterialPropertyBlock _propBlock;
     
@@ -253,6 +255,8 @@ public class BaseEnemy : MonoBehaviour
         float timer = kamikazeDuration;
         Transform playerTr = Core.GameManager.Instance != null ? 
                              FindAnyObjectByType<PlayerHealth>()?.transform : null;
+        
+        PlayerMovement pm = playerTr != null ? playerTr.GetComponent<PlayerMovement>() : null;
 
         while (timer > 0)
         {
@@ -269,15 +273,28 @@ public class BaseEnemy : MonoBehaviour
             if (_renderer != null && _propBlock != null)
             {
                 float flash = Mathf.PingPong(Time.time * 10f, 1f);
-                _propBlock.SetColor(_colorId, Color.Lerp(Color.red, Color.yellow, flash));
+                Color blinkColor = Color.Lerp(Color.red, Color.yellow, flash);
+                
+                // [Fix] URP Lit 매테리얼 대응 (URP는 _BaseColor, 기본은 _Color 사용)
+                _propBlock.SetColor(_colorId, blinkColor);
+                _propBlock.SetColor(_baseColorId, blinkColor);
+                
                 _renderer.SetPropertyBlock(_propBlock);
             }
 
             // 거리 체크 (닿으면 폭발)
             if (playerTr != null && Vector3.Distance(transform.position, playerTr.position) < 1.0f)
             {
-                Explode();
-                yield break;
+                // [Fix] 플레이어가 대시 중일 때는 폭발하지 않고 통과(관통) 대기!
+                if (pm != null && pm.IsDashing)
+                {
+                    // 아무것도 안 함 (다음 프레임에 대시 충돌 박스가 얼려주길 기다림)
+                }
+                else
+                {
+                    Explode();
+                    yield break;
+                }
             }
 
             timer -= Time.deltaTime;

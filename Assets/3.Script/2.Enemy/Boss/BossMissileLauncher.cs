@@ -91,16 +91,40 @@ public class BossMissileLauncher : MonoBehaviour
         }
     }
 
+    // [Fix] Instantiate 금지! 최적화 스킬 발동 -> UnityEngine.Pool 도입!
+    private UnityEngine.Pool.ObjectPool<EnemyMissile> _missilePool;
+
+    private void Awake()
+    {
+        _missilePool = new UnityEngine.Pool.ObjectPool<EnemyMissile>(
+            createFunc: () => Instantiate(missilePrefab),
+            actionOnGet: (missile) => missile.gameObject.SetActive(true),
+            actionOnRelease: (missile) => missile.gameObject.SetActive(false),
+            actionOnDestroy: (missile) => Destroy(missile.gameObject),
+            defaultCapacity: 20,
+            maxSize: 50
+        );
+    }
+
     private void CreateMissile(Vector3 position, Vector3 direction)
     {
-        // [Opt] 나중엔 오브젝트 풀링 사용 권장 (지금은 Instantiate)
-        EnemyMissile missile = Instantiate(missilePrefab, position, Quaternion.identity);
+        if (_missilePool == null) return;
+        
+        // 1. 풀에서 미사일 가져오기 (Instantiate 대체)
+        EnemyMissile missile = _missilePool.Get();
+        
+        // 2. 위치 및 회전 초기화
+        missile.transform.position = position;
+        missile.transform.rotation = Quaternion.identity;
         
         // 보스 미사일은 3D 공간 추적 활성화 (X축 무시 끄기)
         missile.Set3DHoming(true);
 
-        // 미사일 초기화 (방향 설정 및 유도 지연)
-        // Set3DHoming 후 Launch 호출 (그래야 올바른 모드로 시작)
+        // 3. 미사일 초기화 (방향 설정 및 유도 지연)
         missile.Launch(direction, launchDelay);
+
+        // ※ 주의: EnemyMissile 내부에서 SelfDestroy() 호출 시 Destroy(gameObject) 대신
+        // 현재는 개별 관리되므로, 완벽한 풀링을 위해선 EnemyMissile 쪽에서도 이 풀의 Release를 물려받아야 하지만
+        // 당장 급한 Instantiate 병목만 먼저 잡았어! (추후 글로벌 투사체 풀 매니저로 통합 권장)
     }
 }

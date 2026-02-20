@@ -98,8 +98,14 @@ public class EnemyMissile : EnemyProjectile
     // CancelInvoke를 해도 사라지는 문제가 있었음. 빈 Start를 만들어서 부모 Start를 차단!
     private void Start() { }
 
+    private Coroutine _autoHackCoroutine;
+    [SerializeField] private float autoHackDelay = 1.5f; // [New] 자동 발사 대기 시간
+
     public void SetFrozen(bool state)
     {
+        // [Fix] 이미 같은 상태라면 중복 실행(초기화) 방지 (특히 대시로 연속해서 긁힐 때 리셋되는 현상 픽스!)
+        if (_isFrozen == state) return;
+
         _isFrozen = state;
 
         if (_isFrozen)
@@ -123,6 +129,10 @@ public class EnemyMissile : EnemyProjectile
             // [New] Glitch 효과 시작
             if (_glitchCoroutine != null) StopCoroutine(_glitchCoroutine);
             _glitchCoroutine = StartCoroutine(GlitchRoutine());
+
+            // [New] 자동 해킹 & 발사 코루틴 시작 (키보드 입력 없이!)
+            if (_autoHackCoroutine != null) StopCoroutine(_autoHackCoroutine);
+            _autoHackCoroutine = StartCoroutine(AutoHackRoutine());
         }
         else
         {
@@ -143,6 +153,13 @@ public class EnemyMissile : EnemyProjectile
                 StopCoroutine(_glitchCoroutine);
                 _glitchCoroutine = null;
             }
+
+            // 자동 해킹 코루틴 중지
+            if (_autoHackCoroutine != null)
+            {
+                StopCoroutine(_autoHackCoroutine);
+                _autoHackCoroutine = null;
+            }
             
             // 원래 재질 복구
             if (_renderer != null && _originalMaterial != null)
@@ -150,6 +167,43 @@ public class EnemyMissile : EnemyProjectile
                 _renderer.sharedMaterial = _originalMaterial;
                 _renderer.SetPropertyBlock(null);
             }
+        }
+    }
+
+    private System.Collections.IEnumerator AutoHackRoutine()
+    {
+        yield return new WaitForSeconds(autoHackDelay); // 지정된 시간(1.5초) 대기
+
+        // 타겟 찾기 (우선순위: 보스 -> 일반 적)
+        Transform hackTarget = null;
+        
+        BossHealth boss = FindAnyObjectByType<BossHealth>();
+        if (boss != null) hackTarget = boss.transform;
+
+        if (hackTarget == null)
+        {
+            BaseEnemy randomEnemy = FindAnyObjectByType<BaseEnemy>();
+            if (randomEnemy != null) hackTarget = randomEnemy.transform;
+        }
+
+        if (hackTarget != null)
+        {
+            HackReverse(hackTarget);
+            
+            // 스파크 이펙트로 발사 알림
+            if (Core.VFXManager.Instance != null)
+            {
+                 Core.VFXManager.Instance.PlayHackExplosion(transform.position);
+            }
+        }
+        else
+        {
+            // 타겟이 없으면 그냥 자폭
+            if (Core.VFXManager.Instance != null)
+            {
+                 Core.VFXManager.Instance.PlayHackExplosion(transform.position);
+            }
+            Destroy(gameObject);
         }
     }
 
@@ -331,6 +385,7 @@ public class EnemyMissile : EnemyProjectile
     }
 
     private bool _isHacked = false; // [New] 해킹 여부 플래그
+    public bool IsHacked => _isHacked; // [New] 외부 확인용 프로퍼티
 
     // [New] 미사일 해킹: 역추적 (Reverse Homing)
     public void HackReverse(Transform newTarget)

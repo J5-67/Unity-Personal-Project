@@ -119,8 +119,8 @@ namespace Core
         {
             yield return new WaitForSeconds(delay);
             
-            // 오브젝트가 활성화되어 있을 때만 반환 (중복 반환 방지)
-            if (instance.activeSelf)
+            // [Fix] 씬 전환이나 외부 요인으로 이미 파괴된 오브젝트 접근 방지 (null 체크 추가)
+            if (instance != null && instance.activeSelf)
             {
                 pool.Release(instance);
             }

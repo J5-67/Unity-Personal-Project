@@ -50,6 +50,26 @@ namespace Core
             }
 
             UpdateVisuals();
+
+            // [New] 다이나믹 모션 블러 (속도에 비례해서 증가!)
+            if (Core.PostProcessManager.Instance != null)
+            {
+                float maxSpeed = 40f; // 최대 속도 (대시 스피드 등 감안)
+                // 현재 속도 비율 (0.0 ~ 1.0)
+                float speedRatio = Mathf.Clamp01((speed - (activationSpeed * 0.5f)) / (maxSpeed - (activationSpeed * 0.5f))); 
+                
+                // 모션 블러 강도 부드럽게 적용 (0 ~ 1.5 범위 내)
+                Core.PostProcessManager.Instance.SetMotionBlur(speedRatio * 1.5f); // URP Motion Blur Intensity
+            }
+
+            // 카메라 시야각(FOV)도 속도에 비례해서 늘려주기! (최대 FOV + 20)
+            if (Core.CameraEffectManager.Instance != null)
+            {
+                // 속도가 느릴 땐 0, 빠를 땐 20까지 FOV가 쭈~욱 늘어남!
+                float maxSpeed = 40f; 
+                float speedRatio = Mathf.Clamp01((speed - (activationSpeed * 0.5f)) / (maxSpeed - (activationSpeed * 0.5f))); 
+                Core.CameraEffectManager.Instance.SetVelocityFOV(speedRatio * 20f);
+            }
         }
 
         private void UpdateVisuals()

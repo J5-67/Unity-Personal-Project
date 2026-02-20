@@ -13,6 +13,7 @@ namespace Core
         [SerializeField] private Volume globalVolume;
         
         private ChromaticAberration _chromaticAberration; 
+        private MotionBlur _motionBlur; // [New] 모션블러 제어용
         private Coroutine _aberrationRoutine;
 
         private void Awake()
@@ -37,22 +38,31 @@ namespace Core
 
             if (globalVolume != null)
             {
-                // 프로필에서 효과 찾기 시도
+                // 크로마틱 찾아오기
                 if (globalVolume.profile.TryGet(out _chromaticAberration))
                 {
                     _chromaticAberration.active = true;
-                    // 디버그 로그: 효과 찾음
-                    Debug.Log($"[유니] ChromaticAberration 찾기 성공! 기본값 조절 시작: {_chromaticAberration.intensity.value}");
                     _chromaticAberration.intensity.value = 0f;
                 }
-                else
+
+                // [New] 모션블러 찾아오기
+                if (globalVolume.profile.TryGet(out _motionBlur))
                 {
-                    Debug.LogError("[유니] Volume Profile 안에 Chromatic Aberration이 없어! Add Override 했는지 확인해줘!");
+                    _motionBlur.active = true;
+                    _motionBlur.intensity.value = 0f; // 평소엔 꺼둠
                 }
             }
             else
             {
                 Debug.LogError("[유니] Global Volume을 찾을 수 없어! 인스펙터에 연결해줘!");
+            }
+        }
+
+        public void SetMotionBlur(float intensity)
+        {
+            if (_motionBlur != null)
+            {
+                _motionBlur.intensity.value = intensity;
             }
         }
 

@@ -65,6 +65,7 @@ public class PlayerMovement : MonoBehaviour
     private bool _isHookingState = false; 
     
     private bool _isDashing;          
+    public bool IsDashing => _isDashing; // [New] 외부에서 대시 상태 확인용
     private int _currentDashCharges;  
     public int CurrentDashCharges => _currentDashCharges; 
     public int MaxDashCharges => maxDashCharges;          
@@ -313,7 +314,13 @@ public class PlayerMovement : MonoBehaviour
             }
 
             isOverlappingEnemy = false; 
-            Collider[] hits = Physics.OverlapCapsule(transform.position + Vector3.up * 0.5f, transform.position + Vector3.up * 1.5f, 0.25f, dashPassLayer);
+            
+            // [Fix] 3D 미사일/투사체 관통 범위를 더 타이트하게 축소! (오빠 피드백 반영: 난이도 상승 🌶️)
+            // 기존 2f(X축 4m) -> 1f(X축 2m)로 줄이고, 높이(Y축)도 0.8f -> 0.5f로 줄여서 훨씬 정교하게 뚫어야 함!
+            Vector3 dashBoxCenter = transform.position + Vector3.up * 1.0f;
+            Vector3 dashBoxHalfExtents = new Vector3(1f, 0.5f, 0.5f); 
+            
+            Collider[] hits = Physics.OverlapBox(dashBoxCenter, dashBoxHalfExtents, Quaternion.identity, dashPassLayer);
             foreach (var hit in hits)
             {
                 // [Fix] 방패(Shield)에 부딪히면 튕겨나감 (대시 관통 불가)
@@ -344,6 +351,9 @@ public class PlayerMovement : MonoBehaviour
                 // [New] 미사일(투사체)도 뚫고 지나가면서 얼리기!
                 if (hit.TryGetComponent(out EnemyMissile missile) || (hit.transform.parent != null && hit.transform.parent.TryGetComponent(out missile)))
                 {
+                    // [Fix] 이미 해킹되어서 날아가거나(IsHacked), 얼어붙어서 발사 대기 중(IsFrozen)인 미사일은 건들지 않음!
+                    if (missile.IsHacked || missile.IsFrozen) continue;
+
                     missile.SetFrozen(true);
                     isOverlappingEnemy = true; // 적을 뚫은 것으로 간주 (불릿타임 발동)
 
@@ -372,17 +382,21 @@ public class PlayerMovement : MonoBehaviour
             
             if (!isOverlappingEnemy && !hasRecharged)
             {
-                LayerMask combinedMask = dashPassLayer | wallLayer;
-                if (Physics.CapsuleCast(transform.position + Vector3.up * 0.5f, transform.position + Vector3.up * 1.5f, 0.4f, dashDir, out RaycastHit hit, 1.5f, combinedMask))
+                // [Fix] 전방 캐스트(대시 연장 판정)도 BoxCast로 변경하여 깊이 무시. (배경 벽에 걸리지 않도록 wallLayer는 제외)
+                if (Physics.BoxCast(dashBoxCenter, dashBoxHalfExtents, dashDir, out RaycastHit hit, Quaternion.identity, 1.5f, dashPassLayer))
                 {
-                     if (((1 << hit.collider.gameObject.layer) & dashPassLayer.value) != 0)
+                     if (hit.collider.TryGetComponent(out BaseEnemy enemy) || (hit.transform.parent != null && hit.transform.parent.TryGetComponent(out enemy)))
                      {
-                         if (hit.collider.TryGetComponent(out BaseEnemy enemy) || (hit.transform.parent != null && hit.transform.parent.TryGetComponent(out enemy)))
+                         if (!enemy.IsFrozen)
                          {
-                             if (!enemy.IsFrozen)
-                             {
-                                 isOverlappingEnemy = true;
-                             }
+                             isOverlappingEnemy = true;
+                         }
+                     }
+                     else if (hit.collider.TryGetComponent(out EnemyMissile m) || (hit.transform.parent != null && hit.transform.parent.TryGetComponent(out m)))
+                     {
+                         if (!m.IsFrozen)
+                         {
+                             isOverlappingEnemy = true;
                          }
                      }
                 }

@@ -47,7 +47,17 @@ namespace Core
             }
         }
 
-        // LateUpdate 제거! (평소엔 건드리지 않음)
+        private float _punchFOVOffset = 0f;
+        private float _velocityFOVOffset = 0f;
+
+        private void LateUpdate()
+        {
+            if (virtualCamera != null || _mainCam != null)
+            {
+                // [Fix] 대시할 때의 순간적인 FOV(Punch)와 속도에 비례하는 FOV(Velocity)를 합산해서 부드럽게 적용!
+                SetFOV(_defaultFOV + _punchFOVOffset + _velocityFOVOffset);
+            }
+        }
 
         public void PunchFOV(float amount, float duration)
         {
@@ -57,10 +67,7 @@ namespace Core
 
         private IEnumerator PunchRoutine(float amount, float duration)
         {
-            // 시작 시점의 FOV를 기준으로 잡음 (안전)
-            float startFOV = GetCurrentFOV();
-            float targetFOV = _defaultFOV + amount;
-
+            float targetFOV = amount;
             float time = 0f;
 
             // 늘리기 (20%)
@@ -71,7 +78,7 @@ namespace Core
                 float t = time / expandDuration;
                 t = t * (2 - t); // EaseOut
                 
-                SetFOV(Mathf.Lerp(startFOV, targetFOV, t));
+                _punchFOVOffset = Mathf.Lerp(0f, targetFOV, t);
                 yield return null;
             }
 
@@ -84,11 +91,11 @@ namespace Core
                 float t = time / recoverDuration;
                 t = t * t; // EaseIn
 
-                SetFOV(Mathf.Lerp(targetFOV, _defaultFOV, t));
+                _punchFOVOffset = Mathf.Lerp(targetFOV, 0f, t);
                 yield return null;
             }
 
-            SetFOV(_defaultFOV); // 확실하게 원복
+            _punchFOVOffset = 0f; // 확실하게 원복
             _punchRoutine = null;
         }
 
@@ -113,7 +120,10 @@ namespace Core
             }
         }
 
-        // Velocity 관련 메서드는 삭제 (안 쓰니까!)
-        public void SetVelocityFOV(float targetOffset, float smoothTime = 5f) { }
+        // [New] 속도에 비례해서 시야각(FOV)을 부드럽게 늘렸다 줄였다 하는 기능!
+        public void SetVelocityFOV(float targetOffset, float smoothTime = 5f) 
+        { 
+            _velocityFOVOffset = Mathf.Lerp(_velocityFOVOffset, targetOffset, Time.deltaTime * smoothTime);
+        }
     }
 }
