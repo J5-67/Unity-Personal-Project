@@ -67,7 +67,7 @@ namespace Level
             }
             if (boss != null)
             {
-                // boss.OnDeath -= OnBossDeath; (보스 죽음 이벤트가 있다면)
+                boss.OnDeath -= ClearZone; 
             }
         }
 
@@ -86,7 +86,12 @@ namespace Level
                 }
             }
 
-            if (boss != null) boss.gameObject.SetActive(false);
+            if (boss != null) 
+            {
+                boss.gameObject.SetActive(false);
+                boss.OnDeath -= ClearZone; // 중복 방지
+                boss.OnDeath += ClearZone; // 구독
+            }
             if (bossUI != null) bossUI.SetActive(false);
         }
 
@@ -126,15 +131,25 @@ namespace Level
             yield return new WaitForSeconds(currentWave.delayBeforeWave);
 
             Debug.Log($"[WaveManager] 🚨 웨이브 {waveIndex + 1} 시작! 🚨");
+            // 1. 빛 모이는 이펙트 먼저 재생! (파티클이 모이는 시간 벌기)
+            foreach (var enemy in currentWave.enemiesToSpawn)
+            {
+                if (enemy != null && VFXManager.Instance != null)
+                {
+                    VFXManager.Instance.PlaySpawnEffect(enemy.transform.position);
+                }
+            }
 
-            // 적 소환(활성화)
+            // [New] 파티클이 중앙으로 모이는 시간(0.5초)만큼 기다리기! 연출의 디테일!
+            yield return new WaitForSeconds(0.5f);
+
+            // 2. 빛이 다 모였을 때 적 활성화!
             foreach (var enemy in currentWave.enemiesToSpawn)
             {
                 if (enemy != null)
                 {
                     enemy.gameObject.SetActive(true);
-                    // 죽었던 적 살려내기 (BaseEnemy 내부 로직에 따라 다름, 주로 ResetEnemy 호출 필요)
-                    enemy.SendMessage("ResetEnemy", SendMessageOptions.DontRequireReceiver);
+                    enemy.ResetEnemy();
                 }
             }
         }

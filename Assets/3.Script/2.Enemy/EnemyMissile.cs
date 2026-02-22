@@ -25,6 +25,7 @@ public class EnemyMissile : EnemyProjectile
     [SerializeField] private float minHomingAngle = 10f;  // 마지막 조여지는 각도 (직진 강제)
 
     private Transform _target;
+    private Collider _targetCollider; // [New] 타겟 몸통(Center) 조준을 위한 콜라이더 캐싱
     private float _timer;
     private bool _isHoming = true;
     private PID _pidController;
@@ -72,18 +73,22 @@ public class EnemyMissile : EnemyProjectile
         if (_target == null)
         {
             var p = FindAnyObjectByType<PlayerMovement>();
-            if (p != null) _target = p.transform;
+            if (p != null) 
+            {
+                _target = p.transform;
+                _targetCollider = _target.GetComponent<Collider>();
+            }
         }
 
         Invoke(nameof(SelfDestroy), 5f);
     }
-
+    
+    // ... 기존 코드 유지 (OnDisable, SelfDestroy, Start, SetFrozen, AutoHackRoutine, GlitchRoutine 등) ... //
     private void OnDisable()
     {
         CancelInvoke();
         if (_isFrozen) 
         {
-            // 비활성화 되면 얼음 상태도 해제하고 레이어 복구 (풀링 대비)
             _isFrozen = false;
             gameObject.layer = _originalLayer;
         }
@@ -94,74 +99,59 @@ public class EnemyMissile : EnemyProjectile
         Destroy(gameObject);
     }
 
-    // [Fix] 부모(EnemyProjectile)의 Start()가 실행되면 Destroy(gameObject, lifeTime)이 걸려서
-    // CancelInvoke를 해도 사라지는 문제가 있었음. 빈 Start를 만들어서 부모 Start를 차단!
     private void Start() { }
 
     private Coroutine _autoHackCoroutine;
-    [SerializeField] private float autoHackDelay = 1.5f; // [New] 자동 발사 대기 시간
+    [SerializeField] private float autoHackDelay = 1.5f; 
 
     public void SetFrozen(bool state)
     {
-        // [Fix] 이미 같은 상태라면 중복 실행(초기화) 방지 (특히 대시로 연속해서 긁힐 때 리셋되는 현상 픽스!)
         if (_isFrozen == state) return;
 
         _isFrozen = state;
 
         if (_isFrozen)
         {
-            // 1. 파괴 취소 (영원히 남아서 발판이 됨)
             CancelInvoke(nameof(SelfDestroy));
-
-            // 2. 훅이 걸리도록 레이어를 "Wall"로 변경
             gameObject.layer = LayerMask.NameToLayer("Wall");
-            
-            // [New] 태그도 "Wall"로 변경 (훅 판정 확실하게)
             gameObject.tag = "Wall"; 
 
-            // 3. 물리 엔진 정지 (혹시 모를 충돌 밀림 방지)
             if (TryGetComponent(out Rigidbody rb))
             {
                 rb.isKinematic = true;
                 rb.linearVelocity = Vector3.zero;
             }
 
-            // [New] Glitch 효과 시작
             if (_glitchCoroutine != null) StopCoroutine(_glitchCoroutine);
             _glitchCoroutine = StartCoroutine(GlitchRoutine());
 
-            // [New] 자동 해킹 & 발사 코루틴 시작 (키보드 입력 없이!)
             if (_autoHackCoroutine != null) StopCoroutine(_autoHackCoroutine);
             _autoHackCoroutine = StartCoroutine(AutoHackRoutine());
         }
         else
         {
-            // 얼음 땡! 다시 원래대로
             gameObject.layer = _originalLayer;
-            gameObject.tag = "Untagged"; // 태그 복구 (기본값)
+            gameObject.tag = "Untagged"; 
             
-            Invoke(nameof(SelfDestroy), 5f); // 5초 뒤 파괴 재예약
+            Invoke(nameof(SelfDestroy), 5f); 
 
              if (TryGetComponent(out Rigidbody rb))
             {
                 rb.isKinematic = false; 
             }
 
-            // VFX 및 Glitch 효과 제거
             if (_glitchCoroutine != null) 
             {
                 StopCoroutine(_glitchCoroutine);
                 _glitchCoroutine = null;
             }
 
-            // 자동 해킹 코루틴 중지
             if (_autoHackCoroutine != null)
             {
                 StopCoroutine(_autoHackCoroutine);
                 _autoHackCoroutine = null;
             }
             
-            // 원래 재질 복구
             if (_renderer != null && _originalMaterial != null)
             {
                 _renderer.sharedMaterial = _originalMaterial;
@@ -172,9 +162,8 @@ public class EnemyMissile : EnemyProjectile
 
     private System.Collections.IEnumerator AutoHackRoutine()
     {
-        yield return new WaitForSeconds(autoHackDelay); // 지정된 시간(1.5초) 대기
+        yield return new WaitForSeconds(autoHackDelay);
 
-        // 타겟 찾기 (우선순위: 보스 -> 일반 적)
         Transform hackTarget = null;
         
         BossHealth boss = FindAnyObjectByType<BossHealth>();
@@ -190,7 +179,6 @@ public class EnemyMissile : EnemyProjectile
         {
             HackReverse(hackTarget);
             
-            // 스파크 이펙트로 발사 알림
             if (Core.VFXManager.Instance != null)
             {
                  Core.VFXManager.Instance.PlayHackExplosion(transform.position);
@@ -198,7 +186,6 @@ public class EnemyMissile : EnemyProjectile
         }
         else
         {
-            // 타겟이 없으면 그냥 자폭
             if (Core.VFXManager.Instance != null)
             {
                  Core.VFXManager.Instance.PlayHackExplosion(transform.position);
@@ -209,14 +196,12 @@ public class EnemyMissile : EnemyProjectile
 
     private System.Collections.IEnumerator GlitchRoutine()
     {
-        // 1. 셰이더 생성 (Static 공유 - 메모리 절약)
         if (_sharedGlitchMaterial == null && glitchShader != null)
         {
              _sharedGlitchMaterial = new Material(glitchShader);
              _sharedGlitchMaterial.enableInstancing = true; 
         }
 
-        // 2. 머티리얼 교체 및 텍스쳐 복사
         if (_renderer != null && _sharedGlitchMaterial != null)
         {
             Texture originalTex = null;
@@ -230,13 +215,12 @@ public class EnemyMissile : EnemyProjectile
             if (originalTex != null) 
             {
                 _propBlock.SetTexture(_MainTexId, originalTex);
-                _propBlock.SetTexture(_BaseMapId, originalTex); // HDRP/URP 호환성
+                _propBlock.SetTexture(_BaseMapId, originalTex); 
             }
             _propBlock.SetFloat(_NoiseSpeedId, glitchSpeed);
             _renderer.SetPropertyBlock(_propBlock);
         }
 
-        // 3. 글리치 애니메이션 루프
         while (true)
         {
             if (_renderer != null)
@@ -247,7 +231,6 @@ public class EnemyMissile : EnemyProjectile
                 _renderer.GetPropertyBlock(_propBlock); 
                 _propBlock.SetFloat(_GlitchPowerId, currentPower);
 
-                // 색상 깜빡임 (Cyberpunk Cyan)
                 if (noise > 0.8f) _propBlock.SetColor(_ColorId, Color.white); 
                 else _propBlock.SetColor(_ColorId, Color.cyan);
 
@@ -259,45 +242,39 @@ public class EnemyMissile : EnemyProjectile
     }
 
     [Header("⚙️ MODE SETTINGS")]
-    [SerializeField] private bool ignoreXAxis = true; // true: 2D 전용 (X축 무시), false: 3D 추적 (보스용)
-    [SerializeField] private float turnSpeed3D = 5.0f; // 3D 모드 회전 속도
+    [SerializeField] private bool ignoreXAxis = true; 
+    [SerializeField] private float turnSpeed3D = 5.0f; 
 
-    private Vector3 _initialDirection; // [New] 초기 발사 방향
-    private float _homingDelay = 0f;   // [New] 유도 시작 대기 시간
+    private Vector3 _initialDirection; 
+    private float _homingDelay = 0f;   
 
     public void Launch(Vector3 direction, float delay)
     {
         _initialDirection = direction.normalized;
         _homingDelay = delay;
-        _isHoming = false; // 처음엔 유도 꺼둠
+        _isHoming = false; 
         _timer = 0f;
 
-        // 초기 방향 설정
         transform.forward = _initialDirection;
     }
 
     public void Set3DHoming(bool enable)
     {
-        ignoreXAxis = !enable; // enable=true면 ignore=false (3D 모드)
+        ignoreXAxis = !enable; 
     }
 
     protected override void Update()
     {
-        // [New] 정지 상태(얼음 등)면 아예 움직이지 않음
         if (_isFrozen) return;
 
-        // [New] 유도 대기 시간 처리
         if (_homingDelay > 0f)
         {
             _homingDelay -= Time.deltaTime;
-            
-            // 대기 시간 중에는 초기 방향으로 직진
             transform.Translate(Vector3.forward * speed * Time.deltaTime); 
             return;
         }
         else 
         {
-            // 대기 시간이 끝났다면 유도 활성화 (한 번만)
             if (!_isHoming && _timer == 0f) _isHoming = true;
         }
 
@@ -305,7 +282,10 @@ public class EnemyMissile : EnemyProjectile
         {
             Vector3 targetPos = _target.position;
             
-            // [Option] 2D 모드일 때만 X축 평면 보정 (기존 로직)
+            // [Fix] 빙빙 도는 공전(Orbit) 완화 및 바닥 충돌 방지를 위해 대상의 정중앙(Center) 조준
+            if (_targetCollider != null) targetPos = _targetCollider.bounds.center;
+            else targetPos.y += 1.0f; // 콜라이더 없으면 대충 가슴/머리 높이로 1m 보정
+
             if (ignoreXAxis) 
             {
                 targetPos.x = transform.position.x;
@@ -315,17 +295,15 @@ public class EnemyMissile : EnemyProjectile
 
             if (ignoreXAxis)
             {
-                // [Mode A] 2D PID 유도 (기존 로직 유지)
                 Vector3 currentDirection = transform.forward;
                 float angleError = Vector3.Angle(currentDirection, directionToTarget);
 
-                // 시간 흐름에 따른 추적 각도 제한
                 float t = _timer / homingDuration;
                 float currentLimitAngle = Mathf.Lerp(maxHomingAngle, minHomingAngle, t * t);
 
                 if (angleError > currentLimitAngle)
                 {
-                    _isHoming = false; // 각도 너무 벌어지면 포기
+                    _isHoming = false; 
                 }
                 else
                 {
@@ -335,91 +313,93 @@ public class EnemyMissile : EnemyProjectile
                     if (angleError < 1f) signedError = 0f;
 
                     float rotationAmount = _pidController.GetOutput(signedError, Time.deltaTime, kp, ki, kd);
+                    rotationAmount = Mathf.Clamp(rotationAmount, -720f, 720f);
                     transform.Rotate(Vector3.right, rotationAmount * Time.deltaTime, Space.World);
                 }
             }
             else
             {
-                // [Mode B] 3D 유도 (보스용, 단순 회전)
-                // 3D 공간에서는 PID보다 Quaternion.Slerp가 훨씬 안정적임
-                Quaternion targetRotation = Quaternion.LookRotation(directionToTarget);
-                transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, turnSpeed3D * Time.deltaTime);
-                
-                // 3D 모드는 각도 제한 없이 끝까지 쫓아감 (보스니까 무섭게!)
+                // [Mode B] 3D 유도 (보스용 & 해킹역추적용)
+                // [Fix] Slerp는 목표점 부근에서 점근적 타협을 하므로 너무 빠르면 중심 궤도를 돌기만 함(Orbit).
+                // 항상 확실하게 머리를 꺾도록 일정한 각속도(RotateTowards)를 사용하여 꽂히게 만듦!
+                Vector3 newDir = Vector3.RotateTowards(transform.forward, directionToTarget, turnSpeed3D * Time.deltaTime, 0f);
+                if (newDir.sqrMagnitude > 0.001f)
+                {
+                    transform.rotation = Quaternion.LookRotation(newDir);
+                }
             }
 
-            // 타이머 체크 & 종료 처리
             _timer += Time.deltaTime;
             if (_timer >= homingDuration)
             {
-                // 종료 시 마지막 정렬 (2D/3D 공통)
-                if (Vector3.Angle(transform.forward, directionToTarget) <= minHomingAngle)
-                {
-                    if (ignoreXAxis)
-                    {
-                        // 2D 마무리
-                        Vector3 finalTargetPos = _target.position;
-                        finalTargetPos.x = transform.position.x;
-                         Vector3 finalDir = (finalTargetPos - transform.position).normalized;
-                         transform.forward = finalDir;
-                    }
-                    else
-                    {
-                        // 3D 마무리
-                        transform.LookAt(targetPos);
-                    }
-                }
-                _isHoming = false;
+                _isHoming = false; 
             }
         }
 
-        // [Fix] 회전 보정 (2D 모드일 때만 강제 정렬)
         if (ignoreXAxis)
         {
-            Vector3 currentEuler = transform.eulerAngles;
-            transform.rotation = Quaternion.Euler(currentEuler.x, currentEuler.y, 0f);
+            Vector3 fwd = transform.forward;
+            fwd.x = 0f; 
+            if (fwd.sqrMagnitude > 0.001f)
+            {
+                transform.forward = fwd.normalized;
+            }
         }
 
-        // 전진
         transform.Translate(Vector3.forward * speed * Time.deltaTime);
     }
 
-    private bool _isHacked = false; // [New] 해킹 여부 플래그
-    public bool IsHacked => _isHacked; // [New] 외부 확인용 프로퍼티
+    private bool _isHacked = false; 
+    public bool IsHacked => _isHacked; 
 
-    // [New] 미사일 해킹: 역추적 (Reverse Homing)
     public void HackReverse(Transform newTarget)
     {
-        // [New] 중복 해킹 방지 및 즉시 기동
         _isFrozen = false; 
         
         _isHacked = true;
         _target = newTarget;
+        
+        // [Fix] 최상위에 콜라이더가 없을 수 있으므로 자식까지 뒤져서 실질적인 타겟 바운즈 캐싱
+        _targetCollider = _target.GetComponentInChildren<Collider>(); 
+        
         _isHoming = true;
         _timer = 0f;
 
-        // [Safe] 태그/레이어 변경 시도 (없으면 기본값 유지)
+        // [Fix] ⭐️핵심 원인⭐️ 자기가 쏜 미사일은 발사 시점에서 서로 영원히 충돌 무시(IgnoreCollision)가 걸려있음!
+        // 그래서 해킹 후 다시 원래 주인에게 돌아가도 유령처럼 그냥 통과하고 빙빙 돌기만 했던 것!
+        // 다시 칠 수 있도록 대상의 모든 콜라이더와 나의 콜라이더 사이의 무시를 풀어줌(false).
+        Collider[] myCols = GetComponentsInChildren<Collider>();
+        Collider[] targetCols = _target.GetComponentsInChildren<Collider>();
+
+        foreach (var mCol in myCols)
+        {
+            foreach (var tCol in targetCols)
+            {
+                if (mCol != null && tCol != null)
+                {
+                    Physics.IgnoreCollision(mCol, tCol, false);
+                }
+            }
+        }
+
         int pProjLayer = LayerMask.NameToLayer("PlayerProjectile");
         if (pProjLayer != -1) gameObject.layer = pProjLayer;
-        else gameObject.layer = LayerMask.NameToLayer("Default"); // PlayerProjectile 없으면 Default로
+        else gameObject.layer = LayerMask.NameToLayer("Default"); 
 
-        // 태그는 굳이 안 바꿔도 내부 로직(_isHacked)으로 처리 가능하므로 생략!
-        // (에러 로그 방지)
-
-        // 2. 3D 추적 활성화 (보스 맞추러 가야 하니까)
         Set3DHoming(true); 
 
-        // 3. 속도 & 데미지 증가 (카운터 펀치!)
         speed *= 1.5f; 
-        damage *= 5; // 보스한테 아프게!
+        damage *= 5; 
+        
+        // [Fix] 해킹 시 엄청 빠르게 꺾이도록 회전 속도를 어마어마하게 증가시킴 (거의 유도탄 100% 명중수준)
+        turnSpeed3D *= 5f; // Slerp 시절엔 5배도 밀렸지만, RotateTowards 방식에선 초당 1432도(!) 꺾이는 미친 추적력 발휘
+        homingDuration = 10f; 
 
-        // 4. PID 리셋 (새 타겟 적응)
         _pidController.Reset();
 
-        // 5. 시각 효과 (빨강 -> 초록)
         if (_propBlock != null && _renderer != null)
         {
-             _propBlock.SetColor(_ColorId, Color.green); // 해킹 성공 색상
+             _propBlock.SetColor(_ColorId, Color.green); 
              _renderer.SetPropertyBlock(_propBlock);
         }
     }
@@ -435,16 +415,39 @@ public class EnemyMissile : EnemyProjectile
             // 플레이어는 무시 (팀킬 방지)
             if (other.CompareTag("Player")) return;
 
-            // 적(Enemy)이나 보스(Boss) 공격
-            if (other.CompareTag("Enemy") || other.CompareTag("Boss") || other.GetComponent<BaseEnemy>() != null)
+            // [Fix] 내가 쏜 총알에 내가 맞는 것 방지 (안전 장치)
+            if (other.GetComponentInParent<EnemyProjectile>() != null) return;
+
+            // [New] 1. 쉴드 타격 체크 (직접 쉴드 콜라이더를 맞혔거나, 본체를 맞혔지만 자식에 쉴드가 켜져있을 때)
+            EnemyShield shield = other.GetComponentInParent<EnemyShield>(); 
+            if (shield == null) shield = other.GetComponentInChildren<EnemyShield>();
+
+            if (shield != null && shield.gameObject.activeInHierarchy)
+            {
+                // 쉴드가 켜져있다면 본체 대신 쉴드만 파괴!
+                shield.BreakShield();
+                
+                if (Core.VFXManager.Instance != null)
+                {
+                    Core.VFXManager.Instance.PlayHackExplosion(transform.position);
+                }
+                
+                Destroy(gameObject); // 미사일 소멸 (관통 원하면 주석 처리)
+                return;
+            }
+
+            // [Fix] 2. 적(Enemy)이나 보스(Boss) 공격 (방어막 없을 때)
+            // 본체에 부딪히지 않고 무기 등 자식 콜라이더에 부딪힐 수도 있으니 GetComponentInParent 사용
+            BaseEnemy baseEnemy = other.GetComponentInParent<BaseEnemy>();
+            
+            if (other.CompareTag("Enemy") || other.CompareTag("Boss") || baseEnemy != null)
             {
                  // 보스 체력 깎기
                  if (other.TryGetComponent(out BossHealth bossHealth))
                  {
                      bossHealth.TakeDamage(damage);
                  }
-                 // 일반 적 (BaseEnemy에 TakeDamage가 있다고 가정하고 호출)
-                 else if (other.TryGetComponent(out BaseEnemy baseEnemy))
+                 else if (baseEnemy != null)
                  {
                      baseEnemy.SendMessage("TakeDamage", damage, SendMessageOptions.DontRequireReceiver);
                  }
@@ -464,8 +467,34 @@ public class EnemyMissile : EnemyProjectile
         // --- 아래는 일반(적군) 상태일 때 로직 ---
         
         // 적군끼리는 충돌 무시 (보스 몸에서 나올 때 바로 터지면 안 되니까)
-        if (other.CompareTag("Enemy") || other.CompareTag("Boss")) return;
+        if (other.CompareTag("Enemy") || other.CompareTag("Boss") || other.GetComponent<BaseEnemy>() != null) return;
 
-        base.OnTriggerEnter(other);
+        // [Fix] 내가 쏜 거니까 나(EnemyShooter 등 부모) 무시
+        if (other.GetComponentInParent<BaseEnemy>() != null) return;
+
+        // [Fix] 미사일(또는 다른 적의 투사체)끼리 부딪혀서 터지는 현상(2번째 미사일 폭발 등) 방지
+        if (other.GetComponentInParent<EnemyProjectile>() != null) return;
+
+        // 플레이어 피격 처리 (base를 안 부르고 여기서 직접 명확하게 처리)
+        if (other.CompareTag("Player"))
+        {
+            if (other.TryGetComponent(out PlayerHealth health))
+            {
+                health.TakeDamage(damage);
+            }
+            
+            // [Fix] 없는 카미카제 이펙트 대신, 프리팹에 할당된(또는 부모의) HitAndDestroy() 정식 호출
+            HitAndDestroy();
+            return;
+        }
+
+        // 그 외 지형(Wall 등)에 부딪히면 터짐
+        if (other.CompareTag("Untagged") || other.CompareTag("Wall"))
+        {
+            // [Fix] 눈에 보이지 않는 이벤트용 트리거 구역(예: 웨이브 시작 존 등)에 닿아서 공중 폭발하는 것 방지
+            if (other.isTrigger) return;
+
+            HitAndDestroy();
+        }
     }
 }

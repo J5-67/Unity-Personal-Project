@@ -29,11 +29,14 @@ public class EnemyProjectile : MonoBehaviour
         }
         else if (other.CompareTag("Untagged") || other.CompareTag("Wall")) // Ground 태그 제거 (에러 방지)
         {
+            // [Fix] 혹시라도 적 방패(Shield)나 몸통 일부가 Untagged로 되어있어서 총알이 터지는 문제 방지
+            if (other.GetComponentInParent<BaseEnemy>() != null) return;
+
             HitAndDestroy();
         }
     }
 
-    private void HitAndDestroy()
+    protected void HitAndDestroy()
     {
         if (hitVFX != null)
         {

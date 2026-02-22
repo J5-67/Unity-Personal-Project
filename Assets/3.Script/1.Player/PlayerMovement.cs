@@ -321,41 +321,61 @@ public class PlayerMovement : MonoBehaviour
             Vector3 dashBoxHalfExtents = new Vector3(1f, 0.5f, 0.5f); 
             
             Collider[] hits = Physics.OverlapBox(dashBoxCenter, dashBoxHalfExtents, Quaternion.identity, dashPassLayer);
+
+            // 1. [Fix] 쉴드 정면 충돌 검사를 가장 먼저 수행 (방패 안에 있는 본체를 먼저 얼려버리는 문제 방지)
+            bool hitValidShield = false;
+            EnemyShield blockingShield = null;
+
             foreach (var hit in hits)
             {
-                // [Fix] 방패(Shield)에 부딪히면 튕겨나감 (대시 관통 불가)
-                if (hit.TryGetComponent(out EnemyShield shield))
+                if (hit.TryGetComponent(out EnemyShield shield) || (hit.transform.parent != null && hit.transform.parent.TryGetComponent(out shield)))
                 {
-                    // 1. 적이 이미 얼어있으면 방패 무시 (관통 허용)
-                    // 부모나 자신에서 BaseEnemy 찾기
                     BaseEnemy shieldOwner = shield.GetComponentInParent<BaseEnemy>();
-                    if (shieldOwner != null && shieldOwner.IsFrozen) continue;
+                    if (shieldOwner != null && shieldOwner.IsFrozen) continue; // 이미 언 적은 무시
 
-                    // 2. 뒤에서 때리면 방패 무시 (백어택 허용)
-                    // 내 진행 방향(dashDir)과 방패 앞면(forward)이 같은 방향(Dot > 0)이면 뒤에서 때린 것
-                    // 반대 방향(Dot < 0)이면 정면 충돌
-                    if (Vector3.Dot(dashDir, shield.transform.forward) > 0)
+                    // 진행 방향과 방패 앞면 내적 확인 (반대 방향이면 정면 충돌)
+                    if (Vector3.Dot(dashDir, shield.transform.forward) <= 0)
                     {
-                        continue; // 뒤에서 때림 -> 통과
+                        hitValidShield = true;
+                        blockingShield = shield;
+                        break; 
                     }
-
-                    Vector3 bounceDir = (transform.position - shield.transform.position).normalized;
-                    _rb.linearVelocity = bounceDir * shield.BounceForce;
-                    shield.OnBlock(transform.position); 
-                    
-                    _isDashing = false;
-                    _currentDashCharges = 0; 
-                    yield break;
                 }
+            }
 
+            // 정면 방패에 막혔을 때의 처리
+            if (hitValidShield && blockingShield != null)
+            {
+                Vector3 bounceDir = (transform.position - blockingShield.transform.position).normalized;
+                _rb.linearVelocity = bounceDir * blockingShield.BounceForce;
+                blockingShield.OnBlock(transform.position); 
+                
+                // [New] 방패 정면에 대시를 박으면 데미지 받음 (오빠 요청)
+                if (TryGetComponent(out PlayerHealth ph))
+                {
+                    ph.TakeDamage(1); 
+                }
+                
+                _isDashing = false;
+                _currentDashCharges = 0; 
+                yield break;
+            }
+
+            // 2. 쉴드에 막히지 않았을 때 일반 관통 로직 
+            foreach (var hit in hits)
+            {
                 // [New] 미사일(투사체)도 뚫고 지나가면서 얼리기!
                 if (hit.TryGetComponent(out EnemyMissile missile) || (hit.transform.parent != null && hit.transform.parent.TryGetComponent(out missile)))
                 {
-                    // [Fix] 이미 해킹되어서 날아가거나(IsHacked), 얼어붙어서 발사 대기 중(IsFrozen)인 미사일은 건들지 않음!
-                    if (missile.IsHacked || missile.IsFrozen) continue;
+                    // [Fix] 얼어있거나 해킹된 미사일이라도 안에 겹쳐있으면 대시 연장(관통)을 계속 보장해야 함!
+                    if (missile.IsHacked || missile.IsFrozen)
+                    {
+                        isOverlappingEnemy = true; 
+                        continue;
+                    }
 
                     missile.SetFrozen(true);
-                    isOverlappingEnemy = true; // 적을 뚫은 것으로 간주 (불릿타임 발동)
+                    isOverlappingEnemy = true; // 적을 뚫은 것으로 간주 (불릿타임 발동 및 연장)
 
                     if (!hasRecharged)
                     {
@@ -367,7 +387,12 @@ public class PlayerMovement : MonoBehaviour
 
                 if (hit.TryGetComponent(out BaseEnemy enemy) || (hit.transform.parent != null && hit.transform.parent.TryGetComponent(out enemy)))
                 {
-                    if (enemy.IsFrozen) continue; 
+                    // [Fix] 이미 언 적안에 겹쳐있을 때도 isOverlappingEnemy = true로 유지해야 대시가 중간에 안 끊기고 관통함!
+                    if (enemy.IsFrozen)
+                    {
+                        isOverlappingEnemy = true;
+                        continue; 
+                    }
 
                     enemy.Freeze(); 
                     isOverlappingEnemy = true; 
@@ -387,17 +412,12 @@ public class PlayerMovement : MonoBehaviour
                 {
                      if (hit.collider.TryGetComponent(out BaseEnemy enemy) || (hit.transform.parent != null && hit.transform.parent.TryGetComponent(out enemy)))
                      {
-                         if (!enemy.IsFrozen)
-                         {
-                             isOverlappingEnemy = true;
-                         }
+                         // [Fix] 전방의 적이 얼어있든 아니든 통과해야 하므로 연장 판정 무조건 줌!
+                         isOverlappingEnemy = true;
                      }
                      else if (hit.collider.TryGetComponent(out EnemyMissile m) || (hit.transform.parent != null && hit.transform.parent.TryGetComponent(out m)))
                      {
-                         if (!m.IsFrozen)
-                         {
-                             isOverlappingEnemy = true;
-                         }
+                         isOverlappingEnemy = true;
                      }
                 }
             }

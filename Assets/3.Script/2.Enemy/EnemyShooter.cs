@@ -15,6 +15,10 @@ public class EnemyShooter : MonoBehaviour
     [SerializeField] private EnemyProjectile projectilePrefab;
     [SerializeField] private LineRenderer aimLaser;     // 조준선
 
+    [Header("🔊 Audio")]
+    [SerializeField] private AudioClip aimSound;        // 조준 중 나는 소리 (징~)
+    [SerializeField] private AudioClip fireSound;       // 쏘는 소리 (삐융!)
+
     private BaseEnemy _baseEnemy;
     private EnemyPatrol _patrol;
     private Transform _playerTr;
@@ -73,6 +77,11 @@ public class EnemyShooter : MonoBehaviour
     {
         _isAiming = true;
         
+        if (aimSound != null && Core.AudioManager.Instance != null)
+        {
+            Core.AudioManager.Instance.PlaySFX(aimSound);
+        }
+
         // 1. 순찰 멈춤 (조준 집중)
         if (_patrol != null) _patrol.SetPatrol(false);
         
@@ -87,7 +96,6 @@ public class EnemyShooter : MonoBehaviour
 
         // 2. 조준 (레이저 표시 & 회전)
         float timer = 0f;
-        float blinkPhase = 0f;
         if (aimLaser != null) 
         {
             aimLaser.enabled = true;
@@ -113,13 +121,30 @@ public class EnemyShooter : MonoBehaviour
                 transform.rotation = Quaternion.Lerp(transform.rotation, targetRot, Time.deltaTime * 10f);
             }
 
-            // 레이저 깜빡임 (초반 50% 고정 -> 후반 가속 깜빡임)
+            // 레이저 갱신
             if (aimLaser != null)
             {
-                // ... (이하 동일, 레이저 시작점 갱신)
-                // 레이저가 발사 위치에서 나가도록 계속 갱신
                 aimLaser.SetPosition(0, searchFirePoint().position); 
                 aimLaser.SetPosition(1, _playerTr.position);         
+
+                // [Fix] 조준 시간에 비례한 레이저 깜빡임 효과 복구
+                float progress = timer / aimDuration;
+                
+                // 처음엔 천천히 깜빡이다가 발사 직전에 엄청 빠르게 깜빡임
+                // Mathf.Pow를 써서 진행될수록 주파수가 기하급수적으로 증가하게 함
+                // [Fix] 더 극단적이고 날카로운 깜빡임을 위해 속도 범위 상향 및 Pow 수치 조절
+                float blinkSpeed = Mathf.Lerp(10f, 80f, Mathf.Pow(progress, 3f));
+                
+                // [Fix] 부드러운 깜빡임(Sin 스무딩)을 버리고 0과 1로 극단적으로 팍팍 끊기게 (Flicker)
+                float alpha = Mathf.Sin(Time.time * blinkSpeed) > 0f ? 1f : 0.05f;
+
+                // 머티리얼 알파값 변경 (URP LineRenderer 대응)
+                Color c1 = aimLaser.startColor;
+                Color c2 = aimLaser.endColor;
+                c1.a = alpha;
+                c2.a = alpha;
+                aimLaser.startColor = c1;
+                aimLaser.endColor = c2;
             }
 
             timer += Time.deltaTime;
@@ -130,20 +155,25 @@ public class EnemyShooter : MonoBehaviour
         Transform spawnPoint = searchFirePoint();
         if (spawnPoint != null && projectilePrefab != null)
         {
+            if (fireSound != null && Core.AudioManager.Instance != null)
+            {
+                Core.AudioManager.Instance.PlaySFX(fireSound);
+            }
+
             Vector3 dir = (_playerTr.position - spawnPoint.position).normalized;
             Quaternion rot = Quaternion.LookRotation(dir);
             EnemyProjectile proj = Instantiate(projectilePrefab, spawnPoint.position, rot);
             
             // [Fix] 자기가 쏜 총알에 자기 몸(Body)이나 방패(Shield)가 맞는 문제 해결
-            // 자식들(방패 포함)의 모든 콜라이더와 충돌 무시
+            // 자식들(방패 포함)의 모든 콜라이더와 총알(및 그 자식들)의 충돌 완벽 무시
             Collider[] myCols = GetComponentsInChildren<Collider>();
-            Collider projCol = proj.GetComponent<Collider>();
+            Collider[] projCols = proj.GetComponentsInChildren<Collider>();
             
-            if (projCol != null)
+            foreach (var pCol in projCols)
             {
                 foreach (var col in myCols)
                 {
-                    Physics.IgnoreCollision(col, projCol);
+                    Physics.IgnoreCollision(col, pCol);
                 }
             }
         }

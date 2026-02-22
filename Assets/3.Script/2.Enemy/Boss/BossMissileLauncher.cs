@@ -17,7 +17,7 @@ public class BossMissileLauncher : MonoBehaviour
     [SerializeField] private float fireInterval = 0.1f;  // 미사일 간 발사 간격 (순차 발사 시)
 
     [Header("🔊 Sound Effects")]
-    // [ToDo] AudioManager 연동 필요
+    [SerializeField] private AudioClip fireSound;
 
     [Header("Debug")]
     [SerializeField] private bool autoFireTest = false;  // 자동 발사 테스트용
@@ -110,6 +110,11 @@ public class BossMissileLauncher : MonoBehaviour
     {
         if (_missilePool == null) return;
         
+        if (fireSound != null && Core.AudioManager.Instance != null)
+        {
+            Core.AudioManager.Instance.PlaySFX(fireSound);
+        }
+
         // 1. 풀에서 미사일 가져오기 (Instantiate 대체)
         EnemyMissile missile = _missilePool.Get();
         

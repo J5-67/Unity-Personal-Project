@@ -26,6 +26,15 @@ public class PlayerHealth : MonoBehaviour
         lastCheckpointPos = transform.position;
         
         healthUI?.UpdateHealth(currentHealth);
+        UpdateLowHealthEffect();
+    }
+
+    private void UpdateLowHealthEffect()
+    {
+        if (PostProcessManager.Instance != null)
+        {
+            PostProcessManager.Instance.SetLowHealthEffect(currentHealth == 1);
+        }
     }
 
     public void TakeDamage(int amount)
@@ -41,6 +50,7 @@ public class PlayerHealth : MonoBehaviour
         else
         {
             healthUI?.UpdateHealth(currentHealth);
+            UpdateLowHealthEffect();
 
             if (GameManager.Instance != null)
             {
@@ -72,6 +82,7 @@ public class PlayerHealth : MonoBehaviour
     {
         currentHealth -= 1;
         healthUI?.UpdateHealth(currentHealth);
+        UpdateLowHealthEffect();
 
         if (currentHealth > 0)
         {
@@ -117,6 +128,7 @@ public class PlayerHealth : MonoBehaviour
         {
             currentHealth = maxHealth;
             healthUI?.UpdateHealth(currentHealth);
+            UpdateLowHealthEffect();
             
             if (GameManager.Instance != null)
             {

@@ -81,7 +81,7 @@ public class BaseEnemy : MonoBehaviour
         }
     }
 
-    private void ResetEnemy()
+    public void ResetEnemy()
     {
         StopAllCoroutines();
         
@@ -283,7 +283,7 @@ public class BaseEnemy : MonoBehaviour
             }
 
             // 거리 체크 (닿으면 폭발)
-            if (playerTr != null && Vector3.Distance(transform.position, playerTr.position) < 1.0f)
+            if (playerTr != null && (transform.position - playerTr.position).sqrMagnitude < 1.0f)
             {
                 // [Fix] 플레이어가 대시 중일 때는 폭발하지 않고 통과(관통) 대기!
                 if (pm != null && pm.IsDashing)

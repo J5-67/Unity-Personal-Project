@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 1529493902168024404}
   - component: {fileID: 5769954042046272188}
   m_Layer: 0
-  m_Name: Missile
+  m_Name: EnemyMissile
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -59,6 +59,7 @@ MonoBehaviour:
   glitchShader: {fileID: 4800000, guid: 4680fba1598edad4db7d7ecd46ff810e, type: 3}
   glitchIntensity: 0.5
   glitchSpeed: 20
+  autoHackDelay: 1.5
   ignoreXAxis: 1
   turnSpeed3D: 5
 --- !u!54 &5769954042046272188

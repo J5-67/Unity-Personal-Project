@@ -22,6 +22,20 @@ namespace Core
         [SerializeField] private GameObject kamikazeExplosionPrefab;
         [SerializeField] private float kamikazeShakeIntensity = 1.0f; // [New] 자폭은 조금 약하게
 
+        [SerializeField] private GameObject spawnEffectPrefab;
+
+        [Header("👑 Boss VFX")]
+        [SerializeField] private GameObject bossExplosionPrefab;
+        [SerializeField] private float bossShakeIntensity = 4.0f; // 보스 폭발은 엄청 강하게
+
+        public void PlaySpawnEffect(Vector3 position)
+        {
+            if (spawnEffectPrefab != null)
+            {
+                PlayVFX(spawnEffectPrefab, position, Quaternion.identity);
+            }
+        }
+
         public void PlayHackExplosion(Vector3 position)
         {
             if (hackExplosionPrefab != null)
@@ -46,6 +60,20 @@ namespace Core
                 if (Core.GameManager.Instance != null)
                 {
                     Core.GameManager.Instance.TriggerCameraShake(kamikazeShakeIntensity);
+                }
+            }
+        }
+
+        public void PlayBossExplosion(Vector3 position)
+        {
+            if (bossExplosionPrefab != null)
+            {
+                // 보스 폭발은 스케일을 좀 키워서 재생할 수도 있지만 일단 PlayVFX 사용
+                PlayVFX(bossExplosionPrefab, position, Quaternion.identity);
+
+                if (Core.GameManager.Instance != null)
+                {
+                    Core.GameManager.Instance.TriggerCameraShake(bossShakeIntensity);
                 }
             }
         }
