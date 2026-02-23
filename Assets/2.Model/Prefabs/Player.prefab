@@ -1019,6 +1019,8 @@ MonoBehaviour:
   dashPassLayer:
     serializedVersion: 2
     m_Bits: 256
+  dashBulletTimeScale: 0.2
+  dashBulletTimeDuration: 0.5
   jumpForce: 10
   jumpCutMultiplier: 0.5
   gravityScale: 2.5
@@ -1041,6 +1043,8 @@ MonoBehaviour:
   playerAim: {fileID: 9083918145469365737}
   ghostTrail: {fileID: 0}
   ghostSpacing: 0.5
+  dashFovAmount: 10
+  dashFovDuration: 0.3
 --- !u!114 &9083918145469365737
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1094,6 +1098,7 @@ MonoBehaviour:
   swingAngleLimit: 5
   winchUpForce: 0.5
   winchDownForce: 50
+  climbSpeed: 6
   stopDistance: 0.2
   hookRadius: 0.3
   hookableLayer:

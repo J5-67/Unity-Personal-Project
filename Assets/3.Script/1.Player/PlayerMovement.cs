@@ -62,7 +62,12 @@ public class PlayerMovement : MonoBehaviour
     private bool _isWallSliding;
     private bool _isJumpPressed;
     private bool _canMove = true;
+    public bool CanMove => _canMove; // [New] 넉백 등 조작 불가 상태 확인용
     private bool _isHookingState = false; 
+
+    // [New] Animation Events
+    public event System.Action OnJumpEvent;
+    public event System.Action OnDashEvent;
     
     private bool _isDashing;          
     public bool IsDashing => _isDashing; // [New] 외부에서 대시 상태 확인용
@@ -74,6 +79,10 @@ public class PlayerMovement : MonoBehaviour
     private float _coyoteTimeCounter;
     private float _jumpBufferCounter;
     private PlatformFunction _currentFunctionPlatform;
+    
+    // [New] Moving Platform Tracking
+    private Transform _currentPlatformTransform;
+    private Vector3 _lastPlatformPosition;
 
     private void Awake()
     {
@@ -103,6 +112,9 @@ public class PlayerMovement : MonoBehaviour
         {
             _moveInput = Vector2.zero;
         }
+
+        // [Fix] SetParent 대신 위치 변화량을 직접 추적해서 플레이어 위치에 더해줌
+        HandleMovingPlatform();
 
         if (_isDashing)
         {
@@ -162,6 +174,7 @@ public class PlayerMovement : MonoBehaviour
         {
             if (_currentDashCharges > 0 && !_isDashing)
             {
+                OnDashEvent?.Invoke(); // [New] 애니메이션 연동
                 StartCoroutine(DashRoutine());
             }
         }
@@ -315,18 +328,21 @@ public class PlayerMovement : MonoBehaviour
 
             isOverlappingEnemy = false; 
             
-            // [Fix] 3D 미사일/투사체 관통 범위를 더 타이트하게 축소! (오빠 피드백 반영: 난이도 상승 🌶️)
-            // 기존 2f(X축 4m) -> 1f(X축 2m)로 줄이고, 높이(Y축)도 0.8f -> 0.5f로 줄여서 훨씬 정교하게 뚫어야 함!
+            // [Fix] 적과 미사일의 속도 차이를 고려하여 판정 박스를 두 개로 분리!
+            // 1. 적(Enemy) 판정: 오빠의 난이도 요청대로 초근접 타이트하게
+            // 2. 미사일(Missile) 판정: 터널링 방지만 될 정도로 최소한으로 타이트하게 유지
             Vector3 dashBoxCenter = transform.position + Vector3.up * 1.0f;
-            Vector3 dashBoxHalfExtents = new Vector3(1f, 0.5f, 0.5f); 
+            Vector3 tightExtents = new Vector3(0.8f, 0.5f, 0.3f); // 적 (초타이트)
+            Vector3 looseExtents = new Vector3(1.2f, 0.8f, 1.5f); // 미사일 (넉넉함 축소)
             
-            Collider[] hits = Physics.OverlapBox(dashBoxCenter, dashBoxHalfExtents, Quaternion.identity, dashPassLayer);
+            Collider[] tightHits = Physics.OverlapBox(dashBoxCenter, tightExtents, Quaternion.identity, dashPassLayer);
+            Collider[] looseHits = Physics.OverlapBox(dashBoxCenter, looseExtents, Quaternion.identity, dashPassLayer);
 
-            // 1. [Fix] 쉴드 정면 충돌 검사를 가장 먼저 수행 (방패 안에 있는 본체를 먼저 얼려버리는 문제 방지)
+            // 1. [Fix] 쉴드 정면 충돌 검사를 가장 먼저 수행 (타이트한 판정 사용)
             bool hitValidShield = false;
             EnemyShield blockingShield = null;
 
-            foreach (var hit in hits)
+            foreach (var hit in tightHits)
             {
                 if (hit.TryGetComponent(out EnemyShield shield) || (hit.transform.parent != null && hit.transform.parent.TryGetComponent(out shield)))
                 {
@@ -350,7 +366,7 @@ public class PlayerMovement : MonoBehaviour
                 _rb.linearVelocity = bounceDir * blockingShield.BounceForce;
                 blockingShield.OnBlock(transform.position); 
                 
-                // [New] 방패 정면에 대시를 박으면 데미지 받음 (오빠 요청)
+                // 방패 정면에 대시를 박으면 데미지 받음 (오빠 요청)
                 if (TryGetComponent(out PlayerHealth ph))
                 {
                     ph.TakeDamage(1); 
@@ -361,33 +377,11 @@ public class PlayerMovement : MonoBehaviour
                 yield break;
             }
 
-            // 2. 쉴드에 막히지 않았을 때 일반 관통 로직 
-            foreach (var hit in hits)
+            // 2. 적 본체 관통 로직 (타이트한 판정 사용)
+            foreach (var hit in tightHits)
             {
-                // [New] 미사일(투사체)도 뚫고 지나가면서 얼리기!
-                if (hit.TryGetComponent(out EnemyMissile missile) || (hit.transform.parent != null && hit.transform.parent.TryGetComponent(out missile)))
-                {
-                    // [Fix] 얼어있거나 해킹된 미사일이라도 안에 겹쳐있으면 대시 연장(관통)을 계속 보장해야 함!
-                    if (missile.IsHacked || missile.IsFrozen)
-                    {
-                        isOverlappingEnemy = true; 
-                        continue;
-                    }
-
-                    missile.SetFrozen(true);
-                    isOverlappingEnemy = true; // 적을 뚫은 것으로 간주 (불릿타임 발동 및 연장)
-
-                    if (!hasRecharged)
-                    {
-                        AddDashStack(1); // 미사일 뚫어도 대시 충전! (혜자 판정)
-                        hasRecharged = true;
-                    }
-                    continue; 
-                }
-
                 if (hit.TryGetComponent(out BaseEnemy enemy) || (hit.transform.parent != null && hit.transform.parent.TryGetComponent(out enemy)))
                 {
-                    // [Fix] 이미 언 적안에 겹쳐있을 때도 isOverlappingEnemy = true로 유지해야 대시가 중간에 안 끊기고 관통함!
                     if (enemy.IsFrozen)
                     {
                         isOverlappingEnemy = true;
@@ -404,18 +398,44 @@ public class PlayerMovement : MonoBehaviour
                     }
                 }
             }
+
+            // 3. 미사일 관통 로직 (미사일은 엄청 빠르므로 looseHits 사용)
+            foreach (var hit in looseHits)
+            {
+                if (hit.TryGetComponent(out EnemyMissile missile) || (hit.transform.parent != null && hit.transform.parent.TryGetComponent(out missile)))
+                {
+                    if (missile.IsHacked || missile.IsFrozen)
+                    {
+                        isOverlappingEnemy = true; 
+                        continue;
+                    }
+
+                    missile.SetFrozen(true);
+                    isOverlappingEnemy = true; // 적을 뚫은 것으로 간주 (불릿타임 발동 및 연장)
+
+                    if (!hasRecharged)
+                    {
+                        AddDashStack(1); // 미사일 뚫어도 대시 충전! (혜자 판정)
+                        hasRecharged = true;
+                    }
+                }
+            }
             
             if (!isOverlappingEnemy && !hasRecharged)
             {
-                // [Fix] 전방 캐스트(대시 연장 판정)도 BoxCast로 변경하여 깊이 무시. (배경 벽에 걸리지 않도록 wallLayer는 제외)
-                if (Physics.BoxCast(dashBoxCenter, dashBoxHalfExtents, dashDir, out RaycastHit hit, Quaternion.identity, 1.5f, dashPassLayer))
+                // 적 연장 스캔 (초근접 타이트하게)
+                if (Physics.BoxCast(dashBoxCenter, tightExtents, dashDir, out RaycastHit hit, Quaternion.identity, 0.5f, dashPassLayer))
                 {
                      if (hit.collider.TryGetComponent(out BaseEnemy enemy) || (hit.transform.parent != null && hit.transform.parent.TryGetComponent(out enemy)))
                      {
-                         // [Fix] 전방의 적이 얼어있든 아니든 통과해야 하므로 연장 판정 무조건 줌!
                          isOverlappingEnemy = true;
                      }
-                     else if (hit.collider.TryGetComponent(out EnemyMissile m) || (hit.transform.parent != null && hit.transform.parent.TryGetComponent(out m)))
+                }
+                
+                // 미사일 연장 스캔 (길지 않게 3m까지만)
+                if (!isOverlappingEnemy && Physics.BoxCast(dashBoxCenter, looseExtents, dashDir, out RaycastHit mHit, Quaternion.identity, 3.0f, dashPassLayer))
+                {
+                     if (mHit.collider.TryGetComponent(out EnemyMissile m) || (mHit.transform.parent != null && mHit.transform.parent.TryGetComponent(out m)))
                      {
                          isOverlappingEnemy = true;
                      }
@@ -561,6 +581,8 @@ public class PlayerMovement : MonoBehaviour
             _rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
             _jumpBufferCounter = 0f;
             _coyoteTimeCounter = 0f;
+            
+            OnJumpEvent?.Invoke(); // [New] 애니메이션 연동
         }
     }
 
@@ -573,8 +595,12 @@ public class PlayerMovement : MonoBehaviour
         _rb.AddForce(force, ForceMode.Impulse); 
         Vector3 lookDir = new Vector3(0, 0, jumpDirection); 
         transform.rotation = Quaternion.LookRotation(lookDir); 
-        StartCoroutine(DisableMoveRoutine()); 
+        
+        if (_disableMoveCoroutine != null) StopCoroutine(_disableMoveCoroutine);
+        _disableMoveCoroutine = StartCoroutine(DisableMoveRoutine()); 
+        
         _jumpBufferCounter = 0f; 
+        OnJumpEvent?.Invoke(); // [New] 애니메이션 연동 (벽점프)
     }
 
     private void WallSlide()
@@ -598,6 +624,42 @@ public class PlayerMovement : MonoBehaviour
         { 
             _rb.AddForce(Vector3.down * 9.81f * (gravityScale - 1f), ForceMode.Acceleration); 
         } 
+    }
+
+    private void HandleMovingPlatform()
+    {
+        // [Fix] 넉백/벽점프 등 조작 불가 상태(공중에 떴을 때)에는 플랫폼에 억지로 실려가지 않도록 예외 처리!
+        if (!_canMove)
+        {
+            _currentPlatformTransform = null;
+            return;
+        }
+
+        // 바닥에 PlatformFunction 컴포넌트가 있다면 (이동 플랫폼 위라면)
+        if (_currentFunctionPlatform != null)
+        {
+            // 발을 디딘 플랫폼이 바뀌었을 경우 초기화
+            if (_currentPlatformTransform != _currentFunctionPlatform.transform)
+            {
+                _currentPlatformTransform = _currentFunctionPlatform.transform;
+                _lastPlatformPosition = _currentPlatformTransform.position;
+            }
+
+            // 플랫폼이 이동한 거리(Delta) 계산
+            Vector3 platformDelta = _currentPlatformTransform.position - _lastPlatformPosition;
+            
+            // 이동한 거리가 있다면 플레이어 좌표에 그대로 얹어줌 (SetParent의 속도 덮어쓰기 무시)
+            if (platformDelta.sqrMagnitude > 0f)
+            {
+                _rb.position += platformDelta; 
+            }
+            
+            _lastPlatformPosition = _currentPlatformTransform.position;
+        }
+        else
+        {
+            _currentPlatformTransform = null;
+        }
     }
 
     private void ApplyRotation() 
@@ -648,11 +710,27 @@ public class PlayerMovement : MonoBehaviour
         Physics.IgnoreCollision(_playerCollider, platformCollider, false); 
     }
 
-    private IEnumerator DisableMoveRoutine() 
+    private Coroutine _disableMoveCoroutine;
+
+    private IEnumerator DisableMoveRoutine(float overrideTime = -1f) 
     { 
         _canMove = false; 
-        yield return new WaitForSeconds(wallJumpStopControlTime); 
+        float waitTime = overrideTime > 0f ? overrideTime : wallJumpStopControlTime;
+        yield return new WaitForSeconds(waitTime); 
         _canMove = true; 
+    }
+
+    // [New] 함정(레이저/가시 등) 피격 시 무조건 날려버리는 기능
+    public void ApplyKnockback(Vector3 dir, float force, float disableTime = 0.25f)
+    {
+        _rb.linearVelocity = Vector3.zero;
+        _rb.AddForce(dir.normalized * force, ForceMode.Impulse);
+
+        _currentFunctionPlatform = null;
+        _currentPlatformTransform = null;
+
+        if (_disableMoveCoroutine != null) StopCoroutine(_disableMoveCoroutine);
+        _disableMoveCoroutine = StartCoroutine(DisableMoveRoutine(disableTime));
     }
 
     private void OnDrawGizmos() 

@@ -1,5 +1,5 @@
 using UnityEngine;
-
+using UnityEngine.VFX;
 // 일반 EnemyShooter를 상속받거나 그대로 쓰기엔 Homing 기능만 바꾸면 됨.
 // 하지만 미사일 폭격(여러 발)을 하고 싶다면 새로운 EnemyHeavy가 필요.
 // 일단 유저가 "미사일 발사"를 요청했으니, EnemyMissile.cs 를 완성했으므로
@@ -38,6 +38,10 @@ public class EnemyMissile : EnemyProjectile
     [SerializeField] private float glitchIntensity = 0.5f;  
     [SerializeField] private float glitchSpeed = 20f;  
 
+    [Header("✨ VFX Components")]
+    [SerializeField] private VisualEffect _vfx;
+    private bool _isHit = false;
+
     private Renderer _renderer;
     private Material _originalMaterial;
     private MaterialPropertyBlock _propBlock;
@@ -68,7 +72,11 @@ public class EnemyMissile : EnemyProjectile
         _pidController.Reset();
         _isHoming = true;
         _isFrozen = false; // 재사용 시 얼음 상태 해제
+        _isHit = false;
         _timer = 0f;
+
+        if (TryGetComponent(out Collider col)) col.enabled = true;
+        if (_renderer != null) _renderer.enabled = true;
 
         if (_target == null)
         {
@@ -256,6 +264,11 @@ public class EnemyMissile : EnemyProjectile
         _timer = 0f;
 
         transform.forward = _initialDirection;
+
+        if (_vfx != null)
+        {
+             _vfx.SendEvent("create");
+        }
     }
 
     public void Set3DHoming(bool enable)
@@ -265,7 +278,7 @@ public class EnemyMissile : EnemyProjectile
 
     protected override void Update()
     {
-        if (_isFrozen) return;
+        if (_isFrozen || _isHit) return;
 
         if (_homingDelay > 0f)
         {
@@ -404,6 +417,35 @@ public class EnemyMissile : EnemyProjectile
         }
     }
 
+    protected override void HitAndDestroy()
+    {
+        if (_isHit) return;
+        _isHit = true;
+
+        if (_vfx != null)
+        {
+            _vfx.SendEvent("hit");
+            
+            // [Fix] 움직임 정지 및 메쉬 숨기기 (VFX 자연스러운 소멸 대기)
+            if (TryGetComponent(out Collider col)) col.enabled = false;
+            
+            if (TryGetComponent(out Rigidbody rb)) 
+            {
+                rb.linearVelocity = Vector3.zero;
+                rb.isKinematic = true;
+            }
+
+            if (_renderer != null) _renderer.enabled = false;
+            
+            CancelInvoke(nameof(SelfDestroy));
+            Invoke(nameof(SelfDestroy), 2f); // 2초 뒤 파괴
+        }
+        else
+        {
+            base.HitAndDestroy();
+        }
+    }
+
     protected override void OnTriggerEnter(Collider other)
     {
         // [New] 얼어있으면 폭발하지 않음 (플레이어 대시 통과 허용)
@@ -432,7 +474,7 @@ public class EnemyMissile : EnemyProjectile
                     Core.VFXManager.Instance.PlayHackExplosion(transform.position);
                 }
                 
-                Destroy(gameObject); // 미사일 소멸 (관통 원하면 주석 처리)
+                HitAndDestroy(); // [Fix] 미사일 소멸 시 VFX 처리
                 return;
             }
 
@@ -458,7 +500,7 @@ public class EnemyMissile : EnemyProjectile
                      Core.VFXManager.Instance.PlayHackExplosion(transform.position);
                  }
 
-                 Destroy(gameObject);
+                 HitAndDestroy(); // [Fix] 미사일 소멸 시 VFX 처리
                  return;
             }
             return; // 해킹 상태에선 그 외 충돌(벽 등)은 일단 무시하거나 로직 추가 가능

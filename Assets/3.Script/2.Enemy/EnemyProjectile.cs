@@ -36,7 +36,7 @@ public class EnemyProjectile : MonoBehaviour
         }
     }
 
-    protected void HitAndDestroy()
+    protected virtual void HitAndDestroy()
     {
         if (hitVFX != null)
         {

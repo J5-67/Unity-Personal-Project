@@ -19,6 +19,8 @@ public class PlayerAim : MonoBehaviour
 
     [Header("✨ Visual Settings")]
     [SerializeField] private LineRenderer lineRenderer;
+    [Tooltip("조준선이 뿜어져 나올 기준점 (빈 오브젝트 할당)")]
+    [SerializeField] private Transform firePoint; // [New] 총구/발사 위치
     [SerializeField] private float lineWidth = 0.1f;
     [SerializeField] private float animationSpeed = 3.0f; 
     
@@ -232,7 +234,8 @@ public class PlayerAim : MonoBehaviour
         float currentMaxDistance = maxHookDistance;
         if (_playerHook != null) currentMaxDistance = _playerHook.MaxDistance;
 
-        Vector3 startPos = transform.position;
+        // [Fix] FirePoint가 지정되어 있다면 그곳에서, 없다면 내 몸통 중간(Y+1)에서 발사되게 보정!
+        Vector3 startPos = firePoint != null ? firePoint.position : transform.position + Vector3.up * 1.0f;
         Vector3 direction = (_aimWorldPosition - startPos).normalized;
         Vector3 endPos = startPos + (direction * currentMaxDistance);
         

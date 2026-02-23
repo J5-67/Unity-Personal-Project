@@ -19,7 +19,12 @@ public class PlayerHealth : MonoBehaviour
     [SerializeField] private Renderer playerRenderer;
     
     private bool _isInvincible = false;
+    public bool IsInvincible => _isInvincible; // [New] 외부에서 무적 상태 확인용
 
+    // [New] Animation Events
+    public event System.Action OnTakeDamageEvent;
+    public event System.Action OnDieEvent;
+    
     private void Start()
     {
         currentHealth = maxHealth;
@@ -49,6 +54,8 @@ public class PlayerHealth : MonoBehaviour
         }
         else
         {
+            OnTakeDamageEvent?.Invoke(); // [New] 애니메이션 연동
+            
             healthUI?.UpdateHealth(currentHealth);
             UpdateLowHealthEffect();
 
@@ -86,6 +93,7 @@ public class PlayerHealth : MonoBehaviour
 
         if (currentHealth > 0)
         {
+            OnTakeDamageEvent?.Invoke(); // [New] 애니메이션 연동
             Respawn(false);
             StartCoroutine(InvincibilityRoutine());
         }
@@ -97,6 +105,8 @@ public class PlayerHealth : MonoBehaviour
 
     private void Die()
     {
+        OnDieEvent?.Invoke(); // [New] 애니메이션 연동
+        
         if (playerRenderer != null) playerRenderer.enabled = true;
         StopAllCoroutines();
         _isInvincible = false;

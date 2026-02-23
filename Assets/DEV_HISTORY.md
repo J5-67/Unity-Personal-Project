@@ -437,3 +437,42 @@
     *   타겟이 발밑 피벗(Pivot)일 때 발생하던 바닥 박치기 오차를 방지하기 위해 `Collider.bounds.center`를 추적하도록 타겟 좌표 정밀 재설계.
 *   **이벤트 존(Trigger) 폭발 버그 방지**:
     *   `isTrigger`로 설정된 무형성 맵 트리거 등에 투사체가 부딪히며 공중 폭발하지 않도록 판정선 픽스.
+
+### 3. ✨ 고퀄리티 VFX 연동 (Visual Effect Graph) - [완료]
+*   **UNI VFX 자산 적용**:
+    *   `EnemyMissile`에 `Visual Effect` 컴포넌트 연동.
+    *   에디터에서 프리뷰를 확인하기 위한 `Event Tester` 사용법 및 `Always Refresh` 설정.
+*   **이벤트 기반 구조 (Event-Driven)**:
+    *   `create`, `hit` 등의 문자열 이벤트를 스크립트에서 전송하여 파티클의 생성, 루프, 피격 등을 정밀하게 제어.
+*   **히트 이후 처리 방식 변경**:
+    *   기존 `Destroy()` 호출 대신, `_isHit` 플래그를 두어 렌더러와 충돌체만 끄고 2초 뒤 파괴함으로써 파티클의 자연스러운 소멸(Fade-out) 시간 보장.
+
+### 4. 🛤️ 정해진 경로 이동 플랫폼 (Moving Platform) - [완료]
+*   **MovingPlatform**:
+    *   지정된 경유지(`Waypoints`) 배열을 따라 `Rigidbody.MovePosition`으로 부드럽게 이동하는 레벨 기믹 (플랫포머 요소 추가).
+    *   루프(`Loop`), 왕복(`PingPong`), 정차 시간(`WaitTime`) 등의 커스텀 옵션으로 다양한 궤도 제작 가능.
+*   **PlatformFunction 싱크 연동**:
+    *   플랫폼 위에 플레이어가 탑승 시, 마찰력 부족으로 미끄러지는 현상을 방지하기 위해 `PlayerMovement`에서 플랫폼 델타(이동 변화량)를 추적 및 합산하도록 조치 (SetParent로 인한 강제 속도 덮어쓰기 문제 완벽 대응).
+
+### 5. ⚡ 레이저 함정 기믹 (Laser Hazard) - [완료]
+*   **LaserHazard**:
+    *   `LineRenderer` 및 `Physics.Raycast` 기반 연속 데미지 & 넉백 함정.
+    *   **벽에 막힘**: 벽(`obstacleLayer`)을 만나면 레이저 렌더러와 판정 길이가 해당 거리에 맞춰 끊어짐.
+    *   **대시 무적 통과**: `OverlapCapsule`을 스캔하는 동안 플레이어 일시 무적 여부(`pm.IsDashing`)를 확인해, 대시 중이면 데미지 0 및 무사 통과 허용! 슝!💨
+
+### 6. 🏃‍♂️ 캐릭터 3D 모델 애니메이션 연동 (Player Animator) - [완료]
+*   **구조 분리 설계 (Loose Coupling)**:
+    *   물리 연산 전용 부모(`Capsule Collider` + `Rigidbody`가 있는 `@Player`)와 애니메이션/메쉬 전용 자식(`Robot Roller`)으로 트리 구조를 완전히 분리하여 회전/충돌 버그 원천 차단.
+    *   `PlayerMovement`와 `PlayerHealth`에 `Action` 델리게이트 이벤트(`OnJumpEvent`, `OnDashEvent`, `OnTakeDamageEvent` 등)를 선언하고, 신규 생성한 `PlayerAnimator.cs`에서 이를 구독하여 Trigger를 발동하는 방식으로 코드 결합도를 낮춤.
+*   **루트 방향 절대 좌표 보정**:
+    *   애니메이션 `Forward`, `Strafe` 계산 시, 로봇 모델 자신의 `transform`이 아닌, 부모 본체(`_playerMovement.transform`)의 `InverseTransformDirection`을 기준으로 삼아 90도 회전된 모델들도 올바르게 정면 이동 걷기 모션이 출력되도록 보완.
+    *   `Mathf.Clamp`와 보간(`0.1f`, `Time.deltaTime`)을 적용해 애니메이션 블렌딩 트리 스무딩.
+*   **이중 점프 판정 강력 봉인 (Root Motion Fix)**:
+    *   `FBX` 파일 자체에 Y축 위치값이 구워져 있어 `Bake Into Pose` 적용이 불가능했던 구버전 모델 뼈대에 맞춰, `PlayerAnimator.LateUpdate`에서 매 프레임 모델의 뼈대(`Rig` 또는 `RigPelvis`) Y축 로컬 좌표를 `0`으로 강제로 멱살 잡아 내리는 하드코딩 해결책 도입.
+*   **조준선 원점 분리 연동**:
+    *   거대한 캡슐 콜라이더로 인해 발바닥 중앙(`Y=0`)에서 조준선이 나가던 이슈를 수정. `PlayerAim`에 `FirePoint`를 연결하거나, 없을 시 기본 배꼽 위치(`Y+1.0f`)에서 조준선 라인이 뻗도록 타겟 시크 조율 완수.
+
+### 7. 🛤️ 정해진 경로 이동 플랫폼 조작감 유지 (Platform Feel Tweak) - [완료]
+*   **물리적 관성(상대 속도) 허용**:
+    *   플랫폼의 속도(`_platformVelocityZ`)만큼 플레이어 조작 속도를 감산하여 절대 속도를 고정시키려던 시도가 에스컬레이터를 타는 듯한 "무빙 워크 패널티/위화감" 버그를 유발함을 파악.
+    *   액션 플랫포머 특유의 **이동 가속도**를 살리기 위해, 속도 상쇄(`- _platformVelocityZ`) 로직을 당일 즉각 롤백(제거)함으로써 관성 점프와 쾌적한 질주 조작성 회복 보장.

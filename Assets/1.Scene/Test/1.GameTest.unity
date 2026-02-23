@@ -2031,6 +2031,8 @@ MonoBehaviour:
   firePoint: {fileID: 719213003}
   projectilePrefab: {fileID: 0}
   aimLaser: {fileID: 719213010}
+  aimSound: {fileID: 0}
+  fireSound: {fileID: 0}
 --- !u!1 &749529984
 GameObject:
   m_ObjectHideFlags: 0
@@ -2379,6 +2381,8 @@ MonoBehaviour:
   firePoint: {fileID: 770700452}
   projectilePrefab: {fileID: 0}
   aimLaser: {fileID: 770700459}
+  aimSound: {fileID: 0}
+  fireSound: {fileID: 0}
 --- !u!1 &781375691
 GameObject:
   m_ObjectHideFlags: 0
@@ -2554,6 +2558,9 @@ MonoBehaviour:
   hackShakeIntensity: 2
   kamikazeExplosionPrefab: {fileID: 6058139363811131725, guid: 86cd05bc2d108a3449ad8dc656db3ec1, type: 3}
   kamikazeShakeIntensity: 1
+  spawnEffectPrefab: {fileID: 0}
+  bossExplosionPrefab: {fileID: 0}
+  bossShakeIntensity: 4
 --- !u!1 &795754927
 GameObject:
   m_ObjectHideFlags: 0
@@ -4335,6 +4342,8 @@ MonoBehaviour:
   firePoint: {fileID: 1043572294}
   projectilePrefab: {fileID: 8695200416132757608, guid: cb776dddf9c4bae488a62dba2d4f9400, type: 3}
   aimLaser: {fileID: 1043572301}
+  aimSound: {fileID: 0}
+  fireSound: {fileID: 0}
 --- !u!1 &1060436541
 GameObject:
   m_ObjectHideFlags: 0
@@ -5387,6 +5396,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Core.PostProcessManager
   globalVolume: {fileID: 1114967554}
+  heartbeatSound: {fileID: 0}
 --- !u!114 &1234476430
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6478,6 +6488,8 @@ MonoBehaviour:
   firePoint: {fileID: 1402813687}
   projectilePrefab: {fileID: -2968088040466605204, guid: d992310b16d63db4eae4247df238834f, type: 3}
   aimLaser: {fileID: 1402813694}
+  aimSound: {fileID: 0}
+  fireSound: {fileID: 0}
 --- !u!1 &1413134347
 GameObject:
   m_ObjectHideFlags: 0
@@ -8570,6 +8582,8 @@ MonoBehaviour:
   firePoint: {fileID: 1740420866}
   projectilePrefab: {fileID: 0}
   aimLaser: {fileID: 1740420873}
+  aimSound: {fileID: 0}
+  fireSound: {fileID: 0}
 --- !u!1 &1747412579
 GameObject:
   m_ObjectHideFlags: 0
@@ -9964,6 +9978,8 @@ MonoBehaviour:
   firePoint: {fileID: 1981354354}
   projectilePrefab: {fileID: 0}
   aimLaser: {fileID: 1981354361}
+  aimSound: {fileID: 0}
+  fireSound: {fileID: 0}
 --- !u!1 &1984343783
 GameObject:
   m_ObjectHideFlags: 0

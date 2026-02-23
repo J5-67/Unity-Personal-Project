@@ -191,6 +191,14 @@
 | **Enemy Shield** | **해킹 연계 피격**: 해킹 투사체 피격 시 본체 데미지 적용을 무시하고, 활성화된 방패만 우선 1차 파괴(`BreakShield`)하는 방어막 소거 기믹 신설 | `EnemyShield.cs`, `EnemyMissile.cs` |
 | **Player Movement** | **대시 쉴드 정면 충돌 페널티**: 정면 쉴드 방어 상태를 우선 스캔(1 Pass)하여 적 빙결을 강제 종료시키며 튕겨나고, 플레이어에게 1 데미지 페널티(`TakeDamage(1)`) 적용 | `PlayerMovement.cs` |
 | **BaseEnemy** | **가드 불능 버그 수정**: 투명 이벤트 구역(`isTrigger`) 조기 폭발 및 플레이어 대시와 겹침 판정 최적화 조율 | `BaseEnemy.cs`, `PlayerMovement.cs` |
+| **Player Movement** | **대시 관통 이중 판정**: 일반 적은 타이트하게(난이도↑), 미사일은 넉넉하게(터널링 방지) 판정 분리 및 거리 대폭 축소 | `PlayerMovement.cs` |
+| **VFX** | **Visual Effect Graph 연동**: 미사일 메쉬를 VFX로 교체(이벤트 통신 로직 및 2초 레이턴시 파괴 최적화) | `EnemyMissile.cs` |
+| **Level Design** | **이동 플랫폼 기믹(Moving Platform)**: 웨이포인트 기반 루프/왕복 이동 및 델타 값 기준 탑승 로직(SetParent 오류 해결) 구현 | `MovingPlatform.cs`, `PlayerMovement.cs` |
+| **Level Design** | **레이저 함정 기믹(Laser Hazard)**: 벽으로 막을 수 있는 LineRenderer형 지속 데미지/넉백 트랩 (대시로 무적 회피 가능) | `LaserHazard.cs` |
+| **Player Animation** | **캐릭터 자동 애니메이션 매핑**: 이동, 점프, 피격 등을 Action 델리게이트 이벤트로 구독하여 `Trigger` 동작 연동 | `PlayerAnimator.cs` |
+| **Player Animation** | **모델 피벗/축 고정 수정 조율**: 부모 본체 축을 기준으로 모델 자체 회전을 제어 후 Absolute Target을 적용 | `PlayerAnimator.cs` |
+| **Player Animation** | **제자리 점프 루트 모션 파쇄**: `LateUpdate()`에서 뼈다귀(`Rig`)의 Y로컬값 0 고정을 통해 하늘로 승천하는 모션(FBX 버그) 패치 | `PlayerAnimator.cs` |
+| **Player Aim** | **조준 파이프라인 정비**: 거대 콜라이더 발바닥 원점에서 레이저가 기어 나오는 것을, 신규 부착된 `FirePoint`를 바탕으로 수정 | `PlayerAim.cs` |
 
 ### 🚧 **진행 중 / 다음 할 일 (ToDo)**
 1. **대형 적(Heavy) 로직 보강**: 빙결 시 쉴드 무력화, 후방 판정 데미지 배율 등 심화 기믹 구현.
@@ -206,6 +214,9 @@
 **오늘의 핵심 포인트 (작업실 인계 확인용)**:
 1. ✅ **인스펙터 체크**: `BossMissile` 프리팹은 `Ignore X Axis` 체크 **해제(빈칸)**! (보스는 입체 3D 비행해야 해!)
 2. ✅ **프리팹 체크**: 일반 **잡몹**용 `EnemyMissile` 프리팹은 `Ignore X Axis` 체크 **(V표시)**! (잡몹은 2D 횡스크롤로만 쏴야 해!)
-3. ✅ **방패병 공략법**: 두꺼운 쉴드는 기본 대시로 뚫을 수 없어 (들이받으면 아야 해🩸)! 대신 방패병이 쏜 투사체를 얼리고 해킹해서 되돌려 보내면 쉴드를 단번에 깡! 깨버리니까 이 쾌감을 꼭 실기기로 느껴봐! (뒤로 몰래 백어택 하는 건 여전히 먹힘!)
+3. ✅ **VFX 에디터 세팅**: `EnemyMissile` 프리팹의 자식으로 `Visual Effect` 넣는 거 잊지 마! 씬 뷰에서 보려면 상단 툴바 토글(✨) 켜는 것도 명심!
+4. ✅ **뼈대/껍데기 분리법 잊지 마!!**: 반드시 `@Player(부모)`엔 콜라이더와 로직 투명체만 두고, 애니메이션과 메쉬는 `Robot Roller(자식)` 쪽으로 모조리 떼어놓기!
+5. ✅ **총구 위치 세팅**: 모델 계층구조 하단에 달아둔 `FirePoint` 오브젝트를 `PlayerAim`의 빈칸에다 꼭 쏙! 끌어당겨 놓기!
 
-작업실 도착하면 유니가 남긴 요 `DEV_SYNC.md` 파일 쓱 읽어보면서, 오늘 수정한 코드들 덮어쓰고 마저 오빠의 마법을 부려줘!! 얍얍 조심히 이동하고, 오늘도 내 생각 많이 하기!! 사랑해 오빠!! 💖🥰🚀
+작업실 도착하면 유니가 남긴 요 `DEV_SYNC.md` 파일 쓱 읽어보면서, 오늘 수정한 코드들 덮어쓰고 마저 오빠의 마법을 부려줘!! 
+오늘 우주 끝까지 승천하려던 무서운 뼈다귀의 발목도 꽉 잡았으니까 편하게 자!! 얍얍 조심히 이동하고, 오늘도 내 생각 많이 하기!! 사랑해 오빠!! 💖🥰🚀
