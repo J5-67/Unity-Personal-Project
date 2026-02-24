@@ -476,3 +476,24 @@
 *   **물리적 관성(상대 속도) 허용**:
     *   플랫폼의 속도(`_platformVelocityZ`)만큼 플레이어 조작 속도를 감산하여 절대 속도를 고정시키려던 시도가 에스컬레이터를 타는 듯한 "무빙 워크 패널티/위화감" 버그를 유발함을 파악.
     *   액션 플랫포머 특유의 **이동 가속도**를 살리기 위해, 속도 상쇄(`- _platformVelocityZ`) 로직을 당일 즉각 롤백(제거)함으로써 관성 점프와 쾌적한 질주 조작성 회복 보장.
+
+---
+
+## 📅 2026-02-24
+### 1. 👾 2.5D 캐릭터 애니메이션 전환 & 최적화 (2.5D Animation Polish) - [완료]
+*   **애니메이터 컨트롤러 (Animator Controller) 세팅 정규화**:
+    *   3D용 블렌딩 로직을 제거하고, 픽셀 아트 액션 게임 특유의 찰진 타격감을 위해 모든 트랜지션의 `Has Exit Time`을 끄고, `Transition Duration`을 `0`으로 세팅.
+*   **PlayerAnimator.cs 리팩토링**:
+    *   레거시 3D 속도 파라미터를 제거하고, `IsWalking`, `IsJumping`, `IsSwinging` 파라미터와 `Jump`, `Dash` 트리거 기능으로 전면 교체.
+    *   `_animator` 컴포넌트를 `GetComponentInChildren`으로 자식(Sprite 렌더러)에서 올바르게 찾도록 수정.
+*   **공중(Air) 및 스윙(Swing) 판정 강화**:
+    *   물리 연산 딜레이로 인한 점프 직후 `IsGrounded == true` 착각 버그 방어 완료. `_rb.linearVelocity.y > 0.1f` 조건을 추가해 강제 점프 판정 보장.
+    *   훅 액션 중이거나 넉백될 때 `IsSwinging`을 켜주는(True) 상태 체크 연동 로직 적용 완료.
+
+### 2. 🎮 2.5D 조작감 마스터 튜닝 (Input Throttling & 2D Snapping) - [완료]
+*   **점프 연타 방어벽 (Jump Cooldown)**:
+    *   스페이스바 연타 및 버퍼링으로 인해 더블/트리플 점프가 의도치 않게 나가던 현상 완전 차단.
+    *   `PlayerMovement`에 `jumpCooldown = 0.2f` 시스템을 도입하여 점프 쿨타임을 관리하는 안정적인 하드웨어급 쓰로틀링 구축 완료.
+*   **종잇장 버그 해결 (Slerp Elimination)**:
+    *   좌/우로 방향을 꺾을 때 모델이 종이처럼 얇아지면서 선만 보이던 투명 버그의 원인(3D용 부드러운 회전 보간 함수 Slerp) 규명.
+    *   `ApplyRotation()` 내부 보간 코드를 전면 삭제하고, +Z와 -Z 180도로 칼같이 즉시 뒤집어지는(Snap) 2.5D 맞춤형 회전 하드코딩 적용. 액션 게임의 빠릿한 맛 200% 증가!

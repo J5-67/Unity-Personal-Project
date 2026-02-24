@@ -91,6 +91,15 @@ namespace UI
             }
         }
 
+        public void LoadDialogueData(TextAsset newCsv)
+        {
+            if (newCsv == null) return;
+            if (csvFile == newCsv && _allDialogueList != null) return;
+
+            csvFile = newCsv;
+            _allDialogueList = DialogueParser.Parse(csvFile.text);
+        }
+
         public void PlayDialogueRange(int startId, int endId)
         {
             if (_allDialogueList == null) return;
@@ -142,11 +151,14 @@ namespace UI
             }
         }
 
+        public System.Action OnDialogueEnded;
+
         private void EndDialogue()
         {
             dialogueUI.Hide();
             _currentIndex = -1; 
             _currentQueue = null;
+            OnDialogueEnded?.Invoke();
         }
 
         private PortraitInfo GetPortraitInfo(string key)

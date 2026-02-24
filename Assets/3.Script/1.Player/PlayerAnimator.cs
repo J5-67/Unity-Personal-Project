@@ -2,35 +2,34 @@ using UnityEngine;
 
 namespace Player
 {
-    [RequireComponent(typeof(Animator))]
     public class PlayerAnimator : MonoBehaviour
     {
         private Animator _animator;
         private PlayerMovement _playerMovement;
         private PlayerHealth _playerHealth;
+        private PlayerHook _playerHook; // [New] 스윙 애니메이션용 캐싱
         private Rigidbody _rb;
 
-        // 애니메이션 최적화를 위한 Hash 변환 (String 노가다보다 훨씬 빠름!)
-        private readonly int _forwardHash = Animator.StringToHash("Forward");
-        private readonly int _strafeHash = Animator.StringToHash("Strafe");
-        private readonly int _jumpHash = Animator.StringToHash("Jump");
-        private readonly int _dashHash = Animator.StringToHash("SpinAttack"); // 대시 연출용
-        private readonly int _takeDamageHash = Animator.StringToHash("Take Damage");
+        // 2D 전용 심플 해시 변환!
+        private readonly int _isWalkingHash = Animator.StringToHash("IsWalking");
+        private readonly int _isJumpingHash = Animator.StringToHash("IsJumping"); 
+        private readonly int _isSwingingHash = Animator.StringToHash("IsSwinging"); // [New]
+        private readonly int _dashHash = Animator.StringToHash("Dash"); // [Fix] 깔끔하게 이름 변경
         private readonly int _dieHash = Animator.StringToHash("Die");
+        private readonly int _takeDamageHash = Animator.StringToHash("Take Damage");
 
         private void Awake()
         {
-            _animator = GetComponent<Animator>();
-            
-            // 모델이 플레이어의 최상단 자식으로 들어갈 경우를 상정! ('PlayerMovement' 등을 자동으로 찾음)
+            // 부모/자식 어디에 달려있든 유연하게 캐싱!
+            _animator = GetComponentInChildren<Animator>();
             _playerMovement = GetComponentInParent<PlayerMovement>();
             _playerHealth = GetComponentInParent<PlayerHealth>();
+            _playerHook = GetComponentInParent<PlayerHook>();
             _rb = GetComponentInParent<Rigidbody>();
         }
 
         private void OnEnable()
         {
-            // 유니의 완벽한 징검다리! Player 코드를 매 프레임 감시하지 않고, 이벤트 방식으로 구독!
             if (_playerMovement != null)
             {
                 _playerMovement.OnJumpEvent += TriggerJump;
@@ -46,7 +45,6 @@ namespace Player
 
         private void OnDisable()
         {
-            // 메모리 누수 안 나게 이벤트 해제 싹!
             if (_playerMovement != null)
             {
                 _playerMovement.OnJumpEvent -= TriggerJump;
@@ -62,32 +60,33 @@ namespace Player
 
         private void Update()
         {
-            if (_rb == null || _playerMovement == null) return;
+            if (_animator == null || _playerMovement == null) return;
 
-            // [Fix] 모델(내 자신)의 transform을 기준으로 돌리면, 모델이 돌아갈 때마다 입력 축이 꼬여버림!
-            // 따라서 '절대 회전 기준점'인 부모(Player 본체)의 transform 기준으로 앞뒤좌우 속도를 판별해야 함.
-            Vector3 localVelocity = _playerMovement.transform.InverseTransformDirection(_rb.linearVelocity);
+            // 1. 걷기 로직: 방향키(x축 입력)가 들어오면 걷기 ON!!
+            bool isWalking = Mathf.Abs(_playerMovement.MoveInput.x) > 0.05f;
+            _animator.SetBool(_isWalkingHash, isWalking);
 
-            // Forward 계산: 이동 속도 최대치를 기준으로 비율 0~1 산출
-            float moveSpeedLimit = 10f; 
-            float forwardAmount = Mathf.Clamp(localVelocity.z / moveSpeedLimit, -1f, 1f);
-            float strafeAmount = Mathf.Clamp(localVelocity.x / moveSpeedLimit, -1f, 1f); 
+            // 2. 공중 로직 (진짜 중요!⭐)
+            bool isJumping = !_playerMovement.IsGrounded || (_rb != null && _rb.linearVelocity.y > 0.1f);
+            _animator.SetBool(_isJumpingHash, isJumping);
 
-            // 단순 SetFloat이 아니라 마법의 보간 수치(0.1f)를 넣어서,
-            // 걷기-뛰기가 로봇처럼 뚝뚝 안 끊기고 엄청 스무스하게 블렌딩되도록 수정!
-            _animator.SetFloat(_forwardHash, forwardAmount, 0.1f, Time.deltaTime);
-            _animator.SetFloat(_strafeHash, strafeAmount, 0.1f, Time.deltaTime);
+            // 3. 스윙 로직 (훅을 걸고 있는지 공용으로 체크)
+            // (주의: PlayerMovement 안의 내부 변수를 외부 접근자를 만들거나 Hook 스크립트의 상태를 가져옵니다)
+            // [New] PlayerHook 안쪽의 "_isHooking" 상태를 직접 알 수 있게 리플렉션 없이도 편하게 짤 수 있음!
+            // 하지만 제일 간단하게 공중에서 줄을 매달고 있는지를 판단하려면 RigidBody의 제약 조건이나 이동 스피드를 쓸 수도 있음.
+            // 일단은 외부로 상태를 넘겨서 처리하는 게 정석! (PlayerMovement에서 제어 금지 상태인지 확인)
+            bool isSwinging = !_playerMovement.CanMove && !_playerMovement.IsDashing && !_playerMovement.IsGrounded;
+            _animator.SetBool(_isSwingingHash, isSwinging);
         }
 
         // --- Trigger Functions ---
         private void TriggerJump()
         {
-            if (_animator != null) _animator.SetTrigger(_jumpHash);
+            if (_animator != null) _animator.SetTrigger("Jump");
         }
 
         private void TriggerDash()
         {
-            // [대시 모델 기믹] 오빠 맘대로 SpinAttack 애니메이션 빌려 쓰기! 슝!!
             if (_animator != null) _animator.SetTrigger(_dashHash);
         }
 
@@ -99,20 +98,6 @@ namespace Player
         private void TriggerDie()
         {
             if (_animator != null) _animator.SetTrigger(_dieHash);
-        }
-
-        private void LateUpdate()
-        {
-            // 애니메이터가 뼈대를 다 움직인 직후(LateUpdate)에 강제로 뼈다귀의 Y축을 0으로 짓눌러버림!
-            // 로봇 모델의 루트 뼈대(Rig)가 자식으로 있다면, 그 로컬 Y 좌표를 0으로 고정!
-            Transform rigTransform = transform.Find("Rig") ?? transform.Find("RigPelvis");
-            
-            if (rigTransform != null)
-            {
-                Vector3 fixedPos = rigTransform.localPosition;
-                fixedPos.y = 0f; 
-                rigTransform.localPosition = fixedPos;
-            }
         }
     }
 }

@@ -33,6 +33,7 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private float coyoteTime = 0.15f;
     [SerializeField] private float jumpBufferTime = 0.2f;
     [SerializeField] private float dropDisableTime = 0.5f;
+    [SerializeField] private float jumpCooldown = 0.2f; // [New] 연속 점프 방지용 쿨타임
 
     [Header("📍 Checks & References")]
     [SerializeField] private Transform groundCheckPos;
@@ -78,6 +79,7 @@ public class PlayerMovement : MonoBehaviour
 
     private float _coyoteTimeCounter;
     private float _jumpBufferCounter;
+    private float _lastJumpTime; // [New] 마지막 점프 시간 추적
     private PlatformFunction _currentFunctionPlatform;
     
     // [New] Moving Platform Tracking
@@ -153,12 +155,17 @@ public class PlayerMovement : MonoBehaviour
 
         if (context.started || (context.performed && context.ReadValueAsButton()))
         {
-            _jumpBufferCounter = jumpBufferTime;
+            // [Fix] 쿨타임 체크 추가 (연타 방지)
+            if (Time.time >= _lastJumpTime + jumpCooldown)
+            {
+                _jumpBufferCounter = jumpBufferTime;
+            }
             _isJumpPressed = true;
         }
         else if (context.canceled || !context.ReadValueAsButton())
         {
             _isJumpPressed = false;
+            // 위로 올라가는 중에 점프 키 떼면 속도 깎기 (소프트 점프)
             if (_rb.linearVelocity.y > 0f && !_isWallSliding && !_isDashing)
             {
                 CutJumpVelocity();
@@ -581,6 +588,7 @@ public class PlayerMovement : MonoBehaviour
             _rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
             _jumpBufferCounter = 0f;
             _coyoteTimeCounter = 0f;
+            _lastJumpTime = Time.time; // [New] 쿨타임 측정 시작!
             
             OnJumpEvent?.Invoke(); // [New] 애니메이션 연동
         }
@@ -600,6 +608,7 @@ public class PlayerMovement : MonoBehaviour
         _disableMoveCoroutine = StartCoroutine(DisableMoveRoutine()); 
         
         _jumpBufferCounter = 0f; 
+        _lastJumpTime = Time.time; // [New] 벽점프도 쿨타임 측정 시작!
         OnJumpEvent?.Invoke(); // [New] 애니메이션 연동 (벽점프)
     }
 
@@ -664,10 +673,13 @@ public class PlayerMovement : MonoBehaviour
 
     private void ApplyRotation() 
     { 
-        if (_moveInput.x != 0) 
+        if (Mathf.Abs(_moveInput.x) > 0.05f) 
         { 
-            Vector3 lookDir = new Vector3(0, 0, _moveInput.x); 
-            transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(lookDir), rotationSpeed * Time.deltaTime); 
+            // [Fix] 2.5D 스프라이트는 부드럽게(Slerp) 돌면 아예 종이장처럼 얇아지면서 사라지는 각도가 생겨버림!
+            // 무조건 180도로 '팍!' 하고 즉시 뒤집어지도록 Slerp 삭제!!
+            float zDir = _moveInput.x > 0 ? 1f : -1f;
+            Vector3 lookDir = new Vector3(0, 0, zDir); 
+            transform.rotation = Quaternion.LookRotation(lookDir); 
         } 
     }
 
