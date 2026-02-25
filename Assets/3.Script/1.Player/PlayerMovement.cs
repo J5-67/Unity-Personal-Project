@@ -96,6 +96,13 @@ public class PlayerMovement : MonoBehaviour
         if (ghostTrail == null) ghostTrail = GetComponentInChildren<GhostTrail>();
 
         _rb.constraints = RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezeRotation;
+        
+        // [Fix] 가속도 뚫림(터널링) 현상 완전 방어!
+        // 대시나 빠른 낙하 시 오브젝트를 통과해버리는 현상을 막기 위해 물리 충돌 감지 방식을 Continuous로 상향!
+        if (_rb != null)
+        {
+            _rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
+        }
 
         _currentDashCharges = maxDashCharges;
     }
@@ -126,8 +133,10 @@ public class PlayerMovement : MonoBehaviour
         if (_canMove || (_isHookingState && _isGrounded))
         {
             Move();
-            ApplyRotation();
         }
+
+        // [Fix] 시선(조준) 방향은 캐릭터의 이동 가능(_canMove) 여부 및 훅 상태와 무관하게 항상 마우스를 따라가도록 독립적으로 실행
+        ApplyRotation();
 
         HandleGravity();
         WallSlide();
@@ -198,18 +207,24 @@ public class PlayerMovement : MonoBehaviour
             
             bool anyHacked = false;
             
-            // [New] 해킹 시 타겟 찾기 (우선순위: 보스 -> 일반 적)
+            // [Fix] 악마의 FindAnyObjectByType 제거! 
+            // 맵 전체를 뒤지지 않고, 방금 스캔한 반경 20m(hits) 안에서만 타겟을 찾도록 변경! (엄청난 속도 향상🚀)
             Transform hackTarget = null;
             
-            // 1. 보스 찾기
-            BossHealth boss = FindAnyObjectByType<BossHealth>();
-            if (boss != null) hackTarget = boss.transform;
-
-            // 2. 보스 없으면 일반 적 찾기 (가장 가까운)
-            if (hackTarget == null)
+            foreach (var hit in hits)
             {
-                BaseEnemy randomEnemy = FindAnyObjectByType<BaseEnemy>();
-                if (randomEnemy != null) hackTarget = randomEnemy.transform;
+                if (hit.TryGetComponent(out BossHealth boss) || (hit.transform.parent != null && hit.transform.parent.TryGetComponent(out boss)))
+                {
+                    hackTarget = boss.transform;
+                    break; // 보스 찾으면 즉시 종료 (최우선 타겟)
+                }
+                else if (hackTarget == null)
+                {
+                    if (hit.TryGetComponent(out BaseEnemy enemy) || (hit.transform.parent != null && hit.transform.parent.TryGetComponent(out enemy)))
+                    {
+                        hackTarget = enemy.transform; // 일반 적은 임시 저장 (보스 못 찾으면 얘로 씀)
+                    }
+                }
             }
 
             foreach (var hit in hits)
@@ -325,8 +340,9 @@ public class PlayerMovement : MonoBehaviour
 
             if (ghostTrail != null)
             {
-                float distance = Vector3.Distance(transform.position, lastGhostPos);
-                if (distance >= ghostSpacing) 
+                // [Fix] 고속 루프 속 Distance 무거운 계산을 sqrMagnitude로 변경!
+                float sqrDistance = (transform.position - lastGhostPos).sqrMagnitude;
+                if (sqrDistance >= ghostSpacing * ghostSpacing) 
                 {
                     ghostTrail.ShowGhost();
                     lastGhostPos = transform.position;
@@ -596,11 +612,18 @@ public class PlayerMovement : MonoBehaviour
 
     private void PerformWallJump() 
     { 
-        float wallDir = transform.forward.z > 0 ? 1f : -1f; 
+        // [Fix] 벽 점프 시, 벽의 방향을 시선(transform.forward)이 아닌 실제 물리적 벽의 위치로 판단
+        float zDist = Mathf.Abs(wallCheckPos.localPosition.z);
+        if (zDist < 0.1f) zDist = 0.5f; // 안전방어
+        Vector3 rightPos = transform.position + new Vector3(0, wallCheckPos.localPosition.y, zDist);
+        bool isRightWall = Physics.CheckSphere(rightPos, checkRadius, wallLayer);
+
+        float wallDir = isRightWall ? 1f : -1f; 
         float jumpDirection = -wallDir; 
         Vector3 force = new Vector3(0, wallJumpPower.y, jumpDirection * wallJumpPower.x); 
         _rb.linearVelocity = Vector3.zero; 
         _rb.AddForce(force, ForceMode.Impulse); 
+        
         Vector3 lookDir = new Vector3(0, 0, jumpDirection); 
         transform.rotation = Quaternion.LookRotation(lookDir); 
         
@@ -614,7 +637,16 @@ public class PlayerMovement : MonoBehaviour
 
     private void WallSlide()
     {
-        bool isPushingWall = (_moveInput.x > 0 && transform.forward.z > 0) || (_moveInput.x < 0 && transform.forward.z < 0);
+        // [Fix] 조준(마우스) 방향과 무관하게, 입력 방향(_moveInput)과 실제 물리적 벽의 위치를 비교하여 슬라이드 판단
+        float zDist = Mathf.Abs(wallCheckPos.localPosition.z);
+        if (zDist < 0.1f) zDist = 0.5f;
+        Vector3 rightPos = transform.position + new Vector3(0, wallCheckPos.localPosition.y, zDist);
+        Vector3 leftPos = transform.position + new Vector3(0, wallCheckPos.localPosition.y, -zDist);
+        
+        bool touchRight = Physics.CheckSphere(rightPos, checkRadius, wallLayer);
+        bool touchLeft = Physics.CheckSphere(leftPos, checkRadius, wallLayer);
+
+        bool isPushingWall = (_moveInput.x > 0 && touchRight) || (_moveInput.x < 0 && touchLeft);
 
         if (_isTouchingWall && !_isGrounded && _rb.linearVelocity.y < 0 && isPushingWall)
         {
@@ -673,14 +705,20 @@ public class PlayerMovement : MonoBehaviour
 
     private void ApplyRotation() 
     { 
-        if (Mathf.Abs(_moveInput.x) > 0.05f) 
-        { 
-            // [Fix] 2.5D 스프라이트는 부드럽게(Slerp) 돌면 아예 종이장처럼 얇아지면서 사라지는 각도가 생겨버림!
-            // 무조건 180도로 '팍!' 하고 즉시 뒤집어지도록 Slerp 삭제!!
-            float zDir = _moveInput.x > 0 ? 1f : -1f;
+        // [Fix] 플레이어 캐릭터가 무조건 조준선(마우스) 방향을 바라보도록 설정
+        if (playerAim != null)
+        {
+            float zDir = playerAim.GetAimWorldPosition().z > transform.position.z ? 1f : -1f;
+            
+            // [Fix] 훅(스윙) 상태일 때는 스윙 애니메이션(또는 리깅) 자체의 180도 반전을 보정하기 위해 방향을 뒤집음!
+            if (_isHookingState && !_isGrounded)
+            {
+                zDir = -zDir;
+            }
+
             Vector3 lookDir = new Vector3(0, 0, zDir); 
             transform.rotation = Quaternion.LookRotation(lookDir); 
-        } 
+        }
     }
 
     private void CutJumpVelocity() 
@@ -698,7 +736,7 @@ public class PlayerMovement : MonoBehaviour
     { 
         _isGrounded = false; 
         _currentFunctionPlatform = null; 
-        Collider[] colliders = Physics.OverlapSphere(groundCheckPos.position, checkRadius, groundLayer); 
+        Collider[] colliders = Physics.OverlapSphere(groundCheckPos.position, checkRadius, groundLayer | wallLayer); 
         if (colliders.Length > 0) 
         { 
             _isGrounded = true; 
@@ -710,8 +748,17 @@ public class PlayerMovement : MonoBehaviour
                     break; 
                 } 
             } 
-        } 
-        _isTouchingWall = Physics.CheckSphere(wallCheckPos.position, checkRadius, wallLayer); 
+        }
+        
+        // [Fix] 시선(조준) 방향과 독립적으로 절대적 좌/우의 벽을 모두 체크해서 처리!
+        float zDist = Mathf.Abs(wallCheckPos.localPosition.z);
+        if (zDist < 0.1f) zDist = 0.5f;
+        Vector3 rightPos = transform.position + new Vector3(0, wallCheckPos.localPosition.y, zDist);
+        Vector3 leftPos = transform.position + new Vector3(0, wallCheckPos.localPosition.y, -zDist);
+        
+        bool touchRight = Physics.CheckSphere(rightPos, checkRadius, wallLayer);
+        bool touchLeft = Physics.CheckSphere(leftPos, checkRadius, wallLayer);
+        _isTouchingWall = touchRight || touchLeft;
     }
 
     private IEnumerator DisableCollisionRoutine(PlatformFunction platform) 

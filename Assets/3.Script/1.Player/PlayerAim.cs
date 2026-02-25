@@ -23,6 +23,15 @@ public class PlayerAim : MonoBehaviour
     [SerializeField] private Transform firePoint; // [New] 총구/발사 위치
     [SerializeField] private float lineWidth = 0.1f;
     [SerializeField] private float animationSpeed = 3.0f; 
+
+    [Header("📉 조준선 투명도 (알파 그래프 조절)")] // [New]
+    [Tooltip("우측 빈 공간을 클릭하고 키보드/마우스로 점을 찍어 원하는 구간(10% 단위 등)의 투명도를 맘대로 세팅하세요!\n(0.0 = 캐릭터 몸통 / 1.0 = 훅 타겟)")]
+    [SerializeField] private AnimationCurve customAlphaCurve = new AnimationCurve(
+        new Keyframe(0f, 0f), 
+        new Keyframe(0.05f, 0f), 
+        new Keyframe(0.2f, 1f), 
+        new Keyframe(1f, 1f)
+    );
     
     [Header("📏 Density Settings (값이 클수록 촘촘함)")]
     [SerializeField] private float dashTiling = 1.0f;      
@@ -45,6 +54,11 @@ public class PlayerAim : MonoBehaviour
     
     private Material _lineMaterial;
     private float _currentTextureOffset = 0f;
+
+    // [Fix] GC(가비지 컬렉션) 오버헤드 방지용 캐싱 필드!
+    private Gradient _lineGradient;
+    private GradientColorKey[] _colorKeys;
+    private GradientAlphaKey[] _alphaKeys;
 
     private PlayerHook _playerHook;
 
@@ -108,11 +122,16 @@ public class PlayerAim : MonoBehaviour
         if(shader == null) shader = Shader.Find("Mobile/Particles/Alpha Blended"); 
         
         _lineMaterial = new Material(shader);
+
+        // [Fix] 그라디언트 객체를 재사용하여 프레임 드롭 방지 (GC Allocation 제거)
+        _lineGradient = new Gradient();
+        _colorKeys = new GradientColorKey[2];
+        _alphaKeys = new GradientAlphaKey[8]; // 유니티 그라디언트 최대 지원치는 8개
         
         lineRenderer.material = _lineMaterial;
         lineRenderer.startWidth = lineWidth;
         lineRenderer.endWidth = lineWidth;
-        lineRenderer.positionCount = 2;
+        lineRenderer.positionCount = 2; // We will update this dynamically
         
         lineRenderer.textureMode = LineTextureMode.Stretch; 
         lineRenderer.enabled = true;
@@ -337,8 +356,32 @@ public class PlayerAim : MonoBehaviour
             }
         }
 
-        lineRenderer.SetPosition(0, startPos);
-        lineRenderer.SetPosition(1, endPos);
+        // [Fix] 라인 렌더러가 2개의 점만 가지면 그라디언트가 세밀하게 적용되지 않고 선형으로 뭉게짐.
+        // 점(Vertex)을 10개로 쪼개어서 플레이어 앞부분만 투명하고 그 뒤로는 선명하도록 표현!
+        int segmentCount = 10;
+        lineRenderer.positionCount = segmentCount;
+        for (int i = 0; i < segmentCount; i++)
+        {
+            float t = i / (float)(segmentCount - 1);
+            lineRenderer.SetPosition(i, Vector3.Lerp(startPos, endPos, t));
+        }
+
+        // [Fix] 매 프레임 new 할당 방지(GC 회피) 및 오빠가 조절한 커브(customAlphaCurve) 실시간 반영!
+        _colorKeys[0].color = targetColor;
+        _colorKeys[0].time = 0f;
+        _colorKeys[1].color = targetColor;
+        _colorKeys[1].time = 1f;
+
+        // 유니티 그라디언트 최대 수용치(8개)에 맞게 커브를 8구간으로 추출!
+        for (int i = 0; i < 8; i++)
+        {
+            float t = i / 7f; // 0.0, 0.14 ... 1.0
+            _alphaKeys[i].alpha = customAlphaCurve.Evaluate(t);
+            _alphaKeys[i].time = t;
+        }
+
+        _lineGradient.SetKeys(_colorKeys, _alphaKeys);
+        lineRenderer.colorGradient = _lineGradient;
 
         if (_lineMaterial != null)
         {

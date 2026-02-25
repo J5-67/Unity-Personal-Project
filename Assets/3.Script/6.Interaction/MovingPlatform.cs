@@ -79,8 +79,8 @@ namespace Interaction
             // 플랫포머 게임에서 플레이어를 밀거나 싣고 가기 위해 rb.MovePosition 필수 사용
             _rb.MovePosition(newPos);
 
-            // 목적지 도달 체크
-            if (Vector3.Distance(currentPos, targetPos) < 0.05f)
+            // [Fix] 무거운 Vector3.Distance 대신 가벼운 sqrMagnitude 사용! (0.05f의 제곱은 0.0025f)
+            if ((currentPos - targetPos).sqrMagnitude < 0.0025f)
             {
                 StartCoroutine(WaitAndSetNextTarget());
             }

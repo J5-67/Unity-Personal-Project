@@ -20,6 +20,7 @@ public class PlayerHealth : MonoBehaviour
     
     private bool _isInvincible = false;
     public bool IsInvincible => _isInvincible; // [New] 외부에서 무적 상태 확인용
+    public int CurrentHealth => currentHealth; // [New] 체력 상태 연동용 (요정 등)
 
     // [New] Animation Events
     public event System.Action OnTakeDamageEvent;

@@ -495,5 +495,42 @@
     *   스페이스바 연타 및 버퍼링으로 인해 더블/트리플 점프가 의도치 않게 나가던 현상 완전 차단.
     *   `PlayerMovement`에 `jumpCooldown = 0.2f` 시스템을 도입하여 점프 쿨타임을 관리하는 안정적인 하드웨어급 쓰로틀링 구축 완료.
 *   **종잇장 버그 해결 (Slerp Elimination)**:
-    *   좌/우로 방향을 꺾을 때 모델이 종이처럼 얇아지면서 선만 보이던 투명 버그의 원인(3D용 부드러운 회전 보간 함수 Slerp) 규명.
     *   `ApplyRotation()` 내부 보간 코드를 전면 삭제하고, +Z와 -Z 180도로 칼같이 즉시 뒤집어지는(Snap) 2.5D 맞춤형 회전 하드코딩 적용. 액션 게임의 빠릿한 맛 200% 증가!
+
+---
+
+## 📅 2026-02-25
+### 1. 🎯 조준선 파이프라인 정비 (Crosshair AimLine) - [완료]
+*   **조준선 폭 감소 & 커스터마이징 허용 (`Alpha Curve`)**:
+    *   기존 Particle Shader의 `TintColor` 지배적 침범을 피해 `Legacy Shaders/Particles/Alpha Blended`를 유지하되 Vertex Color로 투명도(Gradient)를 제어하도록 수정.
+*   **알파 런타임 제어기 구현 (DeadZone Customization)**:
+    *   `AnimationCurve`를 인스펙터에 노출하여 조준선의 시작부분(DeadZone) 투명도를 유저가 마음대로 튜닝할 수 있도록 GC Allocation 없이(`GradientAlphaKey` 수동 매핑 방식) 극한의 최적화로 구현 탑재!
+
+### 2. 🧚‍♀️ 요정 동료 시스템 시각화 (Fairy Companion System) - [완료]
+*   **고해상도 스프라이트 (High-Res Sprite)**:
+    *   도트(Pixel Art) 대신 URP/Lighting과 자연스럽게 어울리는 2.5D 고해상도 요정 애니메이션 스프라이트 시트 모델링.
+*   **알파 블렌딩(Alpha Transparency) 수정**:
+    *   Solid Background 이슈를 백그라운드 리무버 파이썬 코드를 통해 런타임에 처리하여 Alpha Transparent 상태로 에셋 자동화(`Fairy_Transparent.png`).
+*   **스프라이트 흔들림 방지 (Anti-Wobbling)**:
+    *   원화의 크기 차이로 발생하는 Y축 진동 문제를 4프레임의 Pivot을 렌더링 중앙점(구슬)로 수동 Custom Fix(정렬) 안내.
+
+### 3. 🪄 요정 PID 비행 제어기 (Fairy Flight Control) - [완료]
+*   **독립 제어 시스템 (PID Follower)**:
+    *   무거운 `Rigidbody` 대신 수리 물리학적 `PID.cs`를 재활용하여 가벼운 스프링 감쇠(역학) 기반 비행 추적 시스템 `FairyFollower.cs` 구축.
+*   **비주얼/동적 액션 부여**:
+    *   **호버링(Hovering)**: `Mathf.Sin`을 이용한 자체 상하 부유 렌더링.
+    *   **공기역학 시선 처리(Tilt)**: 2D 종이 모델의 Y축 깊이 파고듦을 수정하여 Z축으로만 강제 Snap 보정. 비행 속도(`Velocity.z`)에 비례해 40도까지 머리를 기울어 숙이게 하는(Tilt) 속도감 있는 애니메이션 코딩 완성.
+
+### 4. 🛠️ 전역 스크립트 최적화 (Global Optimization) - [완료]
+*   **Vector3.Distance 상쇄**: 매 프레임 발생하는 자원 소모적인 `Vector3.Distance` 및 `magnitude` 연산을 루트 연산이 없는 `sqrMagnitude`로 일괄 교체 (`FairyFollower`, `EnemyShooter`, `MovingPlatform` 등).
+*   **병목 색인 제거 (FindAnyObjectByType)**:
+    *   해킹 스캔 및 미사일 역해킹 시 맵 전체를 뒤지던 악성 탐색 코드를 제거.
+    *   기존에 생성해 둔 `OverlapSphere` 내의 배열 순회 및 `GameObject.FindWithTag` 해시 룩업 방식으로 전면 수정하여 성능 극대화 🚀.
+*   **투사체 오브젝트 풀링 (Object Pooling)**:
+    *   **공장 가동 중지!**: `EnemyShooter`, `EnemyMissile`, `EnemyProjectile`, `BossMissileLauncher` 등 각종 전투 객체들의 파괴/할당 병목을 막기 위해 `UnityEngine.Pool.ObjectPool` 시스템 적극 도입 및 델리게이트(`Action`) 재사용 반환 완벽 코딩. ♻️
+
+### 5. 🕷️ 와이어 액션 개선 & 고무줄 반동 픽스 (Hook Zip Polish) - [완료]
+*   **ZipToTargetRoutine 일원화**: 
+    *   가벼운 적(Light)과 무거운 적(Heavy) 구분 없이, 훅 명중 시 플레이어가 항상 입체기동장치처럼 적에게 직접 날아가는(`ZipToTargetRoutine`) 익스트림 뷰로 통일.
+*   **대시 관통 고무줄 버그(Rubber Banding) 픽스**:
+    *   적을 향해 날아가는 도중, **대시 (Dash)** 나 점프 입력 시 와이어를 즉각적으로 텐션 파기(`StopHook`)시켜, 적을 뚫고 지나갈 때 와이어 역물리력 때문에 등 뒤로 확 튕겨져 버리는 반작용 버그 원천 차단! 😎

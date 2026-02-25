@@ -97,9 +97,17 @@ public class BossMissileLauncher : MonoBehaviour
     private void Awake()
     {
         _missilePool = new UnityEngine.Pool.ObjectPool<EnemyMissile>(
-            createFunc: () => Instantiate(missilePrefab),
+            createFunc: () => {
+                var m = Instantiate(missilePrefab);
+                // [Fix] 미사일이 터질 때 부모 풀로 돌아오게 연락줄 명시
+                m.OnReleaseToPool = (proj) => _missilePool.Release((EnemyMissile)proj);
+                return m;
+            },
             actionOnGet: (missile) => missile.gameObject.SetActive(true),
-            actionOnRelease: (missile) => missile.gameObject.SetActive(false),
+            actionOnRelease: (missile) => {
+                missile.gameObject.SetActive(false);
+                missile.transform.position = transform.position; // 잔상 방지용 대기 위치
+            },
             actionOnDestroy: (missile) => Destroy(missile.gameObject),
             defaultCapacity: 20,
             maxSize: 50

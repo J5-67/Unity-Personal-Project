@@ -180,13 +180,10 @@ public class PlayerHook : MonoBehaviour
                          _currentHookTarget = _hookAnchor;
                          yield return StartCoroutine(PullSelfRoutine(_currentHookTarget));
                      }
-                     else if (enemy.Type == EnemyType.Heavy)
-                     {
-                         yield return StartCoroutine(ZipToTargetRoutine(enemy.transform)); 
-                     }
                      else
                      {
-                         yield return StartCoroutine(PullTargetRoutine(enemy.transform));
+                         // [Fix] Heavy, Light 구분 없이 오빠가 적한테 스파이더맨처럼 날아가게(ZipToTargetRoutine) 통일!
+                         yield return StartCoroutine(ZipToTargetRoutine(enemy.transform));
                      }
                 }
                 else
@@ -201,13 +198,10 @@ public class PlayerHook : MonoBehaviour
                          _currentHookTarget = _hookAnchor;
                          yield return StartCoroutine(PullSelfRoutine(_currentHookTarget));
                      }
-                     else if (tag == heavyEnemyTag)
+                     else if (tag == heavyEnemyTag || tag == lightEnemyTag)
                      {
+                         // [Fix] 태그로 잡혔을 때도 무조건 날아가기!
                          yield return StartCoroutine(ZipToTargetRoutine(bestCol.transform));
-                     }
-                     else if (tag == lightEnemyTag)
-                     {
-                         yield return StartCoroutine(PullTargetRoutine(bestCol.transform));
                      }
                      else
                      {
@@ -254,13 +248,10 @@ public class PlayerHook : MonoBehaviour
                         _currentHookTarget = _hookAnchor;
                         yield return StartCoroutine(PullSelfRoutine(_currentHookTarget));
                     }
-                    else if (enemy.Type == EnemyType.Heavy)
-                    {
-                        yield return StartCoroutine(ZipToTargetRoutine(enemy.transform));
-                    }
                     else
                     {
-                        yield return StartCoroutine(PullTargetRoutine(hit.transform));
+                        // [Fix] 궤적 충돌 시에도 Heavy 구분 없이 무조건 적에게 날아가기!
+                        yield return StartCoroutine(ZipToTargetRoutine(hit.transform));
                     }
                 }
                 else
@@ -275,13 +266,10 @@ public class PlayerHook : MonoBehaviour
                         _currentHookTarget = _hookAnchor;
                         yield return StartCoroutine(PullSelfRoutine(_currentHookTarget));
                     }
-                    else if (tag == heavyEnemyTag)
+                    else if (tag == heavyEnemyTag || tag == lightEnemyTag)
                     {
-                         yield return StartCoroutine(ZipToTargetRoutine(hit.transform));
-                    }
-                    else if (tag == lightEnemyTag)
-                    {
-                        yield return StartCoroutine(PullTargetRoutine(hit.transform));
+                        // [Fix] 궤적 태그 판단 시에도 모두 적에게 날아가기!
+                        yield return StartCoroutine(ZipToTargetRoutine(hit.transform));
                     }
                     else
                     {
@@ -798,6 +786,14 @@ public class PlayerHook : MonoBehaviour
 
         while (_isHooking && target != null)
         {
+            // [Fix] 대시 관통 시 로프 반동(고무줄 현상) 방지!
+            // 날아가는 도중에 오빠가 '대시'를 쓰면 즉시 훅을 끊어버려서 자유롭게 관통하게 만들어줌!
+            if (_playerMovement.IsDashing || _playerMovement.ConsumeJumpInput())
+            {
+                StopHook();
+                yield break;
+            }
+
             Vector3 myPos = transform.position;
             Vector3 targetPos = target.position; 
             

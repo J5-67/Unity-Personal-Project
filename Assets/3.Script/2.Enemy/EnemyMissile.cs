@@ -67,8 +67,10 @@ public class EnemyMissile : EnemyProjectile
         if (_renderer != null) _originalMaterial = _renderer.sharedMaterial;
     }
 
-    private void OnEnable()
+    protected override void OnEnable()
     {
+        base.OnEnable(); // [Fix] 부모 클래스(EnemyProjectile)의 초기화도 함께 실행!
+        
         _pidController.Reset();
         _isHoming = true;
         _isFrozen = false; // 재사용 시 얼음 상태 해제
@@ -80,7 +82,8 @@ public class EnemyMissile : EnemyProjectile
 
         if (_target == null)
         {
-            var p = FindAnyObjectByType<PlayerMovement>();
+            // [Fix] 느려터진 FindAnyObjectByType 대신, 유니티 내부 해시를 써서 10 배 이상 빠른 태그 검색으로 교체!
+            GameObject p = GameObject.FindWithTag("Player");
             if (p != null) 
             {
                 _target = p.transform;
@@ -88,13 +91,13 @@ public class EnemyMissile : EnemyProjectile
             }
         }
 
-        Invoke(nameof(SelfDestroy), 5f);
+        // [Fix] base.OnEnable()에서 처리해주므로 수동 카운트다운 제거
     }
     
     // ... 기존 코드 유지 (OnDisable, SelfDestroy, Start, SetFrozen, AutoHackRoutine, GlitchRoutine 등) ... //
-    private void OnDisable()
+    protected override void OnDisable()
     {
-        CancelInvoke();
+        base.OnDisable(); // [Fix] 부모의 CancelInvoke도 같이 실행!
         if (_isFrozen) 
         {
             _isFrozen = false;
@@ -104,7 +107,9 @@ public class EnemyMissile : EnemyProjectile
 
     private void SelfDestroy()
     {
-        Destroy(gameObject);
+        // [Fix] Destroy 대신 웅덩이로 귀향!
+        if (OnReleaseToPool != null) OnReleaseToPool.Invoke(this);
+        else Destroy(gameObject);
     }
 
     private void Start() { }
@@ -174,13 +179,22 @@ public class EnemyMissile : EnemyProjectile
 
         Transform hackTarget = null;
         
-        BossHealth boss = FindAnyObjectByType<BossHealth>();
-        if (boss != null) hackTarget = boss.transform;
-
-        if (hackTarget == null)
+        // [Fix] 악마의 FindAnyObjectByType 제거! (반경 30m 내의 적들만 스캔해서 역해킹 타겟 설정)
+        Collider[] hits = Physics.OverlapSphere(transform.position, 30f);
+        foreach (var hit in hits)
         {
-            BaseEnemy randomEnemy = FindAnyObjectByType<BaseEnemy>();
-            if (randomEnemy != null) hackTarget = randomEnemy.transform;
+            if (hit.TryGetComponent(out BossHealth boss) || (hit.transform.parent != null && hit.transform.parent.TryGetComponent(out boss)))
+            {
+                hackTarget = boss.transform;
+                break; // 보스 최우선 타겟!
+            }
+            else if (hackTarget == null)
+            {
+                if (hit.TryGetComponent(out BaseEnemy enemy) || (hit.transform.parent != null && hit.transform.parent.TryGetComponent(out enemy)))
+                {
+                    hackTarget = enemy.transform; // 일반 적
+                }
+            }
         }
 
         if (hackTarget != null)
@@ -198,7 +212,7 @@ public class EnemyMissile : EnemyProjectile
             {
                  Core.VFXManager.Instance.PlayHackExplosion(transform.position);
             }
-            Destroy(gameObject);
+            SelfDestroy(); // [Fix] 웅덩이로 돌려보냄
         }
     }
 

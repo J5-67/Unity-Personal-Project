@@ -7,9 +7,18 @@ public class EnemyProjectile : MonoBehaviour
     [SerializeField] private float lifeTime = 5f;
     [SerializeField] private GameObject hitVFX;
 
-    private void Start()
+    // [New] 매번 파괴(Destroy)하지 않고 웅덩이(Pool)로 돌아가기 위한 연락줄(Delegate)
+    public System.Action<EnemyProjectile> OnReleaseToPool;
+
+    protected virtual void OnEnable()
     {
-        Destroy(gameObject, lifeTime);
+        // Start 대신 OnEnable에서 타이머 작동시켜 재활용 시에도 5초 뒤 소멸하도록 수정
+        Invoke(nameof(HitAndDestroy), lifeTime);
+    }
+
+    protected virtual void OnDisable()
+    {
+        CancelInvoke(nameof(HitAndDestroy));
     }
 
     protected virtual void Update()
@@ -40,8 +49,12 @@ public class EnemyProjectile : MonoBehaviour
     {
         if (hitVFX != null)
         {
+            // [Todo] 폭발 이펙트도 나중에 파티클 풀링(VFXManager)으로 빼면 완벽! 
             Instantiate(hitVFX, transform.position, Quaternion.identity);
         }
-        Destroy(gameObject);
+        
+        // [Fix] 파괴(Garbage) 금지! 재활용 바구니(Pool)로 돌려보냄!
+        if (OnReleaseToPool != null) OnReleaseToPool.Invoke(this);
+        else Destroy(gameObject);
     }
 }
