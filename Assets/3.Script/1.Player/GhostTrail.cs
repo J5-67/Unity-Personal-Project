@@ -13,6 +13,7 @@ public class GhostTrail : MonoBehaviour
     
     private SkinnedMeshRenderer[] _skinnedRenderers;
     private MeshFilter[] _meshFilters;
+    private SpriteRenderer[] _spriteRenderers;
     
     private MaterialPropertyBlock _propertyBlock;
 
@@ -22,23 +23,33 @@ public class GhostTrail : MonoBehaviour
         
         _skinnedRenderers = GetComponentsInChildren<SkinnedMeshRenderer>();
         _meshFilters = GetComponentsInChildren<MeshFilter>();
+        _spriteRenderers = GetComponentsInChildren<SpriteRenderer>();
         
         _propertyBlock = new MaterialPropertyBlock();
     }
 
     private GameObject CreateGhost()
     {
+        // 1. 최상위 컨테이너 생성
         GameObject ghostObj = new GameObject("Ghost_Pool");
         
-        MeshRenderer mr = ghostObj.AddComponent<MeshRenderer>();
-        MeshFilter mf = ghostObj.AddComponent<MeshFilter>();
-        
+        // 2. 3D Mesh용 자식 객체
+        GameObject meshObj = new GameObject("MeshGhost");
+        meshObj.transform.SetParent(ghostObj.transform, false);
+        MeshRenderer mr = meshObj.AddComponent<MeshRenderer>();
+        MeshFilter mf = meshObj.AddComponent<MeshFilter>();
         mf.mesh = new Mesh(); 
-        
         mr.material = ghostMaterial; 
-        
+
+        // 3. 2D Sprite용 자식 객체
+        GameObject spriteObj = new GameObject("SpriteGhost");
+        spriteObj.transform.SetParent(ghostObj.transform, false);
+        SpriteRenderer sr = spriteObj.AddComponent<SpriteRenderer>();
+        sr.material = ghostMaterial; 
+
+        // 4. 컴포넌트 관리 스크립트 연결
         GhostEffect effect = ghostObj.AddComponent<GhostEffect>();
-        effect.Initialize(this, fadeDuration, _propertyBlock, ghostColor);
+        effect.Initialize(this, fadeDuration, _propertyBlock, ghostColor, mr, sr, mf);
 
         return ghostObj;
     }
@@ -57,10 +68,10 @@ public class GhostTrail : MonoBehaviour
     {
         if (ghost != null)
         {
-            MeshFilter mf = ghost.GetComponent<MeshFilter>();
-            if (mf != null && mf.sharedMesh != null)
+            GhostEffect effect = ghost.GetComponent<GhostEffect>();
+            if (effect != null)
             {
-                Destroy(mf.sharedMesh);
+                effect.DestroySharedMesh();
             }
             Destroy(ghost);
         }
@@ -68,7 +79,7 @@ public class GhostTrail : MonoBehaviour
 
     public void ShowGhost()
     {
-        if (_skinnedRenderers != null)
+        if (_skinnedRenderers != null && _skinnedRenderers.Length > 0)
         {
             foreach (var skinned in _skinnedRenderers)
             {
@@ -76,19 +87,18 @@ public class GhostTrail : MonoBehaviour
 
                 GameObject ghostObj = _ghostPool.Get();
                 ghostObj.transform.SetParent(null);
-
                 ghostObj.transform.SetPositionAndRotation(skinned.transform.position, skinned.transform.rotation);
-                ghostObj.transform.localScale = skinned.transform.localScale;
+                ghostObj.transform.localScale = skinned.transform.lossyScale;
 
-                MeshFilter ghostFilter = ghostObj.GetComponent<MeshFilter>();
+                GhostEffect effect = ghostObj.GetComponent<GhostEffect>();
+                skinned.BakeMesh(effect.GetMeshFilter().mesh); 
                 
-                skinned.BakeMesh(ghostFilter.mesh); 
-                
-                ghostObj.GetComponent<GhostEffect>().StartFade();
+                effect.SetupMesh();
+                effect.StartFade();
             }
         }
 
-        if (_meshFilters != null)
+        if (_meshFilters != null && _meshFilters.Length > 0)
         {
             foreach (var filter in _meshFilters)
             {
@@ -96,23 +106,42 @@ public class GhostTrail : MonoBehaviour
 
                 GameObject ghostObj = _ghostPool.Get();
                 ghostObj.transform.SetParent(null);
-
                 ghostObj.transform.SetPositionAndRotation(filter.transform.position, filter.transform.rotation);
-                ghostObj.transform.localScale = filter.transform.localScale;
+                ghostObj.transform.localScale = filter.transform.lossyScale;
 
-                MeshFilter ghostFilter = ghostObj.GetComponent<MeshFilter>();
+                GhostEffect effect = ghostObj.GetComponent<GhostEffect>();
+                effect.GetMeshFilter().mesh = filter.sharedMesh; 
                 
-                ghostFilter.mesh = filter.sharedMesh; // 여기가 복구됨!
-                
-                ghostObj.GetComponent<GhostEffect>().StartFade();
+                effect.SetupMesh();
+                effect.StartFade();
+            }
+        }
+
+        if (_spriteRenderers != null && _spriteRenderers.Length > 0)
+        {
+            foreach (var sr in _spriteRenderers)
+            {
+                if (!sr.gameObject.activeInHierarchy || sr.sprite == null) continue;
+
+                GameObject ghostObj = _ghostPool.Get();
+                ghostObj.transform.SetParent(null);
+                ghostObj.transform.SetPositionAndRotation(sr.transform.position, sr.transform.rotation);
+                ghostObj.transform.localScale = sr.transform.lossyScale;
+
+                GhostEffect effect = ghostObj.GetComponent<GhostEffect>();
+                effect.SetupSprite(sr.sprite, sr.flipX, sr.flipY);
+                effect.StartFade();
             }
         }
     }
 
     public void ReturnToPool(GameObject ghost)
     {
-        ghost.transform.SetParent(transform);
-        _ghostPool.Release(ghost);
+        if (ghost != null)
+        {
+            ghost.transform.SetParent(transform);
+            _ghostPool.Release(ghost);
+        }
     }
 }
 
@@ -123,21 +152,64 @@ public class GhostEffect : MonoBehaviour
     private float _timeElapsed;
     private MaterialPropertyBlock _propertyBlock;
     private Color _initColor;
+    
     private MeshRenderer _meshRenderer;
+    private SpriteRenderer _spriteRenderer;
+    private MeshFilter _meshFilter;
+    
     private int _colorPropertyId;
+    private bool _isSprite;
 
-    public void Initialize(GhostTrail manager, float duration, MaterialPropertyBlock block, Color color)
+    public void Initialize(GhostTrail manager, float duration, MaterialPropertyBlock block, Color color, MeshRenderer mr, SpriteRenderer sr, MeshFilter mf)
     {
         _manager = manager;
         _fadeDuration = duration;
         _propertyBlock = block;
         _initColor = color;
-        _meshRenderer = GetComponent<MeshRenderer>();
+        
+        _meshRenderer = mr;
+        _spriteRenderer = sr;
+        _meshFilter = mf;
         
         _colorPropertyId = Shader.PropertyToID("_BaseColor");
-        if (!_meshRenderer.sharedMaterial.HasProperty(_colorPropertyId))
+        if (_meshRenderer != null && _meshRenderer.sharedMaterial != null && !_meshRenderer.sharedMaterial.HasProperty(_colorPropertyId))
         {
              _colorPropertyId = Shader.PropertyToID("_Color");
+        }
+    }
+
+    public MeshFilter GetMeshFilter()
+    {
+        return _meshFilter;
+    }
+
+    public void DestroySharedMesh()
+    {
+        if (_meshFilter != null && _meshFilter.sharedMesh != null)
+        {
+            Destroy(_meshFilter.sharedMesh);
+        }
+    }
+
+    public void SetupMesh()
+    {
+        _isSprite = false;
+        if (_meshRenderer != null) _meshRenderer.enabled = true;
+        if (_spriteRenderer != null) _spriteRenderer.enabled = false;
+    }
+
+    public void SetupSprite(Sprite sprite, bool flipX, bool flipY)
+    {
+        _isSprite = true;
+        if (_meshRenderer != null) _meshRenderer.enabled = false;
+        if (_spriteRenderer != null) 
+        {
+            _spriteRenderer.enabled = true;
+            _spriteRenderer.sprite = sprite;
+            _spriteRenderer.flipX = flipX;
+            _spriteRenderer.flipY = flipY;
+            
+            _spriteRenderer.color = _initColor; 
         }
     }
 
@@ -145,8 +217,15 @@ public class GhostEffect : MonoBehaviour
     {
         _timeElapsed = 0f;
         
-        _propertyBlock.SetColor(_colorPropertyId, _initColor);
-        _meshRenderer.SetPropertyBlock(_propertyBlock);
+        if (!_isSprite)
+        {
+            _propertyBlock.SetColor(_colorPropertyId, _initColor);
+            _meshRenderer.SetPropertyBlock(_propertyBlock);
+        }
+        else
+        {
+            _spriteRenderer.color = _initColor;
+        }
         
         enabled = true;
     }
@@ -160,8 +239,15 @@ public class GhostEffect : MonoBehaviour
             float alphaResults = Mathf.Lerp(_initColor.a, 0f, _timeElapsed / _fadeDuration);
             Color newColor = new Color(_initColor.r, _initColor.g, _initColor.b, alphaResults);
 
-            _propertyBlock.SetColor(_colorPropertyId, newColor);
-            _meshRenderer.SetPropertyBlock(_propertyBlock);
+            if (!_isSprite)
+            {
+                _propertyBlock.SetColor(_colorPropertyId, newColor);
+                _meshRenderer.SetPropertyBlock(_propertyBlock);
+            }
+            else
+            {
+                _spriteRenderer.color = newColor;
+            }
         }
         else
         {

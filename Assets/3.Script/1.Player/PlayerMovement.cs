@@ -98,10 +98,10 @@ public class PlayerMovement : MonoBehaviour
         _rb.constraints = RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezeRotation;
         
         // [Fix] 가속도 뚫림(터널링) 현상 완전 방어!
-        // 대시나 빠른 낙하 시 오브젝트를 통과해버리는 현상을 막기 위해 물리 충돌 감지 방식을 Continuous로 상향!
+        // 대시나 빠른 낙하 시 오브젝트를 통과해버리는 현상을 막기 위해 물리 충돌 감지 방식을 ContinuousDynamic으로 상향!
         if (_rb != null)
         {
-            _rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
+            _rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
         }
 
         _currentDashCharges = maxDashCharges;
@@ -202,13 +202,13 @@ public class PlayerMovement : MonoBehaviour
 
         if (context.started)
         {
-            float hackRadius = 20f;
+            float hackRadius = 2000f; // [Fix] 오빠 요청: 화면 밖 아무리 멀리 있는 적도 해킹 가능하게 반경 범위를 맵 전체급으로 초대폭 증가! 🌌
             Collider[] hits = Physics.OverlapSphere(transform.position, hackRadius);
             
             bool anyHacked = false;
             
             // [Fix] 악마의 FindAnyObjectByType 제거! 
-            // 맵 전체를 뒤지지 않고, 방금 스캔한 반경 20m(hits) 안에서만 타겟을 찾도록 변경! (엄청난 속도 향상🚀)
+            // 맵 전체를 뒤지지 않고, 방금 스캔한 물리 반경(hits) 안에서만 타겟을 찾도록 변경! (엄청난 속도 향상🚀)
             Transform hackTarget = null;
             
             foreach (var hit in hits)
@@ -336,7 +336,32 @@ public class PlayerMovement : MonoBehaviour
 
         while (elapsedTime < dashDuration || (isOverlappingEnemy && elapsedTime < dashDuration + maxExtensionTime))
         {
-            _rb.linearVelocity = dashDir * dashSpeed;
+            // [Fix] 대시 중 벽 통과(터널링) 완벽 방어 v3!
+            // SphereCast(가상 구체)로 미리 벽을 감지하는 방식은, 이미 벽에 바짝 붙은 상태(오버랩)에서 감지하지 못하는 사각지대가 존재합니다.
+            // 대신 이미 물리 엔진(Physics)이 처리한 속도 결과를 비교하여 강제 주입을 차단하는 100% 확실한 방식을 적용합니다.
+            
+            Vector3 currentVel = _rb.linearVelocity;
+            float speedAlongDash = Vector3.Dot(currentVel, dashDir);
+
+            // 첫 프레임이 아닐 때, 속도가 물리적 충돌(벽)으로 인해 대폭 깎인(30% 미만) 상태라면?
+            if (elapsedTime > 0f && speedAlongDash < dashSpeed * 0.3f)
+            {
+                // 벽에 가로막혔으므로 더 이상 직진 속도 40을 강제 주입하여 벽을 파고들지 않도록 중지!
+                // 단, 허공에서 수평 대시 중 벽에 막혔을 때 바닥으로 풀썩 떨어지지 않도록 Y축 중력 저항만 가볍게 유지해 줍니다.
+                if (Mathf.Abs(dashDir.y) < 0.1f && currentVel.y <= 0f)
+                {
+                    _rb.linearVelocity = new Vector3(currentVel.x, 0f, currentVel.z);
+                }
+                else
+                {
+                    _rb.linearVelocity = currentVel; // 벽이나 경사면을 따라 미끄러지는 속도 그대로 존중
+                }
+            }
+            else
+            {
+                // 방해물이 없거나 비스듬히 얕게 스쳐 지나가는 중일 때는 목표 대시 속도 주입
+                _rb.linearVelocity = dashDir * dashSpeed;
+            }
 
             if (ghostTrail != null)
             {
@@ -465,13 +490,15 @@ public class PlayerMovement : MonoBehaviour
                 }
             }
             
-            elapsedTime += Time.deltaTime;
-            yield return null;
-        }
-
-        if (hasRecharged && !bulletTimeTriggered && Core.GameManager.Instance != null)
-        {
-             Core.GameManager.Instance.TriggerBulletTime(dashBulletTimeDuration, dashBulletTimeScale, true);
+            if (hasRecharged && !bulletTimeTriggered && Core.GameManager.Instance != null)
+            {
+                 Core.GameManager.Instance.TriggerBulletTime(dashBulletTimeDuration, dashBulletTimeScale, true);
+                 bulletTimeTriggered = true;
+            }
+            
+            // [Fix] 물리 엔진(터널링 방지) 동기화를 위해 Update가 아닌 FixedUpdate 주기로 교체 완료!
+            elapsedTime += Time.fixedDeltaTime;
+            yield return new WaitForFixedUpdate();
         }
 
         int projectileLayerEnd = LayerMask.NameToLayer("Projectile");
@@ -664,6 +691,14 @@ public class PlayerMovement : MonoBehaviour
         if (!_isGrounded && !_isWallSliding) 
         { 
             _rb.AddForce(Vector3.down * 9.81f * (gravityScale - 1f), ForceMode.Acceleration); 
+            
+            // [Fix] 중력 가속도가 무한히 누적되어 콜라이더(Collider)를 무시하고 땅을 뚫어버리는 현상(Tunneling) 방지
+            // 종단 속도(Terminal Velocity)를 설정해 너무 비정상적으로 빠른 속도로 떨어지지 않게 락(Clamp)을 걸어줌
+            float maxFallSpeed = fastFallSpeed * 2.5f; // 지정한 낙하 속도의 여유분까지만 허용
+            if (_rb.linearVelocity.y < -maxFallSpeed)
+            {
+                _rb.linearVelocity = new Vector3(_rb.linearVelocity.x, -maxFallSpeed, _rb.linearVelocity.z);
+            }
         } 
     }
 

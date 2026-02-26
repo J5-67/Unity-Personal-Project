@@ -173,6 +173,9 @@ namespace Core
             
             float timer = 0f;
             float minDuration = 0.1f; 
+            
+            // [Fix] 불릿타임 시작 시점의 이동 키 상태를 저장해서, 계속 누르고 있는 걸로는 취소되지 않게 함!
+            Vector2 initialMove = _gameInput != null ? _gameInput.Player.Move.ReadValue<Vector2>() : Vector2.zero;
 
             while (timer < duration)
             {
@@ -185,13 +188,17 @@ namespace Core
 
                 if (cancelOnInput && _gameInput != null && timer > minDuration)
                 {
-                    bool isMoving = _gameInput.Player.Move.ReadValue<Vector2>().sqrMagnitude > 0.01f;
-                    bool isJumping = _gameInput.Player.Jump.IsPressed();
-                    bool isHooking = _gameInput.Player.Hook.IsPressed();
-                    bool isDashing = _gameInput.Player.Dash.IsPressed();
-                    bool isHacking = _gameInput.Player.Hack.IsPressed();
+                    // 방향키를 새로 누르거나, 다른 방향으로 틀었을 때만 취소되도록
+                    Vector2 currentMove = _gameInput.Player.Move.ReadValue<Vector2>();
+                    bool moveChanged = (currentMove - initialMove).sqrMagnitude > 0.01f;
 
-                    if (isMoving || isJumping || isHooking || isDashing || isHacking)
+                    // 꾹 누르고 있던 버튼(IsPressed) 대신, 새로 눌렀을 때(WasPressedThisFrame)만 취소되게!
+                    bool isJumping = _gameInput.Player.Jump.WasPressedThisFrame();
+                    bool isHooking = _gameInput.Player.Hook.WasPressedThisFrame();
+                    bool isDashing = _gameInput.Player.Dash.WasPressedThisFrame();
+                    bool isHacking = _gameInput.Player.Hack.WasPressedThisFrame();
+
+                    if (moveChanged || isJumping || isHooking || isDashing || isHacking)
                     {
                         break; 
                     }

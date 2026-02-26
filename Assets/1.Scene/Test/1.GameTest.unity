@@ -1003,7 +1003,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &615270816
 Transform:
   m_ObjectHideFlags: 0
@@ -1308,12 +1308,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 51f52f29575082e47915412b70d8d6c7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BaseEnemy
-  enemyType: 1
   hookInteractSpeed: 15
   freezeDuration: 318.1
   glitchShader: {fileID: 4800000, guid: 4680fba1598edad4db7d7ecd46ff810e, type: 3}
   glitchIntensity: 1.5
   glitchSpeed: 20
+  canKamikaze: 0
+  kamikazeTriggerRadius: 10
   overloadDelay: 1
   kamikazeDuration: 3
   kamikazeSpeed: 8
@@ -1658,12 +1659,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 51f52f29575082e47915412b70d8d6c7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BaseEnemy
-  enemyType: 1
   hookInteractSpeed: 15
   freezeDuration: 318.1
   glitchShader: {fileID: 4800000, guid: 4680fba1598edad4db7d7ecd46ff810e, type: 3}
   glitchIntensity: 1.5
   glitchSpeed: 20
+  canKamikaze: 0
+  kamikazeTriggerRadius: 10
   overloadDelay: 1
   kamikazeDuration: 3
   kamikazeSpeed: 8
@@ -1925,7 +1927,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &781375692
 Transform:
   m_ObjectHideFlags: 0
@@ -2446,9 +2448,9 @@ Transform:
   m_GameObject: {fileID: 893494033}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 20.179998, z: 17.919998}
-  m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
-  m_ConstrainProportionsScale: 1
+  m_LocalPosition: {x: 0, y: 23.91, z: 17.919998}
+  m_LocalScale: {x: 0.5, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1442501644}
   - {fileID: 560944970}
@@ -2483,16 +2485,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 51f52f29575082e47915412b70d8d6c7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BaseEnemy
-  enemyType: 0
-  hookInteractSpeed: 15
+  hookInteractSpeed: 25
   freezeDuration: 5
   glitchShader: {fileID: 4800000, guid: 4680fba1598edad4db7d7ecd46ff810e, type: 3}
   glitchIntensity: 1.5
   glitchSpeed: 20
+  canKamikaze: 1
+  kamikazeTriggerRadius: 5
   overloadDelay: 1
   kamikazeDuration: 3
   kamikazeSpeed: 8
-  explosionRadius: 3
+  explosionRadius: 1
   explosionDamage: 1
 --- !u!54 &893494037
 Rigidbody:
@@ -3243,9 +3246,9 @@ Transform:
   m_GameObject: {fileID: 1043572293}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 12.649999, z: 36.319996}
-  m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
-  m_ConstrainProportionsScale: 1
+  m_LocalPosition: {x: 0, y: 24.03, z: 36.319996}
+  m_LocalScale: {x: 0.5, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 280379516}
   - {fileID: 1893748400}
@@ -3280,12 +3283,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 51f52f29575082e47915412b70d8d6c7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BaseEnemy
-  enemyType: 0
-  hookInteractSpeed: 15
+  hookInteractSpeed: 25
   freezeDuration: 5
   glitchShader: {fileID: 4800000, guid: 4680fba1598edad4db7d7ecd46ff810e, type: 3}
   glitchIntensity: 1.5
   glitchSpeed: 20
+  canKamikaze: 0
+  kamikazeTriggerRadius: 10
   overloadDelay: 1
   kamikazeDuration: 3
   kamikazeSpeed: 8
@@ -4272,9 +4276,9 @@ Transform:
   m_GameObject: {fileID: 1178497990}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 16.73, z: 23.739998}
-  m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
-  m_ConstrainProportionsScale: 1
+  m_LocalPosition: {x: 0, y: 18.01, z: 22.71}
+  m_LocalScale: {x: 0.5, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1274244806}
   - {fileID: 451982046}
@@ -4309,16 +4313,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 51f52f29575082e47915412b70d8d6c7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BaseEnemy
-  enemyType: 0
-  hookInteractSpeed: 15
+  hookInteractSpeed: 25
   freezeDuration: 5
   glitchShader: {fileID: 4800000, guid: 4680fba1598edad4db7d7ecd46ff810e, type: 3}
   glitchIntensity: 1.5
   glitchSpeed: 20
+  canKamikaze: 1
+  kamikazeTriggerRadius: 5
   overloadDelay: 1
   kamikazeDuration: 3
   kamikazeSpeed: 8
-  explosionRadius: 3
+  explosionRadius: 1
   explosionDamage: 1
 --- !u!54 &1178497994
 Rigidbody:
@@ -5037,12 +5042,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 51f52f29575082e47915412b70d8d6c7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BaseEnemy
-  enemyType: 1
   hookInteractSpeed: 15
   freezeDuration: 318.1
   glitchShader: {fileID: 4800000, guid: 4680fba1598edad4db7d7ecd46ff810e, type: 3}
   glitchIntensity: 1.5
   glitchSpeed: 20
+  canKamikaze: 0
+  kamikazeTriggerRadius: 10
   overloadDelay: 1
   kamikazeDuration: 3
   kamikazeSpeed: 8
@@ -6142,16 +6148,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 51f52f29575082e47915412b70d8d6c7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BaseEnemy
-  enemyType: 0
-  hookInteractSpeed: 15
+  hookInteractSpeed: 25
   freezeDuration: 5
   glitchShader: {fileID: 4800000, guid: 4680fba1598edad4db7d7ecd46ff810e, type: 3}
   glitchIntensity: 1.5
   glitchSpeed: 20
+  canKamikaze: 1
+  kamikazeTriggerRadius: 5
   overloadDelay: 1
   kamikazeDuration: 3
   kamikazeSpeed: 8
-  explosionRadius: 3
+  explosionRadius: 1
   explosionDamage: 1
 --- !u!54 &1664372720
 Rigidbody:
@@ -6266,9 +6273,9 @@ Transform:
   m_GameObject: {fileID: 1664372718}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 19.56, z: 29.8}
-  m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
-  m_ConstrainProportionsScale: 1
+  m_LocalPosition: {x: 0, y: 20.37, z: 29.8}
+  m_LocalScale: {x: 0.5, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 817218178}
   - {fileID: 1731697546}
@@ -6811,12 +6818,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 51f52f29575082e47915412b70d8d6c7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BaseEnemy
-  enemyType: 1
   hookInteractSpeed: 15
   freezeDuration: 318.1
   glitchShader: {fileID: 4800000, guid: 4680fba1598edad4db7d7ecd46ff810e, type: 3}
   glitchIntensity: 1.5
   glitchSpeed: 20
+  canKamikaze: 0
+  kamikazeTriggerRadius: 10
   overloadDelay: 1
   kamikazeDuration: 3
   kamikazeSpeed: 8
@@ -7979,12 +7987,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 51f52f29575082e47915412b70d8d6c7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BaseEnemy
-  enemyType: 1
   hookInteractSpeed: 15
   freezeDuration: 318.1
   glitchShader: {fileID: 4800000, guid: 4680fba1598edad4db7d7ecd46ff810e, type: 3}
   glitchIntensity: 1.5
   glitchSpeed: 20
+  canKamikaze: 0
+  kamikazeTriggerRadius: 10
   overloadDelay: 1
   kamikazeDuration: 3
   kamikazeSpeed: 8
@@ -9053,9 +9062,9 @@ Transform:
   m_GameObject: {fileID: 2089333719}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 21.73, z: 13.029999}
-  m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
-  m_ConstrainProportionsScale: 1
+  m_LocalPosition: {x: 0, y: 21.73, z: 9.39}
+  m_LocalScale: {x: 0.5, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 18975802}
   - {fileID: 863782364}
@@ -9090,16 +9099,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 51f52f29575082e47915412b70d8d6c7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BaseEnemy
-  enemyType: 0
-  hookInteractSpeed: 15
+  hookInteractSpeed: 25
   freezeDuration: 5
   glitchShader: {fileID: 4800000, guid: 4680fba1598edad4db7d7ecd46ff810e, type: 3}
   glitchIntensity: 1.5
   glitchSpeed: 20
+  canKamikaze: 1
+  kamikazeTriggerRadius: 5
   overloadDelay: 1
   kamikazeDuration: 3
   kamikazeSpeed: 8
-  explosionRadius: 3
+  explosionRadius: 1
   explosionDamage: 1
 --- !u!54 &2089333723
 Rigidbody:
@@ -9384,11 +9394,9 @@ MonoBehaviour:
     m_PostInfinity: 2
     m_RotationOrder: 4
   dashTiling: 1
-  lightArrowTiling: 1
-  heavyArrowTiling: 0.9
-  defaultColor: {r: 0, g: 1, b: 1, a: 1}
-  lightEnemyColor: {r: 0, g: 1, b: 0, a: 1}
-  heavyEnemyColor: {r: 1, g: 0, b: 0, a: 1}
+  enemyArrowTiling: 1
+  defaultColor: {r: 0, g: 1, b: 0, a: 1}
+  enemyColor: {r: 1, g: 0, b: 0, a: 1}
 --- !u!198 &726664874329492881
 ParticleSystem:
   m_ObjectHideFlags: 0
@@ -15214,10 +15222,10 @@ MonoBehaviour:
   retrieveSpeed: 30
   throwSpeed: 60
   fireSound: {fileID: 8300000, guid: 95fb3e178be86884f898011acfb4ea05, type: 3}
-  lightEnemyRetrieveSpeed: 1
-  heavyEnemyPullAcceleration: 5
-  heavyEnemyZipSpeed: 120
+  enemyPullAcceleration: 80
+  enemyZipSpeed: 120
   wallZipSpeed: 15
+  safeZipDistance: 1.5
   swingForce: 50
   swingAngleLimit: 5
   winchUpForce: 0.5
@@ -15229,9 +15237,8 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 448
   wallTag: Wall
-  heavyEnemyTag: Heavy
+  enemyTag: Enemy
   frozenEnemyTag: FrozenEnemy
-  lightEnemyTag: Light
   autoWinchAmount: 0.5
   autoWinchSpeed: 5
   ropeVisual: {fileID: 0}
@@ -16306,7 +16313,7 @@ MonoBehaviour:
   lastCheckpointPos: {x: 0, y: 0, z: 0}
   invincibilityDuration: 1
   blinkInterval: 0.1
-  playerRenderer: {fileID: 0}
+  playerRenderer: {fileID: 7786920330209392674}
 --- !u!225 &6723375991148556432
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -16573,7 +16580,7 @@ MonoBehaviour:
   moveSpeed: 5
   rotationSpeed: 15
   dashSpeed: 20
-  dashDuration: 0.15
+  dashDuration: 0.25
   maxDashCharges: 2
   dashCooldown: 2
   dashPassLayer:
@@ -16782,7 +16789,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3902011015034470702}
-  - component: {fileID: 8846887028202907434}
   - component: {fileID: 8532225634021323761}
   - component: {fileID: 823612884140219100}
   - component: {fileID: 3756817068663506071}
@@ -17029,14 +17035,6 @@ MonoBehaviour:
   shiftAmount: 0.3
   shiftSpeed: 3
   maxShiftDistance: 5
---- !u!33 &8846887028202907434
-MeshFilter:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8014722533618008624}
-  m_Mesh: {fileID: 10208, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!114 &9054628412483599869
 MonoBehaviour:
   m_ObjectHideFlags: 0

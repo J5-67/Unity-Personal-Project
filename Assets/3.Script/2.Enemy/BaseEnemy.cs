@@ -1,24 +1,15 @@
 using System.Collections;
 using UnityEngine;
 
-public enum EnemyType
-{
-    Light,
-    Heavy
-}
-
 [RequireComponent(typeof(Rigidbody))]
 public class BaseEnemy : MonoBehaviour
 {
     [Header("🎯 Enemy Settings")]
-    [SerializeField] private EnemyType enemyType = EnemyType.Light;
-    
     [SerializeField] private float hookInteractSpeed = 30f;
     [SerializeField] private float freezeDuration = 5f;
 
     private Rigidbody _rb;
 
-    public EnemyType Type => enemyType;
     public float HookInteractSpeed => hookInteractSpeed;
     public bool IsFrozen { get; private set; }
 
@@ -67,6 +58,8 @@ public class BaseEnemy : MonoBehaviour
         }
     }
 
+    private Transform _playerTransform;
+
     private void FixedUpdate()
     {
         // [Safety Net] 얼음 상태일 때는 물리적으로 절대 움직이지 못하도록 강제함 (이중 잠금)
@@ -77,6 +70,22 @@ public class BaseEnemy : MonoBehaviour
                 if (!_rb.isKinematic) _rb.isKinematic = true;
                 _rb.linearVelocity = Vector3.zero;
                 _rb.angularVelocity = Vector3.zero;
+            }
+        }
+        else if (canKamikaze && !_isOverloaded && !_isDestroyed)
+        {
+            if (_playerTransform == null)
+            {
+                PlayerHealth ph = FindAnyObjectByType<PlayerHealth>();
+                if (ph != null) _playerTransform = ph.transform;
+            }
+
+            if (_playerTransform != null)
+            {
+                if ((transform.position - _playerTransform.position).sqrMagnitude <= kamikazeTriggerRadius * kamikazeTriggerRadius)
+                {
+                    StartCoroutine(KamikazeRoutine());
+                }
             }
         }
     }
@@ -211,7 +220,9 @@ public class BaseEnemy : MonoBehaviour
         }
     }
 
-    [Header("💣 Kamikaze Settings (Light Enemy)")]
+    [Header("💣 Kamikaze Settings")]
+    [SerializeField] private bool canKamikaze = false; // 카미카제(자폭) 가능 여부
+    [SerializeField] private float kamikazeTriggerRadius = 10.0f;
     [SerializeField] private float overloadDelay = 1.0f; // 훅 당겨진 후 대기 시간
     [SerializeField] private float kamikazeDuration = 3.0f; // 추적 시간
     [SerializeField] private float kamikazeSpeed = 8.0f;
@@ -228,8 +239,8 @@ public class BaseEnemy : MonoBehaviour
         // 이미 얼었거나 죽었거나 과부하 상태면 무시
         if (IsFrozen || _isDestroyed || _isOverloaded) return;
 
-        // 소형 적(Light)만 훅에 당겨지면 자폭 시퀀스 가동
-        if (enemyType == EnemyType.Light)
+        // 설정된 적만 훅에 당겨지면 자폭 시퀀스 가동
+        if (canKamikaze)
         {
             StartCoroutine(KamikazeRoutine());
         }
@@ -335,4 +346,20 @@ public class BaseEnemy : MonoBehaviour
         // 자폭 완료 (비활성화 - 리스폰을 위해 Destroy 하지 않음)
         gameObject.SetActive(false);
     }
+
+#if UNITY_EDITOR
+    private void OnDrawGizmosSelected()
+    {
+        if (canKamikaze)
+        {
+            // Trigger Radius 표시 (빨간색 투명)
+            Gizmos.color = new Color(1f, 0f, 0f, 0.2f);
+            Gizmos.DrawWireSphere(transform.position, kamikazeTriggerRadius);
+            
+            // Explosion Radius 표시 (주황색 투명)
+            Gizmos.color = new Color(1f, 0.5f, 0f, 0.4f);
+            Gizmos.DrawWireSphere(transform.position, explosionRadius);
+        }
+    }
+#endif
 }

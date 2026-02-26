@@ -14,11 +14,11 @@ public class PlayerHook : MonoBehaviour
     [Header("🔊 Sound Settings")]
     [SerializeField] private AudioClip fireSound; 
 
-    [Header("🎯 Enemy Hook Settings (Fallback)")]
-    [SerializeField] private float lightEnemyRetrieveSpeed = 30f;    
-    [SerializeField] private float heavyEnemyPullAcceleration = 80f; 
-    [SerializeField] private float heavyEnemyZipSpeed = 120f;        
+    [Header("🎯 Enemy Hook Settings")]
+    [SerializeField] private float enemyPullAcceleration = 80f; 
+    [SerializeField] private float enemyZipSpeed = 120f;        
     [SerializeField] private float wallZipSpeed = 100f;              
+    [SerializeField] private float safeZipDistance = 1.5f; // [New] 적에게 날아갈 때 충돌하지 않고 멈출 안전 거리
     
     [Header("🧗 Swing Settings")]
     [SerializeField] private float swingForce = 50f;       
@@ -35,9 +35,8 @@ public class PlayerHook : MonoBehaviour
 
     [Header("🏷️ Tags (구분용)")]
     [SerializeField] private string wallTag = "Wall";             
-    [SerializeField] private string heavyEnemyTag = "LargeEnemy"; 
+    [SerializeField] private string enemyTag = "Enemy"; 
     [SerializeField] private string frozenEnemyTag = "FrozenEnemy"; 
-    [SerializeField] private string lightEnemyTag = "SmallEnemy"; 
 
     [Header("🏗️ Auto Winch Settings")]
     [SerializeField] private float autoWinchAmount = 3.0f; 
@@ -198,7 +197,7 @@ public class PlayerHook : MonoBehaviour
                          _currentHookTarget = _hookAnchor;
                          yield return StartCoroutine(PullSelfRoutine(_currentHookTarget));
                      }
-                     else if (tag == heavyEnemyTag || tag == lightEnemyTag)
+                     else if (tag == enemyTag)
                      {
                          // [Fix] 태그로 잡혔을 때도 무조건 날아가기!
                          yield return StartCoroutine(ZipToTargetRoutine(bestCol.transform));
@@ -266,7 +265,7 @@ public class PlayerHook : MonoBehaviour
                         _currentHookTarget = _hookAnchor;
                         yield return StartCoroutine(PullSelfRoutine(_currentHookTarget));
                     }
-                    else if (tag == heavyEnemyTag || tag == lightEnemyTag)
+                    else if (tag == enemyTag)
                     {
                         // [Fix] 궤적 태그 판단 시에도 모두 적에게 날아가기!
                         yield return StartCoroutine(ZipToTargetRoutine(hit.transform));
@@ -403,6 +402,14 @@ public class PlayerHook : MonoBehaviour
                 yield break;
             }
 
+            // [Fix] 훅(로프) 매달린 상태에서 대시(Dash)를 쓰면 즉시 훅을 끊어버립니다!
+            // (이유: 대시 속도 40과 로프 물리 장력이 충돌하여 모서리나 벽을 뚫어버리는 텔레포트 현상 원천 차단)
+            if (_playerMovement.IsDashing)
+            {
+                StopHook();
+                yield break;
+            }
+
             if (_playerMovement.ConsumeJumpInput())
             {
                 bool allowZip = true;
@@ -445,12 +452,6 @@ public class PlayerHook : MonoBehaviour
 
             float inputY = _playerMovement.MoveInput.y;
 
-            float currentAccel = heavyEnemyPullAcceleration; 
-            if (targetTransform.parent != null && targetTransform.parent.TryGetComponent(out BaseEnemy enemy))
-            {
-                currentAccel = enemy.HookInteractSpeed;
-            }
-
             if (Mathf.Abs(inputY) > 0.1f)
             {
                 // 공통 조절 속도 적용
@@ -478,11 +479,21 @@ public class PlayerHook : MonoBehaviour
                 if (inputY > 0)
                 {
                     // W: 줄 감기
-                    Vector3 pullForce = tensionDir * currentAccel * inputY * winchUpForce; 
-                    _playerMovement.AddHookForce(pullForce);
+                    // [Fix] 가속도 힘(AddHookForce) 제거, 대신 최고 속도(climbSpeed)로 방향 지정 정속 부여!
+                    Vector3 currentVel = rb.linearVelocity;
+                    float speedAlongRope = Vector3.Dot(currentVel, tensionDir);
+                    rb.linearVelocity = currentVel - (tensionDir * speedAlongRope) + (tensionDir * climbSpeed);
 
                     currentRopeLength -= changeAmount;
                     
+                    // [Fix] 벽에 물리적으로 막혀서 더 이상 못 가는데 논리적 줄 길이만 계속 짧아지면
+                    // Constraint Solver가 강제로 텔레포트시켜 벽을 뚫어버리는(터널링) 현상이 발생합니다.
+                    // 특히 빠른 속도에서 치명적이므로, 오차를 허용하지 말고 철저하게 즉시 물리 거리에 맞춥니다.
+                    if (currentRopeLength < distToAnchor)
+                    {
+                        currentRopeLength = distToAnchor;
+                    }
+
                     // 래칫: 이미 줄보다 안쪽이면 줄 길이를 거리에 맞춤 (느슨함 방지)
                     if (distToAnchor < currentRopeLength)
                     {
@@ -524,9 +535,10 @@ public class PlayerHook : MonoBehaviour
                          // [Critical Fix V2] 부동소수점 오차 및 덜덜거림 방지 이중 체크
                          if (currentRopeLength < maxDistance - 0.1f)
                          {
-                             // [Feeling Fix] 밀고 내려가는 힘 추가
-                             Vector3 pushForce = -tensionDir * currentAccel * Mathf.Abs(inputY) * winchDownForce;
-                             _playerMovement.AddHookForce(pushForce);
+                             // [Feeling Fix] 가속도 힘(AddHookForce) 제거, 일정한 속도(climbSpeed)로 쭈욱 내려가기
+                             Vector3 currentVel = rb.linearVelocity;
+                             float speedAlongRope = Vector3.Dot(currentVel, tensionDir);
+                             rb.linearVelocity = currentVel - (tensionDir * speedAlongRope) + (-tensionDir * climbSpeed);
 
                              currentRopeLength += changeAmount; 
                          }
@@ -562,18 +574,10 @@ public class PlayerHook : MonoBehaviour
 
             if (_playerMovement != null)
             {
-                int occlusionMask = _playerMovement.GroundLayer | _playerMovement.WallLayer;
-                
-                Vector3 checkStartPos = transform.position + Vector3.up * 0.5f;
-
-                if (Physics.Linecast(checkStartPos, targetPos, out RaycastHit lineHit, occlusionMask))
-                {
-                    if (lineHit.transform != targetTransform && lineHit.transform != _hookAnchor && lineHit.transform != targetTransform.parent)
-                    {
-                        StopHook();
-                        yield break;
-                    }
-                }
+                // [Fix] 훅 로프가 벽에 부딪혀도 안 끊기고 통과해서 유지되도록 오프(Off)! (불쾌감 개선)
+                // int occlusionMask = _playerMovement.GroundLayer | _playerMovement.WallLayer;
+                // Vector3 checkStartPos = transform.position + Vector3.up * 0.5f;
+                // if (Physics.Linecast(checkStartPos, targetPos, out RaycastHit lineHit, occlusionMask)) { ... }
             }
 
             // ---------------------------------------------------------
@@ -594,9 +598,8 @@ public class PlayerHook : MonoBehaviour
                 float limitSpeed = 0f;
                 if (isWinchingDown) 
                 {
-                    // [Speed Fix] 내려갈 때 중력 가속도가 붙어 너무 빨라지므로,
-                    // 올라가는 속도(climbSpeed)의 절반 정도로 제한을 걸어줌. (스윙 속도 영향 없음)
-                    limitSpeed = climbSpeed * 0.5f; 
+                    // [Speed Fix] 정속 하강을 위해 최고 제한 속도도 완전히 동일한 속도(climbSpeed)로 변경
+                    limitSpeed = climbSpeed; 
                 }
 
                 if (speedAway > limitSpeed) 
@@ -610,10 +613,13 @@ public class PlayerHook : MonoBehaviour
                 // 2. Position Correction (위치 강제 보정)
                 float distError = distToAnchor - currentRopeLength;
                 
-                // W키(당기기)나 가만히 있을 때는 단단하게 고정 (0.01f)
-                // S키(풀기) 때는 위치 보정을 끎! (Velocity가 잡아주므로 굳이 텔레포트 시킬 필요 없음)
-                if (!isWinchingDown)
+                bool isWinchingUp = (_playerMovement.MoveInput.y > 0.1f);
+
+                // W키(당기기)나 S키(풀기) 등 사용자가 직접 줄을 조작 중일 때는 위치 보정(MovePosition)을 끕니다!
+                // (이유: 위치 강제 이동은 물리를 무시하는 순간 텔레포트라서, 벽에 닿았을 때 속도가 빠르면 터널링을 심하게 유발함)
+                if (!isWinchingDown && !isWinchingUp)
                 {
+                    // 입력 없이 가만히 매달려 있거나 스윙할 때는 단단하게 고정 (오차 0.01f)
                     if (distError > 0.01f) 
                     {
                         Vector3 fixPos = transform.position + tensionDir * distError; 
@@ -622,7 +628,8 @@ public class PlayerHook : MonoBehaviour
                 }
                 else
                 {
-                    // 혹시나 물리 연산이 뚫려서 너무 멀어지면 안전장치로 한번 당겨줌
+                    // 조작 중일 때는 이미 속도(Velocity) 수식이 강하게 당겨주고 있기 때문에 위치 강제이동은 필요 없음.
+                    // 혹시나 다른 물리 연산이 박살 나서 거리가 너무 비정상적으로 멀어질 때만(1.0f 이상) 비상 당김
                     if (distError > 1.0f)
                     {
                         Vector3 fixPos = transform.position + tensionDir * distError; 
@@ -666,97 +673,6 @@ public class PlayerHook : MonoBehaviour
         }
     }
 
-    private IEnumerator PullTargetRoutine(Transform target)
-    {
-        _playerMovement.AddDashStack(1); 
-
-        Rigidbody targetRb = target.GetComponent<Rigidbody>();
-        if (targetRb != null) targetRb.isKinematic = false; 
-
-        float currentRopeLength = Vector3.Distance(transform.position, target.position);
-        float currentRopeLengthSqr = currentRopeLength * currentRopeLength;
-        float startTime = Time.time; 
-
-        while (_isHooking && target != null)
-        {
-            Vector3 myPos = transform.position;
-            Vector3 targetPos = target.position;
-
-            float currentDist = 0f;
-            Collider targetCol = target.GetComponent<Collider>();
-            
-            // [Fix] 끌려오는 적이 플레이어와 충돌해서 튕겨나가는 문제 해결
-            if (targetCol != null && _myCollider != null && _ignoredCollider != targetCol)
-            {
-                _ignoredCollider = targetCol;
-                Physics.IgnoreCollision(_myCollider, targetCol, true);
-            }
-            
-            if (targetCol != null)
-            {
-                Vector3 closestPoint = targetCol.ClosestPoint(myPos);
-                currentDist = Vector3.Distance(myPos, closestPoint);
-            }
-            else
-            {
-                currentDist = Vector3.Distance(myPos, targetPos);
-            }
-
-            Vector3 playerToTarget = targetPos - myPos;
-            Vector3 pullDir = -playerToTarget.normalized; 
-
-            float inputY = _playerMovement.MoveInput.y;
-
-            float currentRetrieveSpeed = lightEnemyRetrieveSpeed; 
-            BaseEnemy enemyInfo = target.GetComponent<BaseEnemy>();
-            
-            EnemyPatrol enemyPatrol = target.GetComponent<EnemyPatrol>();
-            if (enemyPatrol != null) enemyPatrol.SetPatrol(false);
-
-            if (enemyInfo != null)
-            {
-                if (enemyInfo.IsFrozen)
-                {
-                     // [Fix] 끌려오던 적이 얼어버리면 즉시 훅을 중단하고 놔줌.
-                     // 계속 당기면 물리 충돌이나 위치 강제 이동으로 인해 
-                     // 얼음 상태인데도 날아가거나 바닥으로 떨어지는 버그 발생.
-                     StopHook();
-                     yield break;
-                }
-                currentRetrieveSpeed = enemyInfo.HookInteractSpeed;
-            }
-
-            if (targetRb != null)
-            {
-                targetRb.linearVelocity = pullDir * currentRetrieveSpeed;
-            }
-            else
-            {
-                target.position += pullDir * currentRetrieveSpeed * Time.deltaTime;
-            }
-            
-            // [New] 적만 끌려오는 게 아니라, 플레이어도 적 쪽으로 살짝 끌려가게 함 (상호 작용).
-            // 대시 관통 거리 확보 및 타격감 향상.
-            float playerApproachSpeed = 15f; 
-            _playerMovement.AddHookForce(playerToTarget.normalized * playerApproachSpeed);
-
-            if (currentDist < currentRopeLength)
-            {
-                currentRopeLength = currentDist;
-            }
-
-            if (currentDist < stopDistance && (Time.time - startTime) > 0.2f)
-            {
-                StopHook();
-                yield break;
-            }
-
-            _flyingHookPosition = target.position; 
-
-            yield return new WaitForFixedUpdate(); 
-        }
-        StopHook(); 
-    }
 
     private IEnumerator ZipToTargetRoutine(Transform target, float speedOverride = -1f)
     {
@@ -767,7 +683,7 @@ public class PlayerHook : MonoBehaviour
 
         float startTime = Time.time;
         
-        float currentZipSpeed = heavyEnemyZipSpeed;
+        float currentZipSpeed = enemyZipSpeed;
 
         if (speedOverride > 0)
         {
@@ -807,10 +723,19 @@ public class PlayerHook : MonoBehaviour
 
             Vector3 zipDir = (targetPos - myPos).normalized;
 
-            GetComponent<Rigidbody>().linearVelocity = zipDir * currentZipSpeed;
+            Rigidbody myRb = GetComponent<Rigidbody>();
+            myRb.linearVelocity = zipDir * currentZipSpeed;
 
-            if (distToSurfaceSqr < stopDistance * stopDistance && (Time.time - startTime) > 0.1f)
+            // [Fix] 적한테 날아갈 때는 너무 바싹 안 붙고 'safeZipDistance' 앞에서 브레이크!
+            // 벽 등에는 기존처럼 'stopDistance' 사용
+            bool isEnemy = target.TryGetComponent(out BaseEnemy _) || (target.parent != null && target.parent.TryGetComponent(out BaseEnemy _));
+            float checkDist = isEnemy ? safeZipDistance : stopDistance;
+
+            if (distToSurfaceSqr < checkDist * checkDist && (Time.time - startTime) > 0.1f)
             {
+                // [Fix] 멈출 때 관성 때문에 앞으로 미끄러져서 적이랑 박치기하는 현상 방지 
+                myRb.linearVelocity = Vector3.zero;
+                
                 StopHook();
                 yield break;
             }

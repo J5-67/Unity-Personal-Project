@@ -64,6 +64,11 @@ public class PlayerHealth : MonoBehaviour
             {
                 GameManager.Instance.TriggerHitStop(0.1f);
                 GameManager.Instance.TriggerCameraShake(1.5f);
+                GameManager.Instance.TriggerBulletTime(0.5f, 0.1f, false);
+            }
+            if (PostProcessManager.Instance != null)
+            {
+                PostProcessManager.Instance.TriggerChromaticAberration(1.0f, 0.5f);
             }
             
             StartCoroutine(InvincibilityRoutine());

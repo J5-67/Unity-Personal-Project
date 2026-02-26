@@ -35,13 +35,11 @@ public class PlayerAim : MonoBehaviour
     
     [Header("📏 Density Settings (값이 클수록 촘촘함)")]
     [SerializeField] private float dashTiling = 1.0f;      
-    [SerializeField] private float lightArrowTiling = 0.5f; 
-    [SerializeField] private float heavyArrowTiling = 0.5f; 
+    [SerializeField] private float enemyArrowTiling = 0.5f; 
 
     [Header("🎨 Colors")]
     [SerializeField] private Color defaultColor = new Color(0f, 1f, 0.82f);
-    [SerializeField] private Color lightEnemyColor = Color.green;
-    [SerializeField] private Color heavyEnemyColor = Color.red;
+    [SerializeField] private Color enemyColor = Color.red;
 
     private Camera _mainCamera;
     private GameInput _input; 
@@ -332,19 +330,13 @@ public class PlayerAim : MonoBehaviour
                     currentFlowSpeed = 0f; 
                     currentTiling = dashTiling; 
                 }
-                else if (targetEnemy.Type == EnemyType.Light)
-                {
-                    targetColor = lightEnemyColor;
-                    targetTexture = _arrowTextureReverse; 
-                    currentFlowSpeed = animationSpeed; 
-                    currentTiling = lightArrowTiling; 
-                }
                 else
                 {
-                    targetColor = heavyEnemyColor;
-                    targetTexture = _arrowTexture;
-                    currentFlowSpeed = -animationSpeed; 
-                    currentTiling = heavyArrowTiling; 
+                    targetColor = enemyColor;
+                    // [Fix] 타입 구분 없이 공격적인 붉은색의 역방향 화살표로 통일
+                    targetTexture = _arrowTextureReverse; 
+                    currentFlowSpeed = animationSpeed; 
+                    currentTiling = enemyArrowTiling; 
                 }
             }
             else
