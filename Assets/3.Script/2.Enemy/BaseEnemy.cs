@@ -42,6 +42,12 @@ public class BaseEnemy : MonoBehaviour
         _startRot = transform.rotation;
     }
 
+    public void SetStartTransform(Vector3 pos, Quaternion rot)
+    {
+        _startPos = pos;
+        _startRot = rot;
+    }
+
     private void Start()
     {
         if (Core.GameManager.Instance != null)
