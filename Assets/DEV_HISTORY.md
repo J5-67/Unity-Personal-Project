@@ -590,3 +590,16 @@
 *   **PlayerHook.cs 매달림-대시 충돌(터널링) 픽스**:
     *   로프에 매달려 스윙 중일 때 대시를 쓰면 훅의 장력이 강제로 원위치(MovePosition) 시켜서 벽 안쪽으로 플레이어를 텔레포트시키던 버그 파악. 
     *   이제 매달린 상태에서 대시를 발동하면, 스파이더맨처럼 **붙잡고 있던 훅을 즉시 놓고(Break) 시원하게 대시로 날아가도록** 물리적 충돌 관계를 리뉴얼 완료! 🕷️💨
+
+---
+
+## 📅 2026-02-27
+### 1. ⚔️ 배틀존 씬 마이그레이션 & 리팩토링 (BattleZone Polish) - [완료]
+*   **BattleZone.cs 완전히 리팩토링**:
+    *   기존 씬 배치 방식에서 프리팹 + 위치 스폰 방식으로 구조 변경 및 Trigger 적용.
+    *   플레이어 트리거(`OnTriggerEnter`) 기반으로 전투가 시작되며, 입구 문(Entrance Door) 닫힘 기능 추가.
+    *   오브젝트 풀링(`UnityEngine.Pool`) 기반으로 최적화 적용! 프레임 드랍 완벽 차단.
+*   **적 스폰 자동 마이그레이션 (Auto-Migrate)**:
+    *   기존 배치된 적을 스폰 포인트로 자동 싹 바꿔주는 컨텍스트 메뉴(`AutoMigrateEnemies`) 추가! 인스펙터 우클릭으로 "Auto-Create Spawn Points from existing Scene Enemies" 한방에 보라색 박스 스폰 포인트 예쁘게 자동 생성 완료. 💜
+*   **BaseEnemy.cs 개선**:
+    *   `SetStartTransform` 메서드를 추가하여 풀에서 재활용(Respawn) 시 리스폰 위치 오류를 원천 차단!

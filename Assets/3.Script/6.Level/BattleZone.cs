@@ -13,12 +13,21 @@ namespace Level
         public Transform point;
     }
 
+    [System.Serializable]
+    public class BattleWave
+    {
+        [Tooltip("이 웨이브가 시작되기 전 대기 시간 (초)")]
+        public float delayBeforeWave = 0.5f;
+        [Tooltip("스폰할 적 목록")]
+        public List<EnemySpawnInfo> spawnInfos = new List<EnemySpawnInfo>();
+    }
+
     [RequireComponent(typeof(BoxCollider))]
     public class BattleZone : MonoBehaviour
     {
-        [Header("⚔️ Battle Zone Settings")]
-        [Tooltip("Spawn data. Use 빈 오브젝트(Empty Object) for spawn points.")]
-        [SerializeField] private List<EnemySpawnInfo> spawnInfos = new List<EnemySpawnInfo>();
+        [Header("⚔️ Battle Waves")]
+        [Tooltip("웨이브 목록. 1개만 넣으면 일반 방, 여러 개 넣으면 웨이브 방!")]
+        [SerializeField] private List<BattleWave> waves = new List<BattleWave>();
         
         [Header("🚪 Door Reference")]
         [Tooltip("방에 들어올 때 닫힐 문 (선택)")]
@@ -32,6 +41,7 @@ namespace Level
         [Tooltip("If checked, the zone will reset when the player respawns.")]
         [SerializeField] private bool resetOnRespawn = true;
 
+        private int _currentWaveIndex = 0;
         private int _currentDeadCount = 0;
         private bool _isCleared = false;
         private bool _isBattleActive = false;
@@ -78,7 +88,7 @@ namespace Level
         private void StartBattle()
         {
             _isBattleActive = true;
-            _currentDeadCount = 0;
+            _currentWaveIndex = 0;
 
             // 입구 문 닫기 (플레이어 가두기!)
             if (_entranceDoor != null)
@@ -87,8 +97,48 @@ namespace Level
                 Debug.Log($"[BattleZone] Battle Started! Entrance Locked 🔒");
             }
 
+            if (waves.Count > 0)
+            {
+                StartCoroutine(SpawnWaveRoutine(_currentWaveIndex));
+            }
+            else
+            {
+                CheckClearCondition();
+            }
+        }
+
+        private System.Collections.IEnumerator SpawnWaveRoutine(int waveIndex)
+        {
+            if (waveIndex >= waves.Count)
+            {
+                _isCleared = true;
+                _isBattleActive = false;
+                OpenExitDoor();
+                yield break;
+            }
+
+            BattleWave currentWave = waves[waveIndex];
+            _currentDeadCount = 0;
+
+            if (currentWave.delayBeforeWave > 0f)
+            {
+                yield return new WaitForSeconds(currentWave.delayBeforeWave);
+            }
+
+            // 파티클(모이는 빛) 먼저 보여주기
+            foreach (var info in currentWave.spawnInfos)
+            {
+                if (info.point != null && Core.VFXManager.Instance != null)
+                {
+                    Core.VFXManager.Instance.PlaySpawnEffect(info.point.position);
+                }
+            }
+            
+            // 0.5초 대기 후 소환!
+            if (currentWave.spawnInfos.Count > 0) yield return new WaitForSeconds(0.5f);
+
             // 적들 스폰
-            foreach (var info in spawnInfos)
+            foreach (var info in currentWave.spawnInfos)
             {
                 if (info.enemyPrefab == null || info.point == null) continue;
 
@@ -108,8 +158,11 @@ namespace Level
                 _activeEnemyPoolMap.Add(enemy, pool);
             }
             
-            // 만약 적이 하나도 없으면 바로 클리어
-            CheckClearCondition();
+            // 만약 적이 하나도 없으면 바로 다음 조건 체크
+            if (currentWave.spawnInfos.Count == 0)
+            {
+                CheckClearCondition();
+            }
         }
 
         private ObjectPool<BaseEnemy> GetOrCreatePool(BaseEnemy prefab)
@@ -158,7 +211,16 @@ namespace Level
 
         private void CheckClearCondition()
         {
-            if (_currentDeadCount >= spawnInfos.Count)
+            if (_currentWaveIndex < waves.Count)
+            {
+                var currentWave = waves[_currentWaveIndex];
+                if (_currentDeadCount >= currentWave.spawnInfos.Count)
+                {
+                    _currentWaveIndex++;
+                    StartCoroutine(SpawnWaveRoutine(_currentWaveIndex));
+                }
+            }
+            else
             {
                 _isCleared = true;
                 _isBattleActive = false;
@@ -179,6 +241,8 @@ namespace Level
         {
             if (_isCleared) return; 
 
+            StopAllCoroutines();
+
             // 플레이어가 죽으면 방 안의 몬스터들 싹 다 풀로 반납하고 방 초기화
             foreach (var kvp in _activeEnemyPoolMap)
             {
@@ -186,10 +250,11 @@ namespace Level
                 ObjectPool<BaseEnemy> pool = kvp.Value;
                 
                 enemy.OnDeath -= OnEnemyDeath;
-                pool.Release(enemy);
+                if (enemy.gameObject.activeInHierarchy) pool.Release(enemy);
             }
             _activeEnemyPoolMap.Clear();
 
+            _currentWaveIndex = 0;
             _currentDeadCount = 0;
             _isBattleActive = false;
             
@@ -210,7 +275,9 @@ namespace Level
                 newPoint.transform.rotation = e.transform.rotation;
                 newPoint.transform.SetParent(this.transform);
                 
-                spawnInfos.Add(new EnemySpawnInfo()
+                if (waves.Count == 0) waves.Add(new BattleWave());
+
+                waves[0].spawnInfos.Add(new EnemySpawnInfo()
                 {
                     enemyPrefab = null, // 오빠가 직접 인스펙터에서 프리팹을 넣어줘야 해!
                     point = newPoint.transform
