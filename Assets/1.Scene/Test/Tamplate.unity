@@ -6958,7 +6958,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4baaaf2146587884d8e7c1c4a6dbafab, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Level.BattleZone
-  spawnInfos: []
+  waves: []
   entranceDoorObject: {fileID: 0}
   exitDoorObject: {fileID: 1863777231}
   resetOnRespawn: 1

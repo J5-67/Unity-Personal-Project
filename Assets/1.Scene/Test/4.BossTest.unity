@@ -11708,12 +11708,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 51f52f29575082e47915412b70d8d6c7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BaseEnemy
-  enemyType: 0
   hookInteractSpeed: 15
   freezeDuration: 5
   glitchShader: {fileID: 4800000, guid: 4680fba1598edad4db7d7ecd46ff810e, type: 3}
   glitchIntensity: 1.5
   glitchSpeed: 20
+  canKamikaze: 0
+  kamikazeTriggerRadius: 10
   overloadDelay: 1
   kamikazeDuration: 3
   kamikazeSpeed: 8
@@ -11746,12 +11747,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 51f52f29575082e47915412b70d8d6c7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BaseEnemy
-  enemyType: 1
   hookInteractSpeed: 15
   freezeDuration: 318.1
   glitchShader: {fileID: 4800000, guid: 4680fba1598edad4db7d7ecd46ff810e, type: 3}
   glitchIntensity: 1.5
   glitchSpeed: 20
+  canKamikaze: 0
+  kamikazeTriggerRadius: 10
   overloadDelay: 1
   kamikazeDuration: 3
   kamikazeSpeed: 8
@@ -14918,12 +14920,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 51f52f29575082e47915412b70d8d6c7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BaseEnemy
-  enemyType: 0
   hookInteractSpeed: 15
   freezeDuration: 5
   glitchShader: {fileID: 4800000, guid: 4680fba1598edad4db7d7ecd46ff810e, type: 3}
   glitchIntensity: 1.5
   glitchSpeed: 20
+  canKamikaze: 0
+  kamikazeTriggerRadius: 10
   overloadDelay: 1
   kamikazeDuration: 3
   kamikazeSpeed: 8
@@ -14941,12 +14944,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 51f52f29575082e47915412b70d8d6c7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BaseEnemy
-  enemyType: 0
   hookInteractSpeed: 15
   freezeDuration: 5
   glitchShader: {fileID: 4800000, guid: 4680fba1598edad4db7d7ecd46ff810e, type: 3}
   glitchIntensity: 1.5
   glitchSpeed: 20
+  canKamikaze: 0
+  kamikazeTriggerRadius: 10
   overloadDelay: 1
   kamikazeDuration: 3
   kamikazeSpeed: 8

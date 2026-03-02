@@ -537,10 +537,24 @@ public class PlayerMovement : MonoBehaviour
         float targetSpeedZ = _moveInput.x * moveSpeed;
 
         // [Fix] 훅을 걸고 있더라도(_isHookingState) 땅에 발이 닿아있다면(_isGrounded)
-        // 정상적인 지상 이동(Ground Movement)이 가능해야 함. (미끄러짐 방지 & A/D 이동 허용)
         if (_isGrounded)
         {
-            _rb.linearVelocity = new Vector3(0f, _rb.linearVelocity.y, targetSpeedZ);
+            if (_isHookingState)
+            {
+                // [Fix] 썰매(Surfing) 모드 완성!
+                // 훅 스윙 중 바닥에 닿았을 때 속도를 덮어쓰거나 감속(Brake)시키면 스윙이 턱 막힙니다.
+                // 따라서 절대 속도값을 제한하지 않고 관성을 100% 살린 채로,
+                // 플레이어가 A/D 키를 눌렀을 때만 부드러운 가속(Steering)을 물리 엔진에 보탭니다.
+                if (Mathf.Abs(_moveInput.x) > 0.1f)
+                {
+                    _rb.AddForce(new Vector3(0f, 0f, _moveInput.x * moveSpeed * 1.5f), ForceMode.Acceleration);
+                }
+            }
+            else
+            {
+                // 정상적인 지상 걷기
+                _rb.linearVelocity = new Vector3(0f, _rb.linearVelocity.y, targetSpeedZ);
+            }
         }
         else
         {

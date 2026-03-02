@@ -72,10 +72,8 @@ namespace Player
 
             // 3. 스윙 로직 (훅을 걸고 있는지 공용으로 체크)
             // (주의: PlayerMovement 안의 내부 변수를 외부 접근자를 만들거나 Hook 스크립트의 상태를 가져옵니다)
-            // [New] PlayerHook 안쪽의 "_isHooking" 상태를 직접 알 수 있게 리플렉션 없이도 편하게 짤 수 있음!
-            // 하지만 제일 간단하게 공중에서 줄을 매달고 있는지를 판단하려면 RigidBody의 제약 조건이나 이동 스피드를 쓸 수도 있음.
-            // 일단은 외부로 상태를 넘겨서 처리하는 게 정석! (PlayerMovement에서 제어 금지 상태인지 확인)
-            bool isSwinging = !_playerMovement.CanMove && !_playerMovement.IsDashing && !_playerMovement.IsGrounded;
+            // [Fix] 땅에서 서핑(슬라이딩)할 때도 무조건 스윙 포즈가 나오게 하려면 IsGrounded 체크를 빼야 썰매를 타는 간지가 나옴! 
+            bool isSwinging = !_playerMovement.CanMove && !_playerMovement.IsDashing;
             _animator.SetBool(_isSwingingHash, isSwinging);
         }
 

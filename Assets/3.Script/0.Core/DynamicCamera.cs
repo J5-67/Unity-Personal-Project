@@ -11,6 +11,7 @@ namespace Core
         [SerializeField] private CinemachineCamera virtualCamera;
 
         [Header("👀 Camera Shift (Aim Based)")]
+        [SerializeField] private bool enableAimShift = false;
         [SerializeField] private float shiftAmount = 2.0f; // 기본값 상향 (확실한 효과)
         [SerializeField] private float shiftSpeed = 5f;
         [SerializeField] private float maxShiftDistance = 8f;
@@ -63,7 +64,7 @@ namespace Core
         {
             Vector3 targetShift = Vector3.zero;
 
-            if (playerAim != null)
+            if (enableAimShift && playerAim != null)
             {
                 Vector3 aimPos = playerAim.GetAimWorldPosition();
                 Vector3 playerPos = playerTransform.position;

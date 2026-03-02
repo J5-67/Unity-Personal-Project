@@ -40,6 +40,7 @@ public class PlayerAim : MonoBehaviour
     [Header("🎨 Colors")]
     [SerializeField] private Color defaultColor = new Color(0f, 1f, 0.82f);
     [SerializeField] private Color enemyColor = Color.red;
+    [SerializeField] private Color hookableColor = Color.yellow;
 
     private Camera _mainCamera;
     private GameInput _input; 
@@ -263,7 +264,11 @@ public class PlayerAim : MonoBehaviour
 
         RaycastHit obstructionHit;
         bool hasObstruction = Physics.Raycast(startPos, direction, out obstructionHit, currentMaxDistance, aimLayerMask);
-        if (hasObstruction) endPos = obstructionHit.point;
+        if (hasObstruction) 
+        {
+            endPos = obstructionHit.point;
+            targetColor = hookableColor;
+        }
 
         RaycastHit[] hits = Physics.SphereCastAll(startPos, aimRadius, direction, currentMaxDistance, aimLayerMask);
         Collider bestTarget = null;
@@ -341,7 +346,7 @@ public class PlayerAim : MonoBehaviour
             }
             else
             {
-                targetColor = defaultColor;
+                targetColor = hookableColor;
                 targetTexture = _dashTexture;
                 currentFlowSpeed = -animationSpeed * 0.5f; 
                 currentTiling = dashTiling; 

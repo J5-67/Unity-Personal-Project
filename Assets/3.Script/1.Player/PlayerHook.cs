@@ -42,6 +42,11 @@ public class PlayerHook : MonoBehaviour
     [SerializeField] private float autoWinchAmount = 3.0f; 
     [SerializeField] private float autoWinchSpeed = 5.0f;  
 
+    [Header("✨ Smart Auto Winch (Sanabi Style)")]
+    [SerializeField] private float groundCheckDistance = 3.0f; // 더듬이 레이저 길이
+    [SerializeField] private float minGroundClearance = 1.5f;  // 장애물 경계선
+    [SerializeField] private float smartWinchLerpSpeed = 10.0f; // 스무딩 스피드
+
     [SerializeField] private HookRopeVisual ropeVisual;    
     [SerializeField] private float waveStrength = 1.0f;    
     [SerializeField] private float waveFrequency = 3.0f;   
@@ -378,16 +383,28 @@ public class PlayerHook : MonoBehaviour
 
         float currentRopeLength = Vector3.Distance(transform.position, targetPos);
         
-        float finalRopeLength = currentRopeLength;
-        bool isAutoWinching = false;
+        // [Sanabi Style] 기준 로프 길이
+        float baseRopeLength = currentRopeLength;
+        bool isInitAutoWinching = false;
 
         // [Fix] 루프 내 곳곳에서 쓰이는 Rigidbody를 미리 캐싱하여 선언 순서 문제 해결
         Rigidbody rb = GetComponent<Rigidbody>();
 
         if (_playerMovement.IsGrounded)
         {
-             finalRopeLength = Mathf.Max(currentRopeLength - autoWinchAmount, 1.0f); 
-             isAutoWinching = true;
+             // [Fix] 바닥을 쓸고 다니는 문제 해결! (도약 스윙 추가)
+             // 천장이 낮고 훅이 멀 때, 줄 길이만 줄이면 바닥을 쓸면서(Sweeping) 질질 끌려감.
+             // 이 질질 끌림을 완벽한 공중 스윙(U자 곡선)으로 바꾸려면 훅을 거는 순간 강제로 위로 도약(Jump)시켜야 함!
+             rb.linearVelocity = new Vector3(rb.linearVelocity.x, Mathf.Max(rb.linearVelocity.y, 10f), rb.linearVelocity.z); 
+
+             // 또한 천장 높이를 계산하여, 아무리 수평으로 멀리 떨어져 있어도 로프 길이가 '수직 여유 공간(Safe Length)'을 넘지 않게 미리 깎아둠!
+             float heightDiff = Mathf.Max(targetPos.y - transform.position.y, 1.0f);
+             float safeLength = Mathf.Max(heightDiff - minGroundClearance, 1.0f);
+             float standardWinchLength = Mathf.Max(currentRopeLength - autoWinchAmount, 1.0f);
+             
+             // 기본 윈치량과 천장 안전선 중 더 짧은 쪽을 기준 길이로 채택하여 바닥 충돌 완전 배제
+             baseRopeLength = Mathf.Min(standardWinchLength, safeLength); 
+             isInitAutoWinching = true;
         }
 
         float currentRopeLengthSqr = currentRopeLength * currentRopeLength; 
@@ -547,27 +564,83 @@ public class PlayerHook : MonoBehaviour
 
                 // 최소/최대 길이 제한
                 currentRopeLength = Mathf.Clamp(currentRopeLength, 1f, maxDistance);
+                baseRopeLength = currentRopeLength; // 수동 조작 시 기준 길이 갱신
+                isInitAutoWinching = false;
             }
             else
             {
                  // 입력이 없을 때:
-                 // 1. 오토 윈치 (땅에 있을 때 짧아짐)
-                 if (isAutoWinching)
+                 
+                 // 1. 초반 오토 윈치 (안 깎이고 부드럽게 위로 당겨줌)
+                 if (isInitAutoWinching)
                  {
-                      currentRopeLength = Mathf.MoveTowards(currentRopeLength, finalRopeLength, autoWinchSpeed * Time.fixedDeltaTime);
+                      // [Fix] 단순 길이 조작만 하면 로프가 허공에서 줄어들고 캐릭터가 강제로 텔레포트함!
+                      // 수동 수축(W키)처럼 실질적인 '상승 속도(Velocity)'를 부여해야 오토 윈치가 끝났을 때 스윙으로 부드럽게 이어짐.
+                      Vector3 currentVel = rb.linearVelocity;
+                      float speedAlongRope = Vector3.Dot(currentVel, tensionDir);
+                      rb.linearVelocity = currentVel - (tensionDir * speedAlongRope) + (tensionDir * autoWinchSpeed);
+
+                      currentRopeLength = Mathf.MoveTowards(currentRopeLength, baseRopeLength, autoWinchSpeed * Time.fixedDeltaTime);
                       
-                      if (currentRopeLength <= finalRopeLength + 0.01f)
+                      // 래칫: 이미 오토윈치로 땡겼음에도 거리가 멀어지지 않게 철저히 조임
+                      if (currentRopeLength < distToAnchor)
                       {
-                           isAutoWinching = false;
+                           currentRopeLength = distToAnchor;
+                      }
+
+                      if (currentRopeLength <= baseRopeLength + 0.01f)
+                      {
+                           isInitAutoWinching = false;
                       }
                  }
-                  // 2. 공중에 있을 때
-                  else
-                  {
-                       // [Change] 줄이 자동으로 짧아지는(Ratchet) 로직 제거.
-                       // 대시나 넉백으로 위로 올라갔다가 다시 내려올 때, 줄이 짧아져서 턱 걸리는 문제 해결.
-                       // 이제 줄 길이는 W키를 누를 때만 짧아짐.
-                  }
+                 else
+                 {
+                      // 2. 공중 스윙 상태: 산나비 다이내믹 로프 보정
+                      float targetLength = baseRopeLength; 
+                      
+                      Vector3 velDir = rb.linearVelocity.normalized;
+                      float speed = rb.linearVelocity.magnitude;
+                      
+                      // 1. 경사로 서핑 (Slope Surfing) - 전방 레이더 (일정 속도 이상일 때만)
+                      // 스피드가 너무 느릴 때는 탈 경사로가 없으므로 무시
+                      // 바닥 반경 확인을 위해 '훅이 걸리는 레이어'뿐만 아니라 진짜 '바닥(Ground) / 벽(Wall) 레이어'도 모두 합쳐서 스캔합니다!
+                      int obstacleLayer = hookableLayer | _playerMovement.GroundLayer | _playerMovement.WallLayer;
+
+                      if (speed > 2.0f)
+                      {
+                           // 캐릭터가 날아가는 정면 방향(velDir)에 부딪힐 오르막길이나 턱이 있는지 확인!
+                           if (Physics.SphereCast(myPos, 0.4f, velDir, out RaycastHit forwardHit, 1.5f, obstacleLayer))
+                           {
+                                // [Fix] 평평한 바닥(Up) 위를 수평으로 날고 있을 때(Dot == 0)는 참견하면 안 됨!!
+                                // 벽이나 경사로에 진짜 쾅 박힐 각도(충돌 각도)일 때만 서핑 허용
+                                if (Vector3.Dot(velDir, forwardHit.normal) < -0.1f)
+                                {
+                                     // 벽의 법선(Normal)을 바탕으로, 쾅! 박지 않고 미끄럼틀 타듯 꺾어주기
+                                     Vector3 projectedVel = Vector3.ProjectOnPlane(rb.linearVelocity, forwardHit.normal);
+                                     
+                                     // Y축 속도가 죽어서 평지 걷는 현상 방지: 방향만 꺾어주고 속력은 유지!
+                                     rb.linearVelocity = projectedVel.normalized * speed;
+                                }
+                           }
+                      }
+                           
+                      // [Fix] 바닥 충돌 회피(Anti-Drag) 레이더 삭제 완료!
+                      // 바닥에 안 닿으려고 줄을 억지로 줄이면 저 멀리서부터 가로로 훅 당겨지는 기괴한 V자 꺾임(Yank) 궤적이 나옴.
+                      // 진짜 산나비나 스파이더맨처럼 진짜 밧줄(Pendulum) 물리로 가도록 냅두면, 바닥에 닿았을 때 부드럽게 바닥을 썰면서 서핑(Surfing)하게 됨!
+                      
+                      targetLength = baseRopeLength;
+                      targetLength = Mathf.Clamp(targetLength, 1f, maxDistance);
+                      
+                      // [Fix] 고무줄처럼 늘어나거나 천장에서 덜렁거리는 현상 완벽 해결! (진짜 산나비 펜듈럼)
+                      // 로프는 오직 '수축(당기기)'만 자동으로 작동해야 합니다. 장애물을 지났다고 해서 스스로 늘어나면 바닥으로 추락해버립니다.
+                      if (currentRopeLength > targetLength)
+                      {
+                           float smoothWinchSpeed = climbSpeed * 1.5f; 
+                           currentRopeLength = Mathf.MoveTowards(currentRopeLength, targetLength, Time.fixedDeltaTime * smoothWinchSpeed);
+                      }
+                      // 만약 targetLength가 더 길다면? (장애물/바닥을 피하고 허공으로 나갔을 때)
+                      // 어떤 오토 로직도 줄을 임의로 늘려선 안 됩니다! 무시하고 현재 길이를 유지해야 예쁜 시계추 액션이 나옵니다.
+                 }
             }
 
             _playerMovement.SetDrag(0.05f);
@@ -615,11 +688,11 @@ public class PlayerHook : MonoBehaviour
                 
                 bool isWinchingUp = (_playerMovement.MoveInput.y > 0.1f);
 
-                // W키(당기기)나 S키(풀기) 등 사용자가 직접 줄을 조작 중일 때는 위치 보정(MovePosition)을 끕니다!
-                // (이유: 위치 강제 이동은 물리를 무시하는 순간 텔레포트라서, 벽에 닿았을 때 속도가 빠르면 터널링을 심하게 유발함)
-                if (!isWinchingDown && !isWinchingUp)
+                // W키(당기기)나 S키(풀기) 등 사용자가 직접 줄을 조작 중이거나, 초반 오토윈치(isInitAutoWinching) 중일 때는 위치 보정을 끕니다!
+                // (이유: 위치 강제 이동은 물리를 무시하는 순간 텔레포트라서 부자연스럽게 맥이 탁 풀리는 느낌을 줌)
+                if (!isWinchingDown && !isWinchingUp && !isInitAutoWinching)
                 {
-                    // 입력 없이 가만히 매달려 있거나 스윙할 때는 단단하게 고정 (오차 0.01f)
+                    // 입력 없이 가만히 매달려 있거나 일반 스윙할 때는 단단하게 고정 (오차 0.01f)
                     if (distError > 0.01f) 
                     {
                         Vector3 fixPos = transform.position + tensionDir * distError; 

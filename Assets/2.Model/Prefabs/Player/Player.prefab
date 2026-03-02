@@ -912,11 +912,9 @@ MonoBehaviour:
     m_PostInfinity: 2
     m_RotationOrder: 4
   dashTiling: 1
-  lightArrowTiling: 1
-  heavyArrowTiling: 0.9
+  enemyArrowTiling: 0.5
   defaultColor: {r: 0, g: 1, b: 1, a: 1}
-  lightEnemyColor: {r: 0, g: 1, b: 0, a: 1}
-  heavyEnemyColor: {r: 1, g: 0, b: 0, a: 1}
+  enemyColor: {r: 1, g: 0, b: 0, a: 1}
 --- !u!114 &3363513297093943601
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -934,10 +932,10 @@ MonoBehaviour:
   retrieveSpeed: 30
   throwSpeed: 60
   fireSound: {fileID: 8300000, guid: 95fb3e178be86884f898011acfb4ea05, type: 3}
-  lightEnemyRetrieveSpeed: 1
-  heavyEnemyPullAcceleration: 5
-  heavyEnemyZipSpeed: 120
+  enemyPullAcceleration: 80
+  enemyZipSpeed: 120
   wallZipSpeed: 15
+  safeZipDistance: 1.5
   swingForce: 50
   swingAngleLimit: 5
   winchUpForce: 0.5
@@ -949,9 +947,8 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 448
   wallTag: Wall
-  heavyEnemyTag: Heavy
+  enemyTag: Enemy
   frozenEnemyTag: FrozenEnemy
-  lightEnemyTag: Light
   autoWinchAmount: 0.5
   autoWinchSpeed: 5
   ropeVisual: {fileID: 0}

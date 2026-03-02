@@ -2215,6 +2215,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Core.PostProcessManager
   globalVolume: {fileID: 1114967554}
+  heartbeatSound: {fileID: 0}
 --- !u!114 &1234476430
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3382,12 +3383,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 51f52f29575082e47915412b70d8d6c7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BaseEnemy
-  enemyType: 0
   hookInteractSpeed: 15
   freezeDuration: 5
   glitchShader: {fileID: 4800000, guid: 4680fba1598edad4db7d7ecd46ff810e, type: 3}
   glitchIntensity: 1.5
   glitchSpeed: 20
+  canKamikaze: 0
+  kamikazeTriggerRadius: 10
+  overloadDelay: 1
+  kamikazeDuration: 3
+  kamikazeSpeed: 8
+  explosionRadius: 3
+  explosionDamage: 1
 --- !u!54 &1664372720
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -4172,12 +4179,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 51f52f29575082e47915412b70d8d6c7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BaseEnemy
-  enemyType: 1
   hookInteractSpeed: 15
   freezeDuration: 318.1
   glitchShader: {fileID: 4800000, guid: 4680fba1598edad4db7d7ecd46ff810e, type: 3}
   glitchIntensity: 1.5
   glitchSpeed: 20
+  canKamikaze: 0
+  kamikazeTriggerRadius: 10
+  overloadDelay: 1
+  kamikazeDuration: 3
+  kamikazeSpeed: 8
+  explosionRadius: 3
+  explosionDamage: 1
 --- !u!54 &1786824552
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -6192,10 +6205,10 @@ MonoBehaviour:
   retrieveSpeed: 30
   throwSpeed: 50
   fireSound: {fileID: 8300000, guid: 95fb3e178be86884f898011acfb4ea05, type: 3}
-  lightEnemyRetrieveSpeed: 1
-  heavyEnemyPullAcceleration: 5
-  heavyEnemyZipSpeed: 120
+  enemyPullAcceleration: 80
+  enemyZipSpeed: 120
   wallZipSpeed: 15
+  safeZipDistance: 1.5
   swingForce: 20
   swingAngleLimit: 5
   winchUpForce: 0.5
@@ -6207,9 +6220,8 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 448
   wallTag: Wall
-  heavyEnemyTag: Heavy
+  enemyTag: Enemy
   frozenEnemyTag: FrozenEnemy
-  lightEnemyTag: Light
   autoWinchAmount: 0.5
   autoWinchSpeed: 5
   ropeVisual: {fileID: 0}
@@ -7951,6 +7963,7 @@ MonoBehaviour:
   coyoteTime: 0.15
   jumpBufferTime: 0.2
   dropDisableTime: 0.5
+  jumpCooldown: 0.2
   groundCheckPos: {fileID: 492915834110425426}
   wallCheckPos: {fileID: 119658886020055255}
   checkRadius: 0.2
@@ -11045,14 +11058,55 @@ MonoBehaviour:
   aimRadius: 0.5
   cursorSensitivity: 2
   lineRenderer: {fileID: 6408809967506055769}
+  firePoint: {fileID: 0}
   lineWidth: 0.5
   animationSpeed: 2
+  customAlphaCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 0.05
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 0.2
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
   dashTiling: 1
-  lightArrowTiling: 1
-  heavyArrowTiling: 0.9
+  enemyArrowTiling: 0.5
   defaultColor: {r: 0, g: 1, b: 1, a: 1}
-  lightEnemyColor: {r: 0, g: 1, b: 0, a: 1}
-  heavyEnemyColor: {r: 1, g: 0, b: 0, a: 1}
+  enemyColor: {r: 1, g: 0, b: 0, a: 1}
 --- !u!1 &6465214957830498733
 GameObject:
   m_ObjectHideFlags: 0
