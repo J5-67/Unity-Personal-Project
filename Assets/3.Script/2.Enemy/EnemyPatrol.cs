@@ -31,15 +31,12 @@ public class EnemyPatrol : MonoBehaviour
         }
     }
 
-    public void ResetPatrol()
+    private void Start()
     {
-        _currentIndex = 0;
-        _isWaiting = false;
-        StopAllCoroutines();
-        SetPatrol(true);
-        
-        if (_targetPositions.Count > 0)
+        // 씬에 직접 배치해둔 몬스터들이 멍때리지 않도록 시작 시 한 번 좌표를 잡아줍니다!
+        if (_targetPositions != null && _targetPositions.Count == 0)
         {
+            ResetPatrol();
         }
     }
 
@@ -49,8 +46,22 @@ public class EnemyPatrol : MonoBehaviour
         _rb.isKinematic = true; 
 
         _targetPositions = new List<Vector3>();
-        if (waypoints != null)
+        // [유니의 최적화 & 버그 픽스 포인트✨]
+        // 예전엔 무조건 Awake 때 좌표(방 밖의 허공 등)를 외워버려서 딴 데로 가출했음!
+        // 이제는 ResetPatrol(풀에서 꺼내진 후)에서 좌표를 스캔할 거야!
+    }
+
+    public void ResetPatrol()
+    {
+        _currentIndex = 0;
+        _isWaiting = false;
+        StopAllCoroutines();
+        SetPatrol(true);
+        
+        // 💡 [핵심] 몬스터가 딱! 스폰 포인트로 텔레포트 한 직후에 "아 내 주변 정찰 지점이 여기구나!" 하고 새롭게 외움!
+        if (waypoints != null && _targetPositions != null)
         {
+            _targetPositions.Clear();
             foreach (Transform t in waypoints)
             {
                 if (t != null) _targetPositions.Add(t.position);

@@ -67,14 +67,34 @@ public class EnemyMissile : EnemyProjectile
         if (_renderer != null) _originalMaterial = _renderer.sharedMaterial;
     }
 
+    private float _originalSpeed = -1f;
+    private int _originalDamage = -1;
+    private float _originalTurnSpeed3D = -1f;
+    private float _originalHomingDuration = -1f;
+
     protected override void OnEnable()
     {
         base.OnEnable(); // [Fix] 부모 클래스(EnemyProjectile)의 초기화도 함께 실행!
+
+        if (_originalSpeed < 0) 
+        {
+            _originalSpeed = speed;
+            _originalDamage = damage;
+            _originalTurnSpeed3D = turnSpeed3D;
+            _originalHomingDuration = homingDuration;
+        }
+
+        // [Fix] 오브젝트 풀에서 다시 꺼내질 때 '오리지널 상태'로 무조건 복구!
+        speed = _originalSpeed;
+        damage = _originalDamage;
+        turnSpeed3D = _originalTurnSpeed3D;
+        homingDuration = _originalHomingDuration;
         
         _pidController.Reset();
         _isHoming = true;
         _isFrozen = false; // 재사용 시 얼음 상태 해제
         _isHit = false;
+        _isHacked = false; // ⭐️[Fix] 해킹 상태 완벽 초기화! (새 미사일은 순정이다)
         _timer = 0f;
 
         if (TryGetComponent(out Collider col)) col.enabled = true;
@@ -116,6 +136,13 @@ public class EnemyMissile : EnemyProjectile
 
     private Coroutine _autoHackCoroutine;
     [SerializeField] private float autoHackDelay = 1.5f; 
+
+    // [Fix] 발사 주체를 기억하기 위한 변수
+    private Transform _owner;
+    public void SetOwner(Transform owner)
+    {
+        _owner = owner;
+    }
 
     public void SetFrozen(bool state)
     {
@@ -179,20 +206,28 @@ public class EnemyMissile : EnemyProjectile
 
         Transform hackTarget = null;
         
-        // [Fix] 악마의 FindAnyObjectByType 제거! (반경 30m 내의 적들만 스캔해서 역해킹 타겟 설정)
-        Collider[] hits = Physics.OverlapSphere(transform.position, 30f);
-        foreach (var hit in hits)
+        // [Fix] 1순위 타겟: 무조건 나를 쏜 주인님 (배신의 맛!)
+        if (_owner != null && _owner.gameObject.activeInHierarchy && !_owner.GetComponent<BaseEnemy>().IsDestroyed)
         {
-            if (hit.TryGetComponent(out BossHealth boss) || (hit.transform.parent != null && hit.transform.parent.TryGetComponent(out boss)))
+            hackTarget = _owner;
+        }
+        else
+        {
+            // [Fix] 2순위 타겟: 주인이 이미 죽었다면 근처의 적이나 보스 찾기 (원래 있던 로직)
+            Collider[] hits = Physics.OverlapSphere(transform.position, 30f);
+            foreach (var hit in hits)
             {
-                hackTarget = boss.transform;
-                break; // 보스 최우선 타겟!
-            }
-            else if (hackTarget == null)
-            {
-                if (hit.TryGetComponent(out BaseEnemy enemy) || (hit.transform.parent != null && hit.transform.parent.TryGetComponent(out enemy)))
+                if (hit.TryGetComponent(out BossHealth boss) || (hit.transform.parent != null && hit.transform.parent.TryGetComponent(out boss)))
                 {
-                    hackTarget = enemy.transform; // 일반 적
+                    hackTarget = boss.transform;
+                    break; // 보스 최우선 타겟!
+                }
+                else if (hackTarget == null)
+                {
+                    if (hit.TryGetComponent(out BaseEnemy enemy) || (hit.transform.parent != null && hit.transform.parent.TryGetComponent(out enemy)))
+                    {
+                        hackTarget = enemy.transform; // 일반 적
+                    }
                 }
             }
         }

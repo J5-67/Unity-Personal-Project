@@ -190,6 +190,13 @@ public class EnemyShooter : MonoBehaviour
             EnemyProjectile proj = _projectilePool.Get();
             proj.transform.position = spawnPoint.position;
             proj.transform.rotation = rot;
+
+            // [New] 만약 이게 영리한 '유도 미사일'이라면, 발사한 주인이 누구인지 명찰을 달아줌!
+            // 그래야 나중에 오빠가 미사일을 해킹했을 때, "날 쏜 주인을 죽여라!!" 하고 완벽히 역추적함 😈
+            if (proj is EnemyMissile missile)
+            {
+                missile.SetOwner(transform);
+            }
             
             // [Fix] 자기가 쏜 총알에 자기 몸(Body)이나 방패(Shield)가 맞는 문제 해결
             // 자식들(방패 포함)의 모든 콜라이더와 총알(및 그 자식들)의 충돌 완벽 무시

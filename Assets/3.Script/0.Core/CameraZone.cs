@@ -1,55 +1,64 @@
 using UnityEngine;
 using Unity.Cinemachine;
-using System.Collections;
 
 namespace Core
 {
     [RequireComponent(typeof(Collider))]
     public class CameraZone : MonoBehaviour
     {
-        [Header("Cinemachine Settings")]
-        [SerializeField] private CinemachineConfiner3D confiner;
-        [Tooltip("이 구역에 들어왔을 때 카메라를 가둘 투명 상자 (Trigger 콜라이더와 같아도 되고 다를 수도 있음!)")]
-        [SerializeField] private Collider boundingVolume;
-
-        [Header("Interpolation Setting")]
-        [SerializeField] private float transitionDuration = 1.5f; // 보간에 걸리는 시간
-
-        private Coroutine _transitionCoroutine;
+        [Header("🌟 카메라 스무스 전환 (방마다 카메라 배치)")]
+        [Tooltip("방에 들어오면 활성화시킬 이 구역 전용 가상 카메라")]
+        [SerializeField] private CinemachineCamera roomCamera;
 
         private void Awake()
         {
             // Trigger 체크용 콜라이더 (플레이어 진입 감지용)
             Collider triggerCollider = GetComponent<Collider>();
             if (triggerCollider != null) triggerCollider.isTrigger = true;
-
-            // 안 넣어줬다면 자기 자신을 boundingVolume으로 씀!
-            if (boundingVolume == null) boundingVolume = triggerCollider;
         }
 
         private void OnTriggerEnter(Collider other)
         {
             if (other.CompareTag("Player"))
             {
-                if (confiner == null)
+                // 우선순위를 확 올려서! 시네머신이 알아서 스~무스하게 카메라를 넘기게 만듦
+                if (roomCamera != null)
                 {
-                    CinemachineCamera vcam = FindAnyObjectByType<CinemachineCamera>();
-                    if (vcam != null)
-                    {
-                        confiner = vcam.GetComponent<CinemachineConfiner3D>();
-                    }
-                }
-
-                if (confiner != null && boundingVolume != null)
-                {
-                    // Confiner의 Bounding Volume 업데이트
-                    confiner.BoundingVolume = boundingVolume;
-
-                    // // (옵션) 부드러운 전환을 적용하고 싶다면 Coroutine으로 처리 가능.
-                    // if (_transitionCoroutine != null) StopCoroutine(_transitionCoroutine);
-                    // _transitionCoroutine = StartCoroutine(SmoothTransition());
+                    roomCamera.Priority = 100;
                 }
             }
         }
+
+        private void OnTriggerExit(Collider other)
+        {
+            if (other.CompareTag("Player"))
+            {
+                // 방에서 탈출할 테면, 다음 카메라로 바통 터치할 수 있게 우선순위 0으로 초기화!
+                if (roomCamera != null)
+                {
+                    roomCamera.Priority = 0;
+                }
+            }
+        }
+
+#if UNITY_EDITOR
+        private void OnDrawGizmos()
+        {
+            BoxCollider col = GetComponent<BoxCollider>();
+            if (col != null)
+            {
+                // 콜라이더의 변형(스케일, 회전)을 기즈모 매트릭스에 적용
+                Gizmos.matrix = transform.localToWorldMatrix;
+
+                // 존에 들어왔을 때 활성화되는 거니까 초록색으로 칠하자! (투명도 30%)
+                Gizmos.color = new Color(0f, 1f, 0f, 0.3f);
+                Gizmos.DrawCube(col.center, col.size);
+                
+                // 테두리는 찐한 초록색으로!
+                Gizmos.color = Color.green;
+                Gizmos.DrawWireCube(col.center, col.size);
+            }
+        }
+#endif
     }
 }
