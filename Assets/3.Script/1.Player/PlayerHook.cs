@@ -113,7 +113,9 @@ public class PlayerHook : MonoBehaviour
             AudioManager.Instance.PlaySFX(fireSound);
         }
         
-        Vector3 startPos = transform.position;
+        // [Fix] PlayerAim(UI 조준선)의 시작점과 동일하게 맞춰서 사거리(거리) 계산 오차를 없앰!
+        // (발끝에서 발사하면 머리 위 조준선보다 사거리가 짧아져서 색깔만 변하고 안 닿는 버그 발생)
+        Vector3 startPos = transform.position + Vector3.up * 1.0f;
         Vector3 currentPos = startPos;
         
         Vector3 dir;
@@ -392,17 +394,10 @@ public class PlayerHook : MonoBehaviour
 
         if (_playerMovement.IsGrounded)
         {
-             // [Fix] 바닥을 쓸고 다니는 문제 해결! (도약 스윙 추가)
-             // 천장이 낮고 훅이 멀 때, 줄 길이만 줄이면 바닥을 쓸면서(Sweeping) 질질 끌려감.
-             // 이 질질 끌림을 완벽한 공중 스윙(U자 곡선)으로 바꾸려면 훅을 거는 순간 강제로 위로 도약(Jump)시켜야 함!
-             rb.linearVelocity = new Vector3(rb.linearVelocity.x, Mathf.Max(rb.linearVelocity.y, 10f), rb.linearVelocity.z); 
-
-             // 또한 천장 높이를 계산하여, 아무리 수평으로 멀리 떨어져 있어도 로프 길이가 '수직 여유 공간(Safe Length)'을 넘지 않게 미리 깎아둠!
              float heightDiff = Mathf.Max(targetPos.y - transform.position.y, 1.0f);
              float safeLength = Mathf.Max(heightDiff - minGroundClearance, 1.0f);
              float standardWinchLength = Mathf.Max(currentRopeLength - autoWinchAmount, 1.0f);
              
-             // 기본 윈치량과 천장 안전선 중 더 짧은 쪽을 기준 길이로 채택하여 바닥 충돌 완전 배제
              baseRopeLength = Mathf.Min(standardWinchLength, safeLength); 
              isInitAutoWinching = true;
         }
@@ -484,11 +479,7 @@ public class PlayerHook : MonoBehaviour
                     
                     // [Critical Fix] continue를 사용하면 while 루프의 마지막에 있는 yield return new WaitForFixedUpdate()를 건너뛰어
                     // 한 프레임 내에서 무한 반복(Infinite Loop)이 발생하여 유니티 에디터가 멈춤(Freeze).
-                    // 반드시 yield return을 호출하거나 continue 대신 아래 로직을 스킵하도록 구조를 변경해야 함.
-                    
-                    // [ADD] 땅에 있을 때는 마찰력(Drag)을 0으로 돌려서 미끄러짐 방지!
-                    _playerMovement.SetDrag(0f);
-                    
+                    // 반드시 yield return을 호출하거나 continue 대신 아래 로직을 스킵하도록 구조를 변경해야 함.                     
                     yield return new WaitForFixedUpdate(); 
                     continue; 
                 }
@@ -628,7 +619,20 @@ public class PlayerHook : MonoBehaviour
                       // 바닥에 안 닿으려고 줄을 억지로 줄이면 저 멀리서부터 가로로 훅 당겨지는 기괴한 V자 꺾임(Yank) 궤적이 나옴.
                       // 진짜 산나비나 스파이더맨처럼 진짜 밧줄(Pendulum) 물리로 가도록 냅두면, 바닥에 닿았을 때 부드럽게 바닥을 썰면서 서핑(Surfing)하게 됨!
                       
-                      targetLength = baseRopeLength;
+                      // [Old] 바닥 끌림 방지용 산나비 레이더 부활 (오토 윈치)
+                      Vector3 checkStartPos = myPos + Vector3.up * 0.5f;
+
+                      if (Physics.Raycast(checkStartPos, Vector3.down, out RaycastHit hit, groundCheckDistance, obstacleLayer))
+                      {
+                           float distanceToGround = hit.distance;
+
+                           if (distanceToGround < minGroundClearance)
+                           {
+                                float deficit = minGroundClearance - distanceToGround;
+                                targetLength = baseRopeLength - deficit;
+                           }
+                      }
+
                       targetLength = Mathf.Clamp(targetLength, 1f, maxDistance);
                       
                       // [Fix] 고무줄처럼 늘어나거나 천장에서 덜렁거리는 현상 완벽 해결! (진짜 산나비 펜듈럼)
@@ -643,7 +647,15 @@ public class PlayerHook : MonoBehaviour
                  }
             }
 
-            _playerMovement.SetDrag(0.05f);
+            // [Fix] 땅에 닿아있을 때는 댐핑(마찰)을 없애서 자유롭게 미끄러지면서 가속을 받을 수 있게 함!
+            if (_playerMovement.IsGrounded)
+            {
+                 _playerMovement.SetDrag(0f);
+            }
+            else
+            {
+                 _playerMovement.SetDrag(0.05f);
+            }
 
             if (_playerMovement != null)
             {
@@ -656,56 +668,72 @@ public class PlayerHook : MonoBehaviour
             // ---------------------------------------------------------
             // ⛓️ CRITICAL: Rope Constraint Solver (통합 & 수정됨)
             // ---------------------------------------------------------
+            bool isWinchingUp = (_playerMovement.MoveInput.y > 0.1f);
+
+            // [Fix] 지상 슬라이딩 "그린 라인" 기능 완벽 구현 및 고무줄 버그 수정
+            // 오빠가 바닥에 있을 땐 밧줄이 방해 안 되게 알아서 스무스하게 늘어납니다! (최대 maxDistance까지만)
+            // 멀어지면 늘어나고, 다시 가까워지면 예쁘게 감겨서 수축하기 때문에 "무한정 늘어나는" 예전의 에러가 더이상 없어요!
+            if (_playerMovement.IsGrounded && !isWinchingUp)
+            {
+                currentRopeLength = Mathf.Clamp(distToAnchor, 1f, maxDistance);
+                baseRopeLength = currentRopeLength;
+            }
+
             if (distToAnchor > currentRopeLength) 
             {
                 // 1. Velocity Correction (줄 밖으로 나가는 속도 제거)
                 Vector3 velocity = rb.linearVelocity;
                 float speedAway = Vector3.Dot(velocity, -tensionDir); // -tensionDir = Anchor -> Player 방향 (Away)
 
-                // [수정] Winch Down (S키) 중일 때는 속도 제한(Velocity Limit)만으로 제어하고,
-                // 위치 강제 이동(MovePosition)은 끕니다. (MovePosition이 덜덜거림/렉의 주범)
-                // [Fix] 단, 줄 끝(Max Distance)이면 S키 눌러도 Winch Down 아님 (엄격한 고정 필요)
                 bool isAtMaxDist = (currentRopeLength >= maxDistance - 0.05f);
                 bool isWinchingDown = (_playerMovement.MoveInput.y < -0.1f) && !isAtMaxDist;
                 
                 float limitSpeed = 0f;
                 if (isWinchingDown) 
                 {
-                    // [Speed Fix] 정속 하강을 위해 최고 제한 속도도 완전히 동일한 속도(climbSpeed)로 변경
                     limitSpeed = climbSpeed; 
                 }
 
                 if (speedAway > limitSpeed) 
                 {
-                    // 허용 속도보다 빠를 때만 그 차이만큼 제거 (브레이크)
-                    // 예: 중력 때문에 20으로 떨어지려 하는데, climbSpeed가 6이면 -> 6으로 고정됨. 아주 부드러움.
                     Vector3 velocityCorrection = -tensionDir * (speedAway - limitSpeed);
-                    rb.linearVelocity -= velocityCorrection; 
+                    Vector3 newVel = velocity - velocityCorrection; 
+
+                    // [Kinetic Energy Fix] 원심력으로 방향이 벗어날 때 속도가 깎이는 현상(Pendulum Decay) 완벽 해결!
+                    // 밧줄이 당기면서 궤도를 바꿀 때, 기존 장력이 잡아먹던 속력(Magnitude)을 100% 복구해 줍니다!
+                    // (에너지 보존 법칙: 줄이 팽팽해져서 수평 속도가 위로 꺾여도, 스피드 자체는 줄지 않고 그대로 시원하게 날아감)
+                    if (limitSpeed == 0f && newVel.sqrMagnitude > 0.01f)
+                    {
+                        rb.linearVelocity = newVel.normalized * velocity.magnitude;
+                    }
+                    else
+                    {
+                        rb.linearVelocity = newVel; 
+                    }
                 }
 
                 // 2. Position Correction (위치 강제 보정)
                 float distError = distToAnchor - currentRopeLength;
-                
-                bool isWinchingUp = (_playerMovement.MoveInput.y > 0.1f);
 
-                // W키(당기기)나 S키(풀기) 등 사용자가 직접 줄을 조작 중이거나, 초반 오토윈치(isInitAutoWinching) 중일 때는 위치 보정을 끕니다!
-                // (이유: 위치 강제 이동은 물리를 무시하는 순간 텔레포트라서 부자연스럽게 맥이 탁 풀리는 느낌을 줌)
                 if (!isWinchingDown && !isWinchingUp && !isInitAutoWinching)
                 {
-                    // 입력 없이 가만히 매달려 있거나 일반 스윙할 때는 단단하게 고정 (오차 0.01f)
                     if (distError > 0.01f) 
                     {
-                        Vector3 fixPos = transform.position + tensionDir * distError; 
+                        // [Fix] 땅 끝(절벽)에서 떨어질 때의 순간이동(Teleport) 버그 완벽 차단 !!
+                        // 오빠가 빛의 속도로 달리다 땅이 뚝 끊기면 한 프레임만에 오차가 크게 확 벌어지는데, 
+                        // 이 때 오류라고 생각해서 제자리로 강제 순간이동 시켜버린 게 문제였어요.
+                        // 이제 한 프레임당 최대 0.4f씩만 무겁게 당기도록 캡(Cap)을 씌워서, 부드럽고 묵직한 줄 텐션감만 줍니다!
+                        float correctAmount = Mathf.Min(distError, 0.4f);
+                        Vector3 fixPos = transform.position + tensionDir * correctAmount; 
                         rb.MovePosition(fixPos); 
                     }
                 }
                 else
                 {
-                    // 조작 중일 때는 이미 속도(Velocity) 수식이 강하게 당겨주고 있기 때문에 위치 강제이동은 필요 없음.
-                    // 혹시나 다른 물리 연산이 박살 나서 거리가 너무 비정상적으로 멀어질 때만(1.0f 이상) 비상 당김
                     if (distError > 1.0f)
                     {
-                        Vector3 fixPos = transform.position + tensionDir * distError; 
+                        float correctAmount = Mathf.Min(distError, 0.4f);
+                        Vector3 fixPos = transform.position + tensionDir * correctAmount; 
                         rb.MovePosition(fixPos); 
                     }
                 }
@@ -732,11 +760,29 @@ public class PlayerHook : MonoBehaviour
                 Vector3 axis = Vector3.right; 
                 Vector3 tangent = Vector3.Cross(ropeDir, axis).normalized;
 
-                bool isTooHigh = (angle > swingAngleLimit);
-
-                if (!isTooHigh)
+                // [Fix] 벽에 훅을 걸었을 때(각도가 클 때) 조작이 먹통이 되는 현상 방지!!
+                // isTooHigh 같은 쓸데없는 각도 제한을 완전 해제해서 벽면 스윙도 가능하게 틔워줍니다!
+                if (_playerMovement.IsGrounded)
                 {
-                    _playerMovement.AddHookForce(tangent * inputX * swingForce);
+                    // 땅에 있을 때는 로프의 탄젠트 방향(사선/수직) 때문에 스윙 힘이 바닥으로 흡수되는 현상 제거!
+                    // 오로지 순수 수평 전진(루프/가속)에만 힘을 몰빵해서 미끄러짐을 폭발시킴!
+                    
+                    float currentZSpeed = Mathf.Abs(rb.linearVelocity.z);
+                    float boostMultiplier = 1.0f;
+
+                    if (currentZSpeed < 5f) boostMultiplier = 15.0f;      // 정지 상태 발진 (리얼 로켓 부스터)
+                    else if (currentZSpeed < 15f) boostMultiplier = 5.0f; // 중간 가속 단계 (빠른 변속)
+
+                    Vector3 groundForce = new Vector3(0f, 0f, inputX * swingForce * boostMultiplier);
+                    _playerMovement.AddHookForce(groundForce);
+                }
+                else
+                {
+                    // [Fix] 공중에서 바닥에 훅을 꽂았을 때 조작이 반대로 되는 버그 원천 차단!
+                    // Tangent(접선) 벡터는 훅 위치에 따라 시계/반시계 방향이 뒤집히는 수학적 맹점이 있었습니다.
+                    // 대신 오빠의 입력 방향(좌/우 수평 힘) 그대로 물리 엔진에 직관적으로 꽂아 넣습니다!
+                    // 밧줄의 장력(Tension)이 이미 완벽히 버티고 있기 때문에, 수평 힘만 가해도 알아서 완벽하게 위로 치솟는 스윙 아크를 그려줍니다!
+                    _playerMovement.AddHookForce(new Vector3(0f, 0f, inputX * swingForce));
                 }
             }
 

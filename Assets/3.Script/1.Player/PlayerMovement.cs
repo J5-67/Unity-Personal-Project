@@ -65,6 +65,7 @@ public class PlayerMovement : MonoBehaviour
     private bool _canMove = true;
     public bool CanMove => _canMove; // [New] 넉백 등 조작 불가 상태 확인용
     private bool _isHookingState = false; 
+    public bool IsHookingState => _isHookingState; // [New] 훅 상태 유무 외부 접근용
 
     // [New] Animation Events
     public event System.Action OnJumpEvent;
@@ -130,9 +131,32 @@ public class PlayerMovement : MonoBehaviour
             return;
         }
 
-        if (_canMove || (_isHookingState && _isGrounded))
+        if (_canMove)
         {
             Move();
+        }
+
+        // [Fix] 훅 중이거나, 맨몸인데도 엄청나게 빠른 속도로 관성을 타는 중이라면 마찰력(Friction) 0으로 빙판길 유지!
+        bool isSlidingFast = !_isHookingState && _isGrounded && Mathf.Abs(_rb.linearVelocity.z) > moveSpeed * 1.1f;
+
+        if ((_isHookingState && _isGrounded) || isSlidingFast)
+        {
+            if (_playerCollider != null && _playerCollider.material != null)
+            {
+                _playerCollider.material.dynamicFriction = 0f;
+                _playerCollider.material.staticFriction = 0f;
+                _playerCollider.material.frictionCombine = PhysicsMaterialCombine.Minimum;
+            }
+        }
+        else
+        {
+            // 속도가 죽었을 때만(평소 걷기/멈춤) 마찰력 정상 복구
+            if (_playerCollider != null && _playerCollider.material != null)
+            {
+                _playerCollider.material.dynamicFriction = 0.6f;
+                _playerCollider.material.staticFriction = 0.6f;
+                _playerCollider.material.frictionCombine = PhysicsMaterialCombine.Average;
+            }
         }
 
         // [Fix] 시선(조준) 방향은 캐릭터의 이동 가능(_canMove) 여부 및 훅 상태와 무관하게 항상 마우스를 따라가도록 독립적으로 실행
@@ -306,7 +330,12 @@ public class PlayerMovement : MonoBehaviour
 
         dashDir = new Vector3(0, dashDir.y, dashDir.z).normalized;
 
-        _rb.linearVelocity = dashDir * dashSpeed;
+        // [Fix] 훅으로 이미 미친 듯이 가속을 받은 상태라면, 대시 속도가 오히려 브레이크를 거는 현상 방지!
+        // 현재 오빠의 속도(관성)가 기본 대시 속도(40)보다 빠르다면 그 무식한 속도를 그대로 물려받아서 대시합니다!!
+        float currentSpeed = _rb.linearVelocity.magnitude;
+        float actualDashSpeed = Mathf.Max(dashSpeed, currentSpeed);
+
+        _rb.linearVelocity = dashDir * actualDashSpeed;
 
         float elapsedTime = 0f;
         float maxExtensionTime = 0.5f; 
@@ -344,7 +373,7 @@ public class PlayerMovement : MonoBehaviour
             float speedAlongDash = Vector3.Dot(currentVel, dashDir);
 
             // 첫 프레임이 아닐 때, 속도가 물리적 충돌(벽)으로 인해 대폭 깎인(30% 미만) 상태라면?
-            if (elapsedTime > 0f && speedAlongDash < dashSpeed * 0.3f)
+            if (elapsedTime > 0f && speedAlongDash < actualDashSpeed * 0.3f)
             {
                 // 벽에 가로막혔으므로 더 이상 직진 속도 40을 강제 주입하여 벽을 파고들지 않도록 중지!
                 // 단, 허공에서 수평 대시 중 벽에 막혔을 때 바닥으로 풀썩 떨어지지 않도록 Y축 중력 저항만 가볍게 유지해 줍니다.
@@ -360,7 +389,7 @@ public class PlayerMovement : MonoBehaviour
             else
             {
                 // 방해물이 없거나 비스듬히 얕게 스쳐 지나가는 중일 때는 목표 대시 속도 주입
-                _rb.linearVelocity = dashDir * dashSpeed;
+                _rb.linearVelocity = dashDir * actualDashSpeed;
             }
 
             if (ghostTrail != null)
@@ -536,30 +565,11 @@ public class PlayerMovement : MonoBehaviour
     {
         float targetSpeedZ = _moveInput.x * moveSpeed;
 
-        // [Fix] 훅을 걸고 있더라도(_isHookingState) 땅에 발이 닿아있다면(_isGrounded)
-        if (_isGrounded)
-        {
-            if (_isHookingState)
-            {
-                // [Fix] 썰매(Surfing) 모드 완성!
-                // 훅 스윙 중 바닥에 닿았을 때 속도를 덮어쓰거나 감속(Brake)시키면 스윙이 턱 막힙니다.
-                // 따라서 절대 속도값을 제한하지 않고 관성을 100% 살린 채로,
-                // 플레이어가 A/D 키를 눌렀을 때만 부드러운 가속(Steering)을 물리 엔진에 보탭니다.
-                if (Mathf.Abs(_moveInput.x) > 0.1f)
-                {
-                    _rb.AddForce(new Vector3(0f, 0f, _moveInput.x * moveSpeed * 1.5f), ForceMode.Acceleration);
-                }
-            }
-            else
-            {
-                // 정상적인 지상 걷기
-                _rb.linearVelocity = new Vector3(0f, _rb.linearVelocity.y, targetSpeedZ);
-            }
-        }
-        else
+        if (!_isHookingState)
         {
             float currentZ = _rb.linearVelocity.z;
 
+            // [Fix] 땅이든 공중이든 묻지도 따지지도 않고 우주 가속도(미친 속도감)를 보존!
             if (Mathf.Abs(targetSpeedZ) > 0.1f)
             {
                 bool isMovingFast = Mathf.Abs(currentZ) > moveSpeed;
@@ -567,18 +577,23 @@ public class PlayerMovement : MonoBehaviour
 
                 if (isMovingFast && isSameDir)
                 {
+                    // 가속 상태에서 같은 방향으로 계속 누르고 있으면 서서히(10f) 감속하며 시원하게 미끄러짐!
                     float decayed = Mathf.MoveTowards(currentZ, targetSpeedZ, 10f * Time.deltaTime); 
                     _rb.linearVelocity = new Vector3(0f, _rb.linearVelocity.y, decayed);
                 }
                 else
                 {
-                    float newSpeed = Mathf.MoveTowards(currentZ, targetSpeedZ, moveSpeed * 5f * Time.deltaTime);
+                    // 일반 조작 가속도 (땅에선 10배 빡세게 가속, 공중은 5배 부드럽게 가속)
+                    float accel = _isGrounded ? moveSpeed * 10f : moveSpeed * 5f;
+                    float newSpeed = Mathf.MoveTowards(currentZ, targetSpeedZ, accel * Time.deltaTime);
                     _rb.linearVelocity = new Vector3(0f, _rb.linearVelocity.y, newSpeed);
                 }
             }
             else
             {
-                float newSpeed = Mathf.MoveTowards(currentZ, 0f, moveSpeed * 2f * Time.deltaTime);
+                // 입력에서 손을 뗄 때의 브레이크 (땅에선 빠르게 멈추고(7배), 공중은 관성으로 밀림(2배))
+                float decel = _isGrounded ? moveSpeed * 7f : moveSpeed * 2f;
+                float newSpeed = Mathf.MoveTowards(currentZ, 0f, decel * Time.deltaTime);
                 _rb.linearVelocity = new Vector3(0f, _rb.linearVelocity.y, newSpeed);
             }
         }
@@ -657,7 +672,8 @@ public class PlayerMovement : MonoBehaviour
         float zDist = Mathf.Abs(wallCheckPos.localPosition.z);
         if (zDist < 0.1f) zDist = 0.5f; // 안전방어
         Vector3 rightPos = transform.position + new Vector3(0, wallCheckPos.localPosition.y, zDist);
-        bool isRightWall = Physics.CheckSphere(rightPos, checkRadius, wallLayer);
+        // [Fix] 땅(GroundLayer)의 옆면도 벽으로 인식하게끔 마스크(Mask) 합치기!
+        bool isRightWall = Physics.CheckSphere(rightPos, checkRadius, wallLayer | groundLayer);
 
         float wallDir = isRightWall ? 1f : -1f; 
         float jumpDirection = -wallDir; 
@@ -684,8 +700,9 @@ public class PlayerMovement : MonoBehaviour
         Vector3 rightPos = transform.position + new Vector3(0, wallCheckPos.localPosition.y, zDist);
         Vector3 leftPos = transform.position + new Vector3(0, wallCheckPos.localPosition.y, -zDist);
         
-        bool touchRight = Physics.CheckSphere(rightPos, checkRadius, wallLayer);
-        bool touchLeft = Physics.CheckSphere(leftPos, checkRadius, wallLayer);
+        // [Fix] 땅(GroundLayer)의 옆단면에서도 매달리거나 미끄러질 수 있도록 마스크 합치기!
+        bool touchRight = Physics.CheckSphere(rightPos, checkRadius, wallLayer | groundLayer);
+        bool touchLeft = Physics.CheckSphere(leftPos, checkRadius, wallLayer | groundLayer);
 
         bool isPushingWall = (_moveInput.x > 0 && touchRight) || (_moveInput.x < 0 && touchLeft);
 
@@ -785,7 +802,8 @@ public class PlayerMovement : MonoBehaviour
     { 
         _isGrounded = false; 
         _currentFunctionPlatform = null; 
-        Collider[] colliders = Physics.OverlapSphere(groundCheckPos.position, checkRadius, groundLayer | wallLayer); 
+        // [Fix] 벽 레이어(wallLayer)는 바닥 판정에서 완전히 제외하여, 벽에 붙을 때 지상으로 착각해 애니메이션 버그 및 벽 점프 씹힘 현상이 발생하는 것을 막음
+        Collider[] colliders = Physics.OverlapSphere(groundCheckPos.position, checkRadius, groundLayer); 
         if (colliders.Length > 0) 
         { 
             _isGrounded = true; 
@@ -805,8 +823,9 @@ public class PlayerMovement : MonoBehaviour
         Vector3 rightPos = transform.position + new Vector3(0, wallCheckPos.localPosition.y, zDist);
         Vector3 leftPos = transform.position + new Vector3(0, wallCheckPos.localPosition.y, -zDist);
         
-        bool touchRight = Physics.CheckSphere(rightPos, checkRadius, wallLayer);
-        bool touchLeft = Physics.CheckSphere(leftPos, checkRadius, wallLayer);
+        // [Fix] 주변 환경 감지 시 땅(GroundLayer)의 기둥 부분도 벽(Wall)으로 쳐주기!
+        bool touchRight = Physics.CheckSphere(rightPos, checkRadius, wallLayer | groundLayer);
+        bool touchLeft = Physics.CheckSphere(leftPos, checkRadius, wallLayer | groundLayer);
         _isTouchingWall = touchRight || touchLeft;
     }
 

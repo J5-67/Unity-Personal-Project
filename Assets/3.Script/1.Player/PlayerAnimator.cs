@@ -62,18 +62,17 @@ namespace Player
         {
             if (_animator == null || _playerMovement == null) return;
 
-            // 1. 걷기 로직: 방향키(x축 입력)가 들어오면 걷기 ON!!
-            bool isWalking = Mathf.Abs(_playerMovement.MoveInput.x) > 0.05f;
+            // 1. 걷기 로직: 방향키(x축 입력)가 들어오고, 땅에 닿아있을 때만 걷기 ON!! (벽에 매달려서 걷는 애니메이션 방지)
+            bool isWalking = Mathf.Abs(_playerMovement.MoveInput.x) > 0.05f && _playerMovement.IsGrounded;
             _animator.SetBool(_isWalkingHash, isWalking);
 
             // 2. 공중 로직 (진짜 중요!⭐)
             bool isJumping = !_playerMovement.IsGrounded || (_rb != null && _rb.linearVelocity.y > 0.1f);
             _animator.SetBool(_isJumpingHash, isJumping);
 
-            // 3. 스윙 로직 (훅을 걸고 있는지 공용으로 체크)
-            // (주의: PlayerMovement 안의 내부 변수를 외부 접근자를 만들거나 Hook 스크립트의 상태를 가져옵니다)
-            // [Fix] 땅에서 서핑(슬라이딩)할 때도 무조건 스윙 포즈가 나오게 하려면 IsGrounded 체크를 빼야 썰매를 타는 간지가 나옴! 
-            bool isSwinging = !_playerMovement.CanMove && !_playerMovement.IsDashing;
+            // 3. 스윙 로직 (진짜 훅을 걸고 있는지 명시적으로 체크!)
+            // [Fix] 기존엔 !CanMove로 퉁쳐서, 벽 점프할 때 잠깐 CanMove=false 되는 구간에 스윙 애니가 오발동했음
+            bool isSwinging = _playerMovement.IsHookingState;
             _animator.SetBool(_isSwingingHash, isSwinging);
         }
 
