@@ -9904,8 +9904,8 @@ MonoBehaviour:
   hackShakeIntensity: 2
   kamikazeExplosionPrefab: {fileID: 6058139363811131725, guid: 86cd05bc2d108a3449ad8dc656db3ec1, type: 3}
   kamikazeShakeIntensity: 1
-  spawnEffectPrefab: {fileID: 0}
-  bossExplosionPrefab: {fileID: 0}
+  spawnEffectPrefab: {fileID: 8861982589196740093, guid: e26cb9257396d434c9b297832c653bc9, type: 3}
+  bossExplosionPrefab: {fileID: 6058139363811131725, guid: 86cd05bc2d108a3449ad8dc656db3ec1, type: 3}
   bossShakeIntensity: 4
 --- !u!222 &6023024148198164712
 CanvasRenderer:
