@@ -12,17 +12,17 @@ public class DialogueClip : PlayableAsset
     {
         var playable = ScriptPlayable<DialogueBehaviour>.Create(graph);
         DialogueBehaviour behaviour = playable.GetBehaviour();
-        
+
         behaviour.targetCSV = targetCSV;
         behaviour.startId = startId;
         behaviour.endId = endId;
         behaviour.pauseTimeline = pauseTimeline;
-        
+
         if (owner != null)
         {
             behaviour.director = owner.GetComponent<PlayableDirector>();
         }
-        
+
         return playable;
     }
 }

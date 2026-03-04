@@ -28,7 +28,7 @@ namespace UI
         public void UpdateHealth(int currentHealth)
         {
             int spriteIndex = Mathf.Clamp(currentHealth - 1, 0, heartSprites.Length - 1);
-            
+
             if (heartImage != null && heartSprites.Length > 0)
             {
                 heartImage.sprite = heartSprites[spriteIndex];
@@ -42,7 +42,7 @@ namespace UI
         {
             if (canvasGroup != null)
             {
-                canvasGroup.alpha = 1f; 
+                canvasGroup.alpha = 1f;
             }
 
             yield return new WaitForSeconds(visibleDuration);

@@ -37,7 +37,7 @@ public class BaseEnemy : MonoBehaviour
         _originalTag = gameObject.tag;
         _originalColor = _renderer.material.color;
         _originalMaterial = _renderer.sharedMaterial;
-        _propBlock = new MaterialPropertyBlock(); // [Fix] 자폭 깜빡임 등에서도 쓸 수 있게 미리 할당
+        _propBlock = new MaterialPropertyBlock();
         _startPos = transform.position;
         _startRot = transform.rotation;
     }
@@ -50,25 +50,19 @@ public class BaseEnemy : MonoBehaviour
 
     private void Start()
     {
-        if (Core.GameManager.Instance != null)
-        {
-            Core.GameManager.Instance.OnPlayerRespawn += ResetEnemy;
-        }
+
     }
 
     private void OnDestroy()
     {
-        if (Core.GameManager.Instance != null)
-        {
-            Core.GameManager.Instance.OnPlayerRespawn -= ResetEnemy;
-        }
+
     }
 
     private Transform _playerTransform;
 
     private void FixedUpdate()
     {
-        // [Safety Net] 얼음 상태일 때는 물리적으로 절대 움직이지 못하도록 강제함 (이중 잠금)
+
         if (IsFrozen)
         {
             if (_rb != null)
@@ -99,28 +93,34 @@ public class BaseEnemy : MonoBehaviour
     public void ResetEnemy()
     {
         StopAllCoroutines();
-        
+
         transform.position = _startPos;
         transform.rotation = _startRot;
-        
+
         IsFrozen = false;
         _isDestroyed = false;
-        _isOverloaded = false; // [Fix] 과부하 상태 초기화
+        _isOverloaded = false;
         gameObject.SetActive(true);
         gameObject.tag = _originalTag;
-        
+
         _rb.isKinematic = false;
-        _rb.useGravity = true; // [Fix] 카미카제 때 껐던 중력 복구
+        _rb.useGravity = true;
         _rb.linearVelocity = Vector3.zero;
 
         if (_renderer != null)
         {
             _renderer.SetPropertyBlock(null);
-            
+
             if (_originalMaterial != null)
             {
                 _renderer.sharedMaterial = _originalMaterial;
             }
+        }
+
+        EnemyShield[] shields = GetComponentsInChildren<EnemyShield>(true);
+        foreach (var shield in shields)
+        {
+            shield.gameObject.SetActive(true);
         }
 
         if (_patrol != null) _patrol.ResetPatrol();
@@ -133,30 +133,30 @@ public class BaseEnemy : MonoBehaviour
     }
 
     [Header("⚡ Glitch Effect")]
-    [SerializeField] private Shader glitchShader;           
-    [SerializeField] private float glitchIntensity = 0.5f;  
-    [SerializeField] private float glitchSpeed = 20f;       
+    [SerializeField] private Shader glitchShader;
+    [SerializeField] private float glitchIntensity = 0.5f;
+    [SerializeField] private float glitchSpeed = 20f;
 
     private static Material _sharedGlitchMaterial;
     private static int _mainTexId = Shader.PropertyToID("_MainTex");
     private static int _baseMapId = Shader.PropertyToID("_BaseMap");
     private static int _glitchPowerId = Shader.PropertyToID("_GlitchPower");
     private static int _noiseSpeedId = Shader.PropertyToID("_NoiseSpeed");
-    private static int _colorId = Shader.PropertyToID("_Color"); 
-    private static int _baseColorId = Shader.PropertyToID("_BaseColor"); // [New] URP 대응용
-    
+    private static int _colorId = Shader.PropertyToID("_Color");
+    private static int _baseColorId = Shader.PropertyToID("_BaseColor");
+
     private MaterialPropertyBlock _propBlock;
-    
-    private Material _originalMaterial; 
+
+    private Material _originalMaterial;
 
     private IEnumerator FreezeRoutine()
     {
         IsFrozen = true;
-        
+
         if (_sharedGlitchMaterial == null && glitchShader != null)
         {
              _sharedGlitchMaterial = new Material(glitchShader);
-             _sharedGlitchMaterial.enableInstancing = true; 
+             _sharedGlitchMaterial.enableInstancing = true;
         }
 
         if (_renderer != null && _sharedGlitchMaterial != null)
@@ -166,7 +166,7 @@ public class BaseEnemy : MonoBehaviour
             else if (_originalMaterial.HasProperty(_baseMapId)) originalTex = _originalMaterial.GetTexture(_baseMapId);
 
             _renderer.sharedMaterial = _sharedGlitchMaterial;
-            
+
             if (_propBlock == null) _propBlock = new MaterialPropertyBlock();
 
             if (originalTex != null) _propBlock.SetTexture(_mainTexId, originalTex);
@@ -176,30 +176,30 @@ public class BaseEnemy : MonoBehaviour
 
         try { gameObject.tag = "FrozenEnemy"; } catch {}
         if (_patrol != null) _patrol.SetPatrol(false);
-        
+
         if (_rb != null)
-        { 
+        {
             _rb.linearVelocity = Vector3.zero;
             _rb.angularVelocity = Vector3.zero;
-            _rb.isKinematic = true; 
-        } 
+            _rb.isKinematic = true;
+        }
 
         while (true)
         {
             if (_renderer != null)
             {
-                float noise = Mathf.PerlinNoise(Time.time * 10f, transform.position.x); 
+                float noise = Mathf.PerlinNoise(Time.time * 10f, transform.position.x);
                 float currentPower = glitchIntensity * (0.5f + noise * 0.5f);
-                
-                _renderer.GetPropertyBlock(_propBlock); 
+
+                _renderer.GetPropertyBlock(_propBlock);
                 _propBlock.SetFloat(_glitchPowerId, currentPower);
 
-                if (noise > 0.8f) _propBlock.SetColor(_colorId, Color.white); 
+                if (noise > 0.8f) _propBlock.SetColor(_colorId, Color.white);
                 else _propBlock.SetColor(_colorId, Color.cyan);
 
-                _renderer.SetPropertyBlock(_propBlock); 
+                _renderer.SetPropertyBlock(_propBlock);
             }
- 
+
             yield return null;
         }
     }
@@ -216,10 +216,10 @@ public class BaseEnemy : MonoBehaviour
         }
 
         _isDestroyed = true;
-        OnDeath?.Invoke(this); // 알림 발송
-        
+        OnDeath?.Invoke(this);
+
         gameObject.SetActive(false);
-        
+
         if (_renderer != null && _originalMaterial != null)
         {
             _renderer.sharedMaterial = _originalMaterial;
@@ -227,25 +227,24 @@ public class BaseEnemy : MonoBehaviour
     }
 
     [Header("💣 Kamikaze Settings")]
-    [SerializeField] private bool canKamikaze = false; // 카미카제(자폭) 가능 여부
+    [SerializeField] private bool canKamikaze = false;
     [SerializeField] private float kamikazeTriggerRadius = 10.0f;
-    [SerializeField] private float overloadDelay = 1.0f; // 훅 당겨진 후 대기 시간
-    [SerializeField] private float kamikazeDuration = 3.0f; // 추적 시간
+    [SerializeField] private float overloadDelay = 1.0f;
+    [SerializeField] private float kamikazeDuration = 3.0f;
     [SerializeField] private float kamikazeSpeed = 8.0f;
     [SerializeField] private float explosionRadius = 3.0f;
     [SerializeField] private int explosionDamage = 1;
 
-    public bool IsDestroyed => _isDestroyed; // [Fix] 외부 접근 허용
+    public bool IsDestroyed => _isDestroyed;
 
     private bool _isOverloaded = false;
     public bool IsOverloaded => _isOverloaded;
 
     public void OnHooked()
     {
-        // 이미 얼었거나 죽었거나 과부하 상태면 무시
+
         if (IsFrozen || _isDestroyed || _isOverloaded) return;
 
-        // 설정된 적만 훅에 당겨지면 자폭 시퀀스 가동
         if (canKamikaze)
         {
             StartCoroutine(KamikazeRoutine());
@@ -255,57 +254,51 @@ public class BaseEnemy : MonoBehaviour
     private IEnumerator KamikazeRoutine()
     {
         _isOverloaded = true;
-        
-        // 1. 대기 (당겨진 직후 멍 때리기)
+
         yield return new WaitForSeconds(overloadDelay);
 
         if (IsFrozen || _isDestroyed) yield break;
 
-        // 2. 카운트다운 & 추적 시작
         if (_patrol != null) _patrol.SetPatrol(false);
-        if (_rb != null) 
+        if (_rb != null)
         {
             _rb.isKinematic = false;
-            _rb.useGravity = false; // 공중 부양 추적
+            _rb.useGravity = false;
         }
 
         float timer = kamikazeDuration;
-        Transform playerTr = Core.GameManager.Instance != null ? 
+        Transform playerTr = Core.GameManager.Instance != null ?
                              FindAnyObjectByType<PlayerHealth>()?.transform : null;
-        
+
         PlayerMovement pm = playerTr != null ? playerTr.GetComponent<PlayerMovement>() : null;
 
         while (timer > 0)
         {
-            if (IsFrozen || _isDestroyed) yield break; // 얼면 자폭 취소
+            if (IsFrozen || _isDestroyed) yield break;
 
-            // 플레이어 추적
             if (playerTr != null && _rb != null)
             {
                 Vector3 dir = (playerTr.position - transform.position).normalized;
-                _rb.linearVelocity = dir * kamikazeSpeed; // MovePosition 대신 Velocity로 부드럽게
+                _rb.linearVelocity = dir * kamikazeSpeed;
             }
 
-            // 깜빡거림 (경고)
             if (_renderer != null && _propBlock != null)
             {
                 float flash = Mathf.PingPong(Time.time * 10f, 1f);
                 Color blinkColor = Color.Lerp(Color.red, Color.yellow, flash);
-                
-                // [Fix] URP Lit 매테리얼 대응 (URP는 _BaseColor, 기본은 _Color 사용)
+
                 _propBlock.SetColor(_colorId, blinkColor);
                 _propBlock.SetColor(_baseColorId, blinkColor);
-                
+
                 _renderer.SetPropertyBlock(_propBlock);
             }
 
-            // 거리 체크 (닿으면 폭발)
             if (playerTr != null && (transform.position - playerTr.position).sqrMagnitude < 1.0f)
             {
-                // [Fix] 플레이어가 대시 중일 때는 폭발하지 않고 통과(관통) 대기!
+
                 if (pm != null && pm.IsDashing)
                 {
-                    // 아무것도 안 함 (다음 프레임에 대시 충돌 박스가 얼려주길 기다림)
+
                 }
                 else
                 {
@@ -318,7 +311,6 @@ public class BaseEnemy : MonoBehaviour
             yield return null;
         }
 
-        // 3. 시간 종료 시 자폭
         Explode();
     }
 
@@ -326,17 +318,14 @@ public class BaseEnemy : MonoBehaviour
     {
         if (_isDestroyed) return;
         _isDestroyed = true;
-        
-        // [Fix] 자폭도 죽은 것으로 간주 (BattleZone 카운트)
+
         OnDeath?.Invoke(this);
 
-        // 폭발 이펙트 (중앙 관리)
         if (Core.VFXManager.Instance != null)
         {
             Core.VFXManager.Instance.PlayKamikazeExplosion(transform.position);
         }
 
-        // 범위 데미지
         Collider[] hits = Physics.OverlapSphere(transform.position, explosionRadius);
         foreach (var hit in hits)
         {
@@ -349,7 +338,6 @@ public class BaseEnemy : MonoBehaviour
             }
         }
 
-        // 자폭 완료 (비활성화 - 리스폰을 위해 Destroy 하지 않음)
         gameObject.SetActive(false);
     }
 
@@ -358,11 +346,10 @@ public class BaseEnemy : MonoBehaviour
     {
         if (canKamikaze)
         {
-            // Trigger Radius 표시 (빨간색 투명)
+
             Gizmos.color = new Color(1f, 0f, 0f, 0.2f);
             Gizmos.DrawWireSphere(transform.position, kamikazeTriggerRadius);
-            
-            // Explosion Radius 표시 (주황색 투명)
+
             Gizmos.color = new Color(1f, 0.5f, 0f, 0.4f);
             Gizmos.DrawWireSphere(transform.position, explosionRadius);
         }

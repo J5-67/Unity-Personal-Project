@@ -1,7 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.Rendering;
-using UnityEngine.Rendering.Universal; 
+using UnityEngine.Rendering.Universal;
 
 namespace Core
 {
@@ -12,15 +12,10 @@ namespace Core
         [Header("Settings")]
         [SerializeField] private Volume globalVolume;
 
-        [Header("🔊 Audio")]
-        [SerializeField] private AudioClip heartbeatSound;
-        
-        private AudioSource _heartbeatSource;
-        
-        private ChromaticAberration _chromaticAberration; 
-        private MotionBlur _motionBlur; // [New] 모션블러 제어용
-        private Vignette _vignette;     // [New] 딸피 효과용 비네팅
-        
+        private ChromaticAberration _chromaticAberration;
+        private MotionBlur _motionBlur;
+        private Vignette _vignette;
+
         private Coroutine _aberrationRoutine;
         private Coroutine _heartbeatRoutine;
 
@@ -29,11 +24,6 @@ namespace Core
             if (Instance == null)
             {
                 Instance = this;
-                
-                // [New] 심장박동 소리용 오디오 소스 자동차 생성
-                _heartbeatSource = gameObject.AddComponent<AudioSource>();
-                _heartbeatSource.loop = true;
-                _heartbeatSource.playOnAwake = false;
             }
             else
             {
@@ -51,21 +41,19 @@ namespace Core
 
             if (globalVolume != null)
             {
-                // 크로마틱 찾아오기
+
                 if (globalVolume.profile.TryGet(out _chromaticAberration))
                 {
                     _chromaticAberration.active = true;
                     _chromaticAberration.intensity.value = 0f;
                 }
 
-                // [New] 모션블러 찾아오기
                 if (globalVolume.profile.TryGet(out _motionBlur))
                 {
                     _motionBlur.active = true;
-                    _motionBlur.intensity.value = 0f; // 평소엔 꺼둠
+                    _motionBlur.intensity.value = 0f;
                 }
 
-                // [New] 비네팅 찾아오기
                 if (globalVolume.profile.TryGet(out _vignette))
                 {
                     _vignette.active = true;
@@ -74,7 +62,7 @@ namespace Core
             }
             else
             {
-                Debug.LogError("[유니] Global Volume을 찾을 수 없어! 인스펙터에 연결해줘!");
+
             }
         }
 
@@ -85,11 +73,10 @@ namespace Core
                 if (_heartbeatRoutine == null)
                 {
                     _heartbeatRoutine = StartCoroutine(HeartbeatRoutine());
-                    
-                    if (heartbeatSound != null && _heartbeatSource != null)
+
+                    if (Core.AudioManager.Instance != null)
                     {
-                        _heartbeatSource.clip = heartbeatSound;
-                        _heartbeatSource.Play();
+                        Core.AudioManager.Instance.PlayHeartbeat();
                     }
                 }
             }
@@ -101,7 +88,10 @@ namespace Core
                     _heartbeatRoutine = null;
                 }
 
-                if (_heartbeatSource != null) _heartbeatSource.Stop();
+                if (Core.AudioManager.Instance != null)
+                {
+                    Core.AudioManager.Instance.StopHeartbeat();
+                }
 
                 if (_vignette != null)
                 {
@@ -115,16 +105,16 @@ namespace Core
         {
             while (true)
             {
-                // 심장 박동처럼 두 번 연속 뛰는 느낌을 주기 위한 수학적 곡선 (PingPong 2번)
+
                 float time = Time.time * 3f;
-                float pulse = Mathf.PingPong(time, 1f) * Mathf.PingPong(time * 0.8f, 1f); 
+                float pulse = Mathf.PingPong(time, 1f) * Mathf.PingPong(time * 0.8f, 1f);
 
                 if (_vignette != null)
                 {
                     _vignette.intensity.value = Mathf.Lerp(0.3f, 0.45f, pulse);
                     _vignette.color.value = Color.Lerp(new Color(0.2f, 0f, 0f), Color.red, pulse);
                 }
-                
+
                 yield return null;
             }
         }
@@ -141,12 +131,9 @@ namespace Core
         {
             if (_chromaticAberration == null)
             {
-                Debug.LogWarning("[유니] 효과가 없어서 실행 불가능!");
+
                 return;
             }
-
-            // 디버그 로그: 실행 신호 받음 (주석 해제!)
-            Debug.Log($"[유니] 효과 발동! 강도: {intensity}, 시간: {duration}");
 
             if (_aberrationRoutine != null) StopCoroutine(_aberrationRoutine);
             _aberrationRoutine = StartCoroutine(AberrationRoutine(intensity, duration));
@@ -156,9 +143,8 @@ namespace Core
         {
             float startVal = _chromaticAberration.intensity.value;
             float time = 0f;
-            
-            // 올라갈 때 (20%)
-            while (time < duration * 0.2f) 
+
+            while (time < duration * 0.2f)
             {
                 time += Time.deltaTime;
                 float t = time / (duration * 0.2f);
@@ -166,9 +152,8 @@ namespace Core
                 yield return null;
             }
 
-            // 내려올 때 (80%)
             time = 0f;
-            while (time < duration * 0.8f) 
+            while (time < duration * 0.8f)
             {
                 time += Time.deltaTime;
                 float t = time / (duration * 0.8f);

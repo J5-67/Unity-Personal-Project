@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System.Text;
-using Core; 
+using Core;
 
 namespace UI
 {
@@ -25,7 +25,7 @@ namespace UI
         [SerializeField] private Slider sfxSlider;
         [SerializeField] private TMP_InputField sfxInput;
 
-        private StringBuilder _sb = new StringBuilder(10); 
+        private StringBuilder _sb = new StringBuilder(10);
 
         private void Start()
         {
@@ -36,7 +36,7 @@ namespace UI
         {
             if (graphicDropdown != null)
             {
-                int graphicOption = PlayerPrefs.GetInt("FullScreen", 0); 
+                int graphicOption = PlayerPrefs.GetInt("FullScreen", 0);
                 graphicDropdown.value = graphicOption;
                 graphicDropdown.RefreshShownValue();
                 graphicDropdown.onValueChanged.AddListener(OnGraphicChanged);
@@ -58,12 +58,12 @@ namespace UI
 
         private void SetupControl(Slider slider, TMP_InputField input, float value, UnityEngine.Events.UnityAction<float> onSliderChange)
         {
-            if(slider) 
+            if(slider)
             {
                 slider.value = value;
                 slider.onValueChanged.AddListener(onSliderChange);
             }
-            
+
             UpdatePlaceholder(input, value);
 
             if(input)
@@ -89,7 +89,7 @@ namespace UI
             PlayerPrefs.SetInt("FullScreen", index);
             SetFullScreen(index);
         }
-        
+
         private void SetFullScreen(int index)
         {
             bool isFull = (index == 0);
@@ -114,7 +114,7 @@ namespace UI
         {
             PlayerPrefs.SetFloat("MasterVolume", value);
             UpdatePlaceholder(masterInput, value);
-            
+
             if (AudioManager.Instance != null)
             {
                 AudioManager.Instance.SetMasterVolume(value);
@@ -150,8 +150,8 @@ namespace UI
                 if (targetSlider)
                 {
                     value = Mathf.Clamp(value, targetSlider.minValue, targetSlider.maxValue);
-                    targetSlider.value = value; 
-                    
+                    targetSlider.value = value;
+
                     callback(value);
                 }
             }

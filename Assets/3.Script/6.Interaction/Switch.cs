@@ -6,7 +6,7 @@ namespace Interaction
     {
         [Header("Connection")]
         [SerializeField] private Door targetDoor;
-        
+
         [Header("Settings")]
         [SerializeField] private bool activateOnce = true;
         [SerializeField] private bool isActivated = false;
@@ -29,7 +29,7 @@ namespace Interaction
             if (activateOnce && isActivated) return;
 
             isActivated = !isActivated;
-            
+
             if (activateOnce) isActivated = true;
 
             UpdateVisual();
@@ -40,7 +40,6 @@ namespace Interaction
                 else targetDoor.Toggle();
             }
 
-            Debug.Log($"[Switch] Click! State: {isActivated}");
         }
 
         private void UpdateVisual()

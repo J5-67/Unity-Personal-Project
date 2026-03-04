@@ -17,20 +17,19 @@ public class PlayerHealth : MonoBehaviour
     [SerializeField] private float invincibilityDuration = 1.0f;
     [SerializeField] private float blinkInterval = 0.1f;
     [SerializeField] private Renderer playerRenderer;
-    
-    private bool _isInvincible = false;
-    public bool IsInvincible => _isInvincible; // [New] 외부에서 무적 상태 확인용
-    public int CurrentHealth => currentHealth; // [New] 체력 상태 연동용 (요정 등)
 
-    // [New] Animation Events
+    private bool _isInvincible = false;
+    public bool IsInvincible => _isInvincible;
+    public int CurrentHealth => currentHealth;
+
     public event System.Action OnTakeDamageEvent;
     public event System.Action OnDieEvent;
-    
+
     private void Start()
     {
         currentHealth = maxHealth;
         lastCheckpointPos = transform.position;
-        
+
         healthUI?.UpdateHealth(currentHealth);
         UpdateLowHealthEffect();
     }
@@ -55,8 +54,8 @@ public class PlayerHealth : MonoBehaviour
         }
         else
         {
-            OnTakeDamageEvent?.Invoke(); // [New] 애니메이션 연동
-            
+            OnTakeDamageEvent?.Invoke();
+
             healthUI?.UpdateHealth(currentHealth);
             UpdateLowHealthEffect();
 
@@ -70,7 +69,7 @@ public class PlayerHealth : MonoBehaviour
             {
                 PostProcessManager.Instance.TriggerChromaticAberration(1.0f, 0.5f);
             }
-            
+
             StartCoroutine(InvincibilityRoutine());
         }
     }
@@ -78,7 +77,7 @@ public class PlayerHealth : MonoBehaviour
     private System.Collections.IEnumerator InvincibilityRoutine()
     {
         _isInvincible = true;
-        
+
         float timer = 0f;
         while (timer < invincibilityDuration)
         {
@@ -99,7 +98,7 @@ public class PlayerHealth : MonoBehaviour
 
         if (currentHealth > 0)
         {
-            OnTakeDamageEvent?.Invoke(); // [New] 애니메이션 연동
+            OnTakeDamageEvent?.Invoke();
             Respawn(false);
             StartCoroutine(InvincibilityRoutine());
         }
@@ -111,29 +110,29 @@ public class PlayerHealth : MonoBehaviour
 
     private void Die()
     {
-        OnDieEvent?.Invoke(); // [New] 애니메이션 연동
-        
+        OnDieEvent?.Invoke();
+
         if (playerRenderer != null) playerRenderer.enabled = true;
         StopAllCoroutines();
         _isInvincible = false;
 
         Respawn(true);
     }
-    
+
     private void Respawn(bool isFullReset)
     {
         if (TryGetComponent(out Rigidbody rb))
         {
             rb.linearVelocity = Vector3.zero;
         }
-        
+
         if (TryGetComponent(out PlayerHook hook))
         {
             hook.StopHook();
         }
 
         transform.position = lastCheckpointPos;
-        
+
         if (rb != null)
         {
             rb.linearVelocity = Vector3.zero;
@@ -145,7 +144,7 @@ public class PlayerHealth : MonoBehaviour
             currentHealth = maxHealth;
             healthUI?.UpdateHealth(currentHealth);
             UpdateLowHealthEffect();
-            
+
             if (GameManager.Instance != null)
             {
                 GameManager.Instance.TriggerPlayerRespawn();
@@ -157,7 +156,7 @@ public class PlayerHealth : MonoBehaviour
     {
         lastCheckpointPos = pos;
     }
-    
+
     private void OnCollisionEnter(Collision collision)
     {
         if (_isInvincible) return;
@@ -165,9 +164,9 @@ public class PlayerHealth : MonoBehaviour
         if (collision.gameObject.TryGetComponent(out BaseEnemy enemy))
         {
             if (enemy.IsFrozen) return;
-            
+
             TakeDamage(1);
-            
+
             if (TryGetComponent(out Rigidbody rb))
             {
                 Vector3 contactPoint = collision.GetContact(0).point;

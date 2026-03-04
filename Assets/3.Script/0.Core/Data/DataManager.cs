@@ -27,10 +27,10 @@ namespace Core.Data
             bool hadFile = SaveSystem.HasSaveFile();
 
             CurrentData = SaveSystem.Load();
-            
+
             if (!hadFile)
             {
-                Debug.Log("[DataManager] Created new save file.");
+
                 SaveGame();
             }
         }
@@ -44,7 +44,7 @@ namespace Core.Data
         {
             CurrentData.currentStageSceneName = sceneName;
             SaveGame();
-            Debug.Log($"[DataManager] Progress saved: {sceneName}");
+
         }
     }
 }

@@ -1,6 +1,6 @@
 using System.Collections;
 using UnityEngine;
-using Unity.Cinemachine; 
+using Unity.Cinemachine;
 
 namespace Core
 {
@@ -11,7 +11,7 @@ namespace Core
         [Header("References")]
         [SerializeField] private CinemachineCamera virtualCamera;
         private Camera _mainCam;
-        
+
         private float _defaultFOV;
         private Coroutine _punchRoutine;
 
@@ -54,7 +54,7 @@ namespace Core
         {
             if (virtualCamera != null || _mainCam != null)
             {
-                // [Fix] 대시할 때의 순간적인 FOV(Punch)와 속도에 비례하는 FOV(Velocity)를 합산해서 부드럽게 적용!
+
                 SetFOV(_defaultFOV + _punchFOVOffset + _velocityFOVOffset);
             }
         }
@@ -70,32 +70,30 @@ namespace Core
             float targetFOV = amount;
             float time = 0f;
 
-            // 늘리기 (20%)
             float expandDuration = duration * 0.2f;
             while (time < expandDuration)
             {
                 time += Time.deltaTime;
                 float t = time / expandDuration;
-                t = t * (2 - t); // EaseOut
-                
+                t = t * (2 - t);
+
                 _punchFOVOffset = Mathf.Lerp(0f, targetFOV, t);
                 yield return null;
             }
 
-            // 복구하기 (80%)
             time = 0f;
             float recoverDuration = duration * 0.8f;
             while (time < recoverDuration)
             {
                 time += Time.deltaTime;
                 float t = time / recoverDuration;
-                t = t * t; // EaseIn
+                t = t * t;
 
                 _punchFOVOffset = Mathf.Lerp(targetFOV, 0f, t);
                 yield return null;
             }
 
-            _punchFOVOffset = 0f; // 확실하게 원복
+            _punchFOVOffset = 0f;
             _punchRoutine = null;
         }
 
@@ -120,9 +118,8 @@ namespace Core
             }
         }
 
-        // [New] 속도에 비례해서 시야각(FOV)을 부드럽게 늘렸다 줄였다 하는 기능!
-        public void SetVelocityFOV(float targetOffset, float smoothTime = 5f) 
-        { 
+        public void SetVelocityFOV(float targetOffset, float smoothTime = 5f)
+        {
             _velocityFOVOffset = Mathf.Lerp(_velocityFOVOffset, targetOffset, Time.deltaTime * smoothTime);
         }
     }

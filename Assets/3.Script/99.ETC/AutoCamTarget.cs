@@ -19,7 +19,7 @@ public class AutoCamTarget : MonoBehaviour
             Transform playerTransform = playerScript.transform;
 
             var cam = GetComponent<CinemachineCamera>();
-            
+
             if (cam != null)
             {
                 cam.Follow = playerTransform;

@@ -15,7 +15,7 @@ namespace UI
         [Header("Common UI")]
         [SerializeField] private GameObject dialoguePanel;
         [SerializeField] private TMP_Text messageText;
-        [SerializeField] private TypewriterEffect typewriter; 
+        [SerializeField] private TypewriterEffect typewriter;
 
         [Header("Left Speaker")]
         [SerializeField] private GameObject leftGroup;
@@ -58,13 +58,13 @@ namespace UI
 
         public void Show(string message, SpeakerSide side, string name, Sprite portrait, AudioClip typingSound = null)
         {
-            // 텍스트에 포함된 줄바꿈 문자(\n)가 문자열로 들어올 경우 처리
+
             message = message.Replace("\\n", "\n");
 
             if (Core.GameManager.Instance != null) Core.GameManager.Instance.SetDialogueState(true);
 
             gameObject.SetActive(true);
-            
+
             Canvas parentCanvas = GetComponentInParent<Canvas>(true);
             if (parentCanvas != null)
             {
@@ -103,7 +103,7 @@ namespace UI
                 {
                     leftGroup.SetActive(true);
                     if (leftName) leftName.text = name;
-                    if (leftPortrait) 
+                    if (leftPortrait)
                     {
                         leftPortrait.sprite = portrait;
                         leftPortrait.color = activeColor;
@@ -123,7 +123,7 @@ namespace UI
                 {
                     rightGroup.SetActive(true);
                     if (rightName) rightName.text = name;
-                    if (rightPortrait) 
+                    if (rightPortrait)
                     {
                         rightPortrait.sprite = portrait;
                         rightPortrait.color = activeColor;

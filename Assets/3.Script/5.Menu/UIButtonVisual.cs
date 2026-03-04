@@ -18,7 +18,7 @@ namespace UI
         private void Awake()
         {
             _originalScale = transform.localScale;
-            
+
             _audioSource = GetComponent<AudioSource>();
             if (_audioSource == null)
             {

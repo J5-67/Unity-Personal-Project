@@ -40,9 +40,9 @@ public class DialogueBehaviour : PlayableBehaviour
     private void ResumeTimeline()
     {
         if (UI.DialogueTester.Instance == null) return;
-        
+
         UI.DialogueTester.Instance.OnDialogueEnded -= ResumeTimeline;
-        
+
         if (director != null)
         {
             director.Play();

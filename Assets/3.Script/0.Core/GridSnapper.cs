@@ -23,7 +23,6 @@ namespace Core
         {
             if (!snapEnabled || Application.isPlaying) return;
 
-            // 선택된 오브젝트만 스냅 (불필요한 연산 방지)
             if (Selection.activeTransform != transform && !transform.hasChanged) return;
 
             SnapToGrid();
@@ -45,11 +44,10 @@ namespace Core
             if (!showGizmos) return;
 
             Gizmos.color = gizmoColor;
-            
-            // 현재 위치를 기준으로 그리드 박스 그리기
+
             Vector3 center = transform.position;
             Vector3 size = gridSize;
-            
+
             Gizmos.DrawWireCube(center, size);
         }
 #endif

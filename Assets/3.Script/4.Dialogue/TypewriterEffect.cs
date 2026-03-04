@@ -20,7 +20,7 @@ namespace UI
         [SerializeField] private AudioSource audioSource;
         [SerializeField] private AudioClip typingSound;
         [Tooltip("Frequency of sound (1 = every chat)")]
-        [Range(1, 10)] [SerializeField] private int soundFrequency = 2; 
+        [Range(1, 10)] [SerializeField] private int soundFrequency = 2;
         [Range(0.5f, 2f)] [SerializeField] private float minPitch = 0.9f;
         [Range(0.5f, 2f)] [SerializeField] private float maxPitch = 1.1f;
 
@@ -40,7 +40,7 @@ namespace UI
             {
                 TryGetComponent(out audioSource);
             }
-            
+
             if (typingSound != null)
             {
                 _defaultTypingSound = typingSound;
@@ -48,7 +48,7 @@ namespace UI
 
             if (_tmp == null)
             {
-                Debug.LogError($"Error: No TMP_Text on {gameObject.name}");
+
             }
         }
 
@@ -80,7 +80,7 @@ namespace UI
                 _tmp = GetComponent<TMP_Text>();
                 if (_tmp == null)
                 {
-                    Debug.LogError($"Error: No TMP_Text on {gameObject.name}");
+
                     return;
                 }
             }
@@ -88,7 +88,7 @@ namespace UI
             gameObject.SetActive(true);
 
             if (_typeRoutine != null) StopCoroutine(_typeRoutine);
-            
+
             _tmp.text = textToType;
             _tmp.maxVisibleCharacters = 0;
 
@@ -108,8 +108,8 @@ namespace UI
         private IEnumerator TypeRoutine(float speed)
         {
             _isSkipping = false;
-            
-            _tmp.ForceMeshUpdate(); 
+
+            _tmp.ForceMeshUpdate();
             TMP_TextInfo textInfo = _tmp.textInfo;
             int totalVisibleCharacters = textInfo.characterCount;
 
@@ -129,7 +129,7 @@ namespace UI
                 if (_isSkipping)
                 {
                     _tmp.maxVisibleCharacters = totalVisibleCharacters;
-                    break; 
+                    break;
                 }
 
                 _tmp.maxVisibleCharacters = i + 1;
@@ -149,7 +149,7 @@ namespace UI
             _tmp.maxVisibleCharacters = totalVisibleCharacters;
             _typeRoutine = null;
             _isSkipping = false;
-            
+
             onComplete?.Invoke();
         }
 
@@ -161,11 +161,11 @@ namespace UI
 
         private void PlayTypingSound()
         {
-            if (audioSource == null) 
+            if (audioSource == null)
             {
                 return;
             }
-            if (typingSound == null) 
+            if (typingSound == null)
             {
                 return;
             }
@@ -178,7 +178,7 @@ namespace UI
         {
              if (FindObjectOfType<AudioListener>() == null)
              {
-                 Debug.LogError("Error: No AudioListener in scene.");
+
              }
         }
     }

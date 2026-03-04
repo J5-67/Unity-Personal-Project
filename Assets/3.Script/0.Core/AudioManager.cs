@@ -13,6 +13,9 @@ namespace Core
         [Header("🎶 Default Clips (Optional)")]
         [SerializeField] private AudioClip defaultBGM;
         [SerializeField] private AudioClip testSFX;
+        [SerializeField] private AudioClip heartbeatSFX;
+
+        private AudioSource _heartbeatSource;
 
         private float _masterVolume = 1f;
         private float _bgmVolume = 1f;
@@ -44,6 +47,15 @@ namespace Core
                 sfxSource = sfxObj.AddComponent<AudioSource>();
                 sfxSource.loop = false;
                 sfxSource.playOnAwake = false;
+            }
+
+            if (_heartbeatSource == null)
+            {
+                GameObject hbObj = new GameObject("Heartbeat_Source");
+                hbObj.transform.SetParent(transform);
+                _heartbeatSource = hbObj.AddComponent<AudioSource>();
+                _heartbeatSource.loop = true;
+                _heartbeatSource.playOnAwake = false;
             }
 
             LoadVolumes();
@@ -85,6 +97,7 @@ namespace Core
         {
             if (bgmSource != null) bgmSource.volume = _masterVolume * _bgmVolume;
             if (sfxSource != null) sfxSource.volume = _masterVolume * _sfxVolume;
+            if (_heartbeatSource != null) _heartbeatSource.volume = _masterVolume * _sfxVolume;
         }
 
         public void PlayBGM(AudioClip clip)
@@ -105,6 +118,24 @@ namespace Core
         public void PlayTestSFX()
         {
             PlaySFX(testSFX);
+        }
+
+        public void PlayHeartbeat()
+        {
+            if (heartbeatSFX == null) return;
+            if (_heartbeatSource != null && !_heartbeatSource.isPlaying)
+            {
+                _heartbeatSource.clip = heartbeatSFX;
+                _heartbeatSource.Play();
+            }
+        }
+
+        public void StopHeartbeat()
+        {
+            if (_heartbeatSource != null && _heartbeatSource.isPlaying)
+            {
+                _heartbeatSource.Stop();
+            }
         }
     }
 }

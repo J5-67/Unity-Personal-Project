@@ -14,7 +14,7 @@ namespace UI
         [SerializeField] private CanvasGroup canvasGroup;
 
         [Header("Settings")]
-        [SerializeField] private float minLoadingTime = 1.0f; 
+        [SerializeField] private float minLoadingTime = 1.0f;
 
         private void Start()
         {
@@ -25,7 +25,7 @@ namespace UI
 
             if (string.IsNullOrEmpty(targetScene))
             {
-                Debug.LogError("Error: TargetScene is empty");
+
                 return;
             }
 
@@ -35,8 +35,8 @@ namespace UI
         private IEnumerator LoadSceneAsync(string sceneName)
         {
             AsyncOperation op = SceneManager.LoadSceneAsync(sceneName);
-            
-            op.allowSceneActivation = false; 
+
+            op.allowSceneActivation = false;
 
             float timer = 0.0f;
 
@@ -47,7 +47,7 @@ namespace UI
                 timer += Time.unscaledDeltaTime;
 
                 float realProgress = Mathf.Clamp01(op.progress / 0.9f);
-                
+
                 float fakeProgress = Mathf.Clamp01(timer / minLoadingTime);
 
                 float targetProgress = Mathf.Min(realProgress, fakeProgress);
@@ -55,10 +55,10 @@ namespace UI
                 if (progressBar != null)
                 {
                     progressBar.value = Mathf.Lerp(progressBar.value, targetProgress, Time.unscaledDeltaTime * 5f);
-                    
+
                     if (Mathf.Abs(progressBar.value - targetProgress) < 0.01f) progressBar.value = targetProgress;
                 }
-                
+
                 if (progressText != null)
                 {
                      progressText.text = $"{(progressBar.value * 100f):F0}%";

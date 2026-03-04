@@ -8,7 +8,7 @@ namespace Core.Data
 #if UNITY_EDITOR
         private static string SaveDirectory => Path.Combine(Application.dataPath, "../SaveData");
 #else
-        private static string SaveDirectory => Path.Combine(Application.dataPath, "../SaveData"); 
+        private static string SaveDirectory => Path.Combine(Application.dataPath, "../SaveData");
 #endif
         private static string SaveFileName = "save.json";
 
@@ -24,7 +24,6 @@ namespace Core.Data
             string path = Path.Combine(SaveDirectory, SaveFileName);
             File.WriteAllText(path, json);
 
-            Debug.Log($"[SaveSystem] Saved to: {Path.GetFullPath(path)}");
         }
 
         public static GameData Load()
@@ -33,15 +32,14 @@ namespace Core.Data
 
             if (!File.Exists(path))
             {
-                Debug.LogWarning($"[SaveSystem] No save file found at ({Path.GetFullPath(path)}). Creating new data.");
+
                 return new GameData();
             }
 
             string json = File.ReadAllText(path);
-            
+
             GameData data = JsonUtility.FromJson<GameData>(json);
 
-            Debug.Log($"[SaveSystem] Loaded. Scene: {data.currentStageSceneName}");
             return data;
         }
 

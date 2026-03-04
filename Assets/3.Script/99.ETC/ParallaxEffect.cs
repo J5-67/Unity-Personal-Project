@@ -5,16 +5,16 @@ namespace Environment
     public class ParallaxEffect : MonoBehaviour
     {
         [Header("Settings")]
-        [SerializeField] private Vector2 parallaxFactor; 
-        
+        [SerializeField] private Vector2 parallaxFactor;
+
         [Header("Infinite Scrolling")]
         [SerializeField] private bool infiniteHorizontal = true;
         [SerializeField] private bool infiniteVertical = false;
 
         private Transform _cameraTransform;
         private Vector3 _lastCameraPosition;
-        private float _textureUnitSizeZ; 
-        private float _textureUnitSizeY; 
+        private float _textureUnitSizeZ;
+        private float _textureUnitSizeY;
 
         private void Start()
         {
@@ -25,14 +25,14 @@ namespace Environment
             }
             else
             {
-                Debug.LogError("Error: Main Camera not found");
+
             }
 
             if (TryGetComponent(out SpriteRenderer spriteRenderer))
             {
                 Sprite sprite = spriteRenderer.sprite;
                 Texture2D texture = sprite.texture;
-                
+
                 _textureUnitSizeZ = (texture.width / sprite.pixelsPerUnit) * transform.lossyScale.x;
                 _textureUnitSizeY = (texture.height / sprite.pixelsPerUnit) * transform.lossyScale.y;
             }
@@ -45,9 +45,9 @@ namespace Environment
             Vector3 deltaMovement = _cameraTransform.position - _lastCameraPosition;
 
             transform.position += new Vector3(
-                0, 
-                deltaMovement.y * parallaxFactor.y, 
-                deltaMovement.z * parallaxFactor.x  
+                0,
+                deltaMovement.y * parallaxFactor.y,
+                deltaMovement.z * parallaxFactor.x
             );
 
             _lastCameraPosition = _cameraTransform.position;

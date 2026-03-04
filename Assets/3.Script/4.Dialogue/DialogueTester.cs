@@ -1,6 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
-using UnityEngine.InputSystem; 
+using UnityEngine.InputSystem;
 using System.Linq;
 
 namespace UI
@@ -24,14 +24,14 @@ namespace UI
 
         [Header("Data")]
         [SerializeField] private List<PortraitInfo> portraitDatabase;
-        
+
         private Dictionary<string, PortraitInfo> _portraitDic = new Dictionary<string, PortraitInfo>();
 
         private List<DialogueData> _allDialogueList;
         private List<DialogueData> _currentQueue;
-        
+
         private int _currentIndex = -1;
-        private GameInput _inputAction; 
+        private GameInput _inputAction;
 
         private void Awake()
         {
@@ -45,8 +45,8 @@ namespace UI
                 return;
             }
 
-            _inputAction = new GameInput(); 
-            
+            _inputAction = new GameInput();
+
             foreach (var info in portraitDatabase)
             {
                 if (!_portraitDic.ContainsKey(info.key))
@@ -58,9 +58,9 @@ namespace UI
 
         private void OnEnable()
         {
-            _inputAction.UI.Enable(); 
+            _inputAction.UI.Enable();
             _inputAction.UI.NextDialogue.performed += OnNextDialogue;
-            
+
             if (Core.GameManager.Instance != null)
                 Core.GameManager.Instance.OnSkipDialogue += EndDialogue;
         }
@@ -69,7 +69,7 @@ namespace UI
         {
             _inputAction.UI.Disable();
             _inputAction.UI.NextDialogue.performed -= OnNextDialogue;
-            
+
             if (Core.GameManager.Instance != null)
                 Core.GameManager.Instance.OnSkipDialogue -= EndDialogue;
         }
@@ -79,7 +79,7 @@ namespace UI
             if (csvFile != null)
             {
                 _allDialogueList = DialogueParser.Parse(csvFile.text);
-                
+
                 if (playTestOnStart)
                 {
                     PlayDialogueRange(1, 5);
@@ -87,7 +87,7 @@ namespace UI
             }
             else
             {
-                Debug.LogWarning("CSV File Error");
+
             }
         }
 
@@ -115,7 +115,7 @@ namespace UI
             }
             else
             {
-                Debug.LogWarning($"Range Error (ID: {startId} ~ {endId})");
+
             }
         }
 
@@ -156,7 +156,7 @@ namespace UI
         private void EndDialogue()
         {
             dialogueUI.Hide();
-            _currentIndex = -1; 
+            _currentIndex = -1;
             _currentQueue = null;
             OnDialogueEnded?.Invoke();
         }
@@ -169,8 +169,8 @@ namespace UI
             {
                 return info;
             }
-            
-            return new PortraitInfo(); 
+
+            return new PortraitInfo();
         }
     }
 }

@@ -9,17 +9,17 @@ namespace UI
         [SerializeField] private string gameSceneName = "1.GameTest";
 
         [Header("Menu Groups")]
-        [SerializeField] private GameObject mainMenuGroup; 
-        [SerializeField] private GameObject subMenuGroup;  
+        [SerializeField] private GameObject mainMenuGroup;
+        [SerializeField] private GameObject subMenuGroup;
 
         [Header("Sub Menus")]
-        [SerializeField] private GameObject startSubMenu;    
-        [SerializeField] private GameObject settingsSubMenu; 
+        [SerializeField] private GameObject startSubMenu;
+        [SerializeField] private GameObject settingsSubMenu;
 
         public void OnClickPlay()
         {
             if (subMenuGroup) subMenuGroup.SetActive(true);
-            
+
             ActivateSubMenu(startSubMenu);
         }
 
@@ -48,12 +48,12 @@ namespace UI
             if (Core.Data.DataManager.Instance != null)
             {
                 string sceneName = Core.Data.DataManager.Instance.CurrentData.currentStageSceneName;
-                
+
                 Core.SceneLoader.LoadScene(sceneName);
             }
             else
             {
-                 Debug.LogWarning("[MainMenu] DataManager가 없어서 이어할 수 없어! 😱 (빈 오브젝트에 DataManager 컴포넌트 추가해줘!)");
+
             }
         }
 

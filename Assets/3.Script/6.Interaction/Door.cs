@@ -57,8 +57,8 @@ namespace Interaction
             {
                 elapsed += Time.deltaTime;
                 float t = elapsed / duration;
-                
-                t = t * t * (3f - 2f * t); 
+
+                t = t * t * (3f - 2f * t);
 
                 transform.position = Vector3.Lerp(startPos, targetPos, t);
                 yield return null;

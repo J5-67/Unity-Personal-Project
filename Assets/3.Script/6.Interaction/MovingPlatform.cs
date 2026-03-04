@@ -10,10 +10,10 @@ namespace Interaction
         [Header("Path Settings")]
         [Tooltip("플랫폼이 이동할 경로점(Waypoints) 배열")]
         [SerializeField] private Transform[] waypoints;
-        
+
         [Tooltip("플랫폼의 이동 속도 (초당 스피드)")]
         [SerializeField] private float speed = 5.0f;
-        
+
         [Tooltip("각 웨이포인트(정점)에 도달했을 때 대기하는 시간")]
         [SerializeField] private float waitTimeAtPoint = 1.0f;
 
@@ -33,12 +33,10 @@ namespace Interaction
         private void Awake()
         {
             _rb = GetComponent<Rigidbody>();
-            
-            // 물리 엔진 기반 이동을 위해 Kinematic 설정 필수
+
             _rb.isKinematic = true;
             _rb.useGravity = false;
-            
-            // X축, Y축, Z축 회전을 원하지 않는다면 회전 잠금
+
             _rb.constraints = RigidbodyConstraints.FreezeRotation;
 
             _targetPositions = new List<Vector3>();
@@ -55,14 +53,14 @@ namespace Interaction
         {
             if (_targetPositions != null && _targetPositions.Count > 0)
             {
-                // 시작 시 첫 번째 웨이포인트 위치로 순간이동 (옵션)
+
                 transform.position = _targetPositions[0];
             }
         }
 
         private void FixedUpdate()
         {
-            // 웨이포인트가 없거나 기다리는 중이면 이동 로직 무시
+
             if (_targetPositions == null || _targetPositions.Count <= 1 || _isWaiting) return;
 
             MoveTowardsTarget();
@@ -73,13 +71,10 @@ namespace Interaction
             Vector3 currentPos = transform.position;
             Vector3 targetPos = _targetPositions[_currentWaypointIndex];
 
-            // 목적지까지 부드럽게 이동하는 보간
             Vector3 newPos = Vector3.MoveTowards(currentPos, targetPos, speed * Time.fixedDeltaTime);
-            
-            // 플랫포머 게임에서 플레이어를 밀거나 싣고 가기 위해 rb.MovePosition 필수 사용
+
             _rb.MovePosition(newPos);
 
-            // [Fix] 무거운 Vector3.Distance 대신 가벼운 sqrMagnitude 사용! (0.05f의 제곱은 0.0025f)
             if ((currentPos - targetPos).sqrMagnitude < 0.0025f)
             {
                 StartCoroutine(WaitAndSetNextTarget());
@@ -89,12 +84,11 @@ namespace Interaction
         private IEnumerator WaitAndSetNextTarget()
         {
             _isWaiting = true;
-            
-            // 대기 시간 
+
             yield return new WaitForSeconds(waitTimeAtPoint);
 
             SetNextWaypointIndex();
-            
+
             _isWaiting = false;
         }
 
@@ -102,14 +96,14 @@ namespace Interaction
         {
             if (_movingForward)
             {
-                // 정방향 이동
+
                 if (_currentWaypointIndex < _targetPositions.Count - 1)
                 {
                     _currentWaypointIndex++;
                 }
                 else
                 {
-                    // 끝에 도달했을 때
+
                     if (loop)
                     {
                         if (pingPong)
@@ -119,14 +113,14 @@ namespace Interaction
                         }
                         else
                         {
-                            _currentWaypointIndex = 0; // 처음 지점으로 텔레포트 혹은 순차 이동
+                            _currentWaypointIndex = 0;
                         }
                     }
                 }
             }
             else
             {
-                // 역방향 이동 (PingPong)
+
                 if (_currentWaypointIndex > 0)
                 {
                     _currentWaypointIndex--;
@@ -142,7 +136,6 @@ namespace Interaction
             }
         }
 
-        // 에디터에서 웨이포인트 경로와 플랫폼의 움직임을 선으로 그려주는 기능 (개발 편의성)
         private void OnDrawGizmos()
         {
             if (Application.isPlaying && _targetPositions != null && _targetPositions.Count >= 2)

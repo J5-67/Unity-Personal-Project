@@ -8,7 +8,7 @@ namespace Trap
         [SerializeField] private Vector3 moveOffset = new Vector3(5, 0, 0);
         [SerializeField] private float speed = 2.0f;
         [SerializeField] private float rotationSpeed = 360f;
-        
+
         [Header("Delay")]
         [SerializeField] private float waitTime = 0.5f;
 
@@ -30,7 +30,7 @@ namespace Trap
             if (distance > 0.01f)
             {
                 _timer += Time.deltaTime * speed;
-                
+
                 float t = Mathf.PingPong(_timer, 1.0f);
 
                 t = Mathf.SmoothStep(0f, 1f, t);

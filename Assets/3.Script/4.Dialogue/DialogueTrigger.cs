@@ -27,14 +27,14 @@ namespace UI
                 {
                     DialogueTester.Instance.PlayDialogueRange(startId, endId);
                     _hasRun = true;
-                    
+
                     if (runOnlyOnce)
                     {
                     }
                 }
                 else
                 {
-                    Debug.LogError("No DialogueTester");
+
                 }
             }
         }

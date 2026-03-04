@@ -1,12 +1,11 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Core 
+namespace Core
 {
     public class Portal : MonoBehaviour
     {
         [Header("🚀 Portal Settings")]
-        [Tooltip("The name of the scene to load")]
         [SerializeField] private string nextSceneName = "Name_Of_Scene";
 
         [SerializeField] private string playerTag = "Player";
@@ -16,7 +15,7 @@ namespace Core
         private void OnTriggerEnter(Collider other)
         {
             if (_isActivated) return;
-            
+
             if (other.CompareTag(playerTag))
             {
                 _isActivated = true;
@@ -28,12 +27,10 @@ namespace Core
         {
             if (string.IsNullOrEmpty(nextSceneName))
             {
-                Debug.LogError("Error: NextSceneName is empty");
-                _isActivated = false; 
+
+                _isActivated = false;
                 return;
             }
-
-            Debug.Log($"[Portal] Loading scene: {nextSceneName}");
 
             if (Core.Data.DataManager.Instance != null)
             {

@@ -15,7 +15,7 @@ namespace UI
             {
                 Core.GameManager.Instance.SetPauseUI(this);
             }
-            
+
             Hide();
         }
 
@@ -46,7 +46,7 @@ namespace UI
 
         public void OnClickSettings()
         {
-            if (settingsPanel) 
+            if (settingsPanel)
             {
                 settingsPanel.SetActive(true);
             }
@@ -55,10 +55,10 @@ namespace UI
         public void OnClickMainMenu()
         {
             Time.timeScale = 1f;
-            
+
             SceneManager.LoadScene("0.MenuTest");
         }
-        
+
         public void OnClickCloseSettings()
         {
             if (settingsPanel) settingsPanel.SetActive(false);

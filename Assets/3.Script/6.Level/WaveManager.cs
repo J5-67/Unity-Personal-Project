@@ -9,9 +9,9 @@ namespace Level
     public class WaveData
     {
         public string waveName;
-        // 웨이브에서 소환할 적 목록 (미리 배치해두고 비활성화한 상태로 참조)
+
         public List<BaseEnemy> enemiesToSpawn = new List<BaseEnemy>();
-        public float delayBeforeWave = 2f; 
+        public float delayBeforeWave = 2f;
     }
 
     public class WaveManager : MonoBehaviour
@@ -20,8 +20,7 @@ namespace Level
         [SerializeField] private List<WaveData> waves;
         [SerializeField] private GameObject exitDoorObject;
         [SerializeField] private bool resetOnRespawn = true;
-        
-        // 보스 등 특별한 이벤트용 보스 (마지막 웨이브 이후에 등장하거나 특정 웨이브에 포함)
+
         [Header("👑 Boss Settings (Optional)")]
         [SerializeField] private BossHealth boss;
         [SerializeField] private GameObject bossUI;
@@ -44,9 +43,8 @@ namespace Level
                 GameManager.Instance.OnPlayerRespawn += ResetWaves;
             }
 
-            // 시작할 때 모든 적과 보스 비활성화
             InitializeAllEnemies();
-            
+
             if (_doorComponent != null) _doorComponent.Close();
         }
 
@@ -57,7 +55,6 @@ namespace Level
                 GameManager.Instance.OnPlayerRespawn -= ResetWaves;
             }
 
-            // 이벤트 구독 해제
             foreach (var wave in waves)
             {
                 foreach (var enemy in wave.enemiesToSpawn)
@@ -67,7 +64,7 @@ namespace Level
             }
             if (boss != null)
             {
-                boss.OnDeath -= ClearZone; 
+                boss.OnDeath -= ClearZone;
             }
         }
 
@@ -79,23 +76,22 @@ namespace Level
                 {
                     if (enemy != null)
                     {
-                        enemy.gameObject.SetActive(false); // 일단 숨김
-                        enemy.OnDeath -= OnEnemyDeath; // 중복 방지
-                        enemy.OnDeath += OnEnemyDeath; // 구독
+                        enemy.gameObject.SetActive(false);
+                        enemy.OnDeath -= OnEnemyDeath;
+                        enemy.OnDeath += OnEnemyDeath;
                     }
                 }
             }
 
-            if (boss != null) 
+            if (boss != null)
             {
                 boss.gameObject.SetActive(false);
-                boss.OnDeath -= ClearZone; // 중복 방지
-                boss.OnDeath += ClearZone; // 구독
+                boss.OnDeath -= ClearZone;
+                boss.OnDeath += ClearZone;
             }
             if (bossUI != null) bossUI.SetActive(false);
         }
 
-        // 플레이어가 트리거(콜라이더)에 닿으면 웨이브 시작
         private void OnTriggerEnter(Collider other)
         {
             if (other.CompareTag("Player") && !_isWaveActive && !_isCleared)
@@ -109,7 +105,7 @@ namespace Level
             _isWaveActive = true;
             _currentWaveIndex = 0;
             _currentDeadCount = 0;
-            
+
             if (_doorComponent != null) _doorComponent.Close();
 
             StartCoroutine(SpawnWaveRoutine(_currentWaveIndex));
@@ -119,19 +115,16 @@ namespace Level
         {
             if (waveIndex >= waves.Count)
             {
-                // 모든 웨이브 끝남 -> 보스전 시작!
+
                 StartBossFight();
                 yield break;
             }
 
             WaveData currentWave = waves[waveIndex];
-            _currentDeadCount = 0; // 데드 카운트 초기화
-            
-            Debug.Log($"[WaveManager] 웨이브 {waveIndex + 1} 대기 중... ({currentWave.delayBeforeWave}초)");
+            _currentDeadCount = 0;
+
             yield return new WaitForSeconds(currentWave.delayBeforeWave);
 
-            Debug.Log($"[WaveManager] 🚨 웨이브 {waveIndex + 1} 시작! 🚨");
-            // 1. 빛 모이는 이펙트 먼저 재생! (파티클이 모이는 시간 벌기)
             foreach (var enemy in currentWave.enemiesToSpawn)
             {
                 if (enemy != null && VFXManager.Instance != null)
@@ -140,10 +133,8 @@ namespace Level
                 }
             }
 
-            // [New] 파티클이 중앙으로 모이는 시간(0.5초)만큼 기다리기! 연출의 디테일!
             yield return new WaitForSeconds(0.5f);
 
-            // 2. 빛이 다 모였을 때 적 활성화!
             foreach (var enemy in currentWave.enemiesToSpawn)
             {
                 if (enemy != null)
@@ -160,12 +151,11 @@ namespace Level
 
             _currentDeadCount++;
 
-            // 현재 웨이브의 모든 적이 죽었는지 체크
             if (_currentWaveIndex < waves.Count)
             {
                 if (_currentDeadCount >= waves[_currentWaveIndex].enemiesToSpawn.Count)
                 {
-                    Debug.Log($"[WaveManager] 웨이브 {_currentWaveIndex + 1} 클리어!");
+
                     _currentWaveIndex++;
                     StartCoroutine(SpawnWaveRoutine(_currentWaveIndex));
                 }
@@ -176,27 +166,23 @@ namespace Level
         {
             if (boss != null)
             {
-                Debug.Log("[WaveManager] 👑 보스전 시작!");
+
                 boss.gameObject.SetActive(true);
-                // 보스 입장씬이나 등장 이펙트 추가 가능
 
                 if (bossUI != null) bossUI.SetActive(true);
 
-                // [ToDo] 보스가 죽었을 때 문 열리기 로직 (BossHealth 쪽에 이벤트 연동 요망)
-                // 지금은 보스가 없다고 가정하고 클리어 처리
             }
             else
             {
-                // 보스가 세팅 안 되어 있으면 그냥 스테이지 클리어
+
                 ClearZone();
             }
         }
 
-        public void ClearZone() // 보스가 죽거나 웨이브가 끝났을 때 외부에서 호출
+        public void ClearZone()
         {
             if (_isCleared) return;
 
-            Debug.Log("[WaveManager] 모든 웨이브 & 보스 클리어! 🚪✨");
             _isCleared = true;
             _isWaveActive = false;
 
@@ -212,7 +198,7 @@ namespace Level
             _currentWaveIndex = 0;
             _currentDeadCount = 0;
 
-            InitializeAllEnemies(); // 전부 숨기고 델리게이트 재연결
+            InitializeAllEnemies();
 
             if (_doorComponent != null) _doorComponent.Close();
         }
