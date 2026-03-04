@@ -428,7 +428,7 @@ Transform:
   m_GameObject: {fileID: 86763701}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -9.98, y: 7.999999, z: -11.400002}
+  m_LocalPosition: {x: -10.5, y: 7.999999, z: -11.400002}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -466,7 +466,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 847e9e16a960aab4aa75c567ac83d766, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Interaction.Door
-  moveOffset: {x: 0, y: 5, z: 0}
+  moveOffset: {x: 0, y: 12, z: 0}
   duration: 1
   isOpen: 0
 --- !u!65 &278518187
@@ -586,7 +586,7 @@ Transform:
   m_GameObject: {fileID: 306948908}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -9.98, y: 8.7, z: 35.6}
+  m_LocalPosition: {x: -10.5, y: 8.7, z: 20.5}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -617,7 +617,7 @@ Transform:
   m_GameObject: {fileID: 406169217}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -9.98, y: -13.8, z: 15.400002}
+  m_LocalPosition: {x: -10.5, y: -13.8, z: 15.400002}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1514,7 +1514,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 847e9e16a960aab4aa75c567ac83d766, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Interaction.Door
-  moveOffset: {x: 0, y: 5, z: 0}
+  moveOffset: {x: 0, y: 12, z: 0}
   duration: 1
   isOpen: 1
 --- !u!65 &623577670
@@ -1673,6 +1673,8 @@ MonoBehaviour:
   waves: []
   entranceDoorObject: {fileID: 278518185}
   exitDoorObject: {fileID: 623577668}
+  doorCamera: {fileID: 0}
+  doorCameraDuration: 1.5
   resetOnRespawn: 1
 --- !u!65 &740708507
 BoxCollider:
@@ -3220,8 +3222,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1093252934}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.0061829216, y: -0.70707977, z: 0.0061582946, w: 0.70708}
-  m_LocalPosition: {x: 10, y: 7.7, z: 19.162971}
+  m_LocalRotation: {x: 0.006170608, y: -0.7070799, z: 0.006170608, w: 0.7070799}
+  m_LocalPosition: {x: 10, y: 7.7, z: -40.3}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -3731,6 +3733,8 @@ MonoBehaviour:
       point: {fileID: 306948909}
   entranceDoorObject: {fileID: 623577668}
   exitDoorObject: {fileID: 278518185}
+  doorCamera: {fileID: 0}
+  doorCameraDuration: 1.5
   resetOnRespawn: 1
 --- !u!1 &1737047049
 GameObject:
@@ -3762,6 +3766,69 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1669015974}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1765455124
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1765455127}
+  - component: {fileID: 1765455126}
+  - component: {fileID: 1765455125}
+  m_Layer: 0
+  m_Name: Global Volume
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1765455125
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1765455124}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 120a20952b3fdc04997001986abafdd8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Core.PostProcessManager
+  globalVolume: {fileID: 1765455126}
+--- !u!114 &1765455126
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1765455124}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 172515602e62fb746b5d573b38a5fe58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.RenderPipelines.Core.Runtime::UnityEngine.Rendering.Volume
+  m_IsGlobal: 1
+  priority: 0
+  blendDistance: 0
+  weight: 1
+  sharedProfile: {fileID: 11400000, guid: 999f29cf3cfae0949ad128543eb53274, type: 2}
+--- !u!4 &1765455127
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1765455124}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 5.354656, y: 11.73015, z: 87.9729}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!4 &2014446470 stripped
 Transform:
@@ -4672,6 +4739,7 @@ MonoBehaviour:
   sfxSource: {fileID: 0}
   defaultBGM: {fileID: 0}
   testSFX: {fileID: 0}
+  heartbeatSFX: {fileID: 0}
 --- !u!212 &1067946241255226468
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -4878,7 +4946,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Core.PostProcessManager
   globalVolume: {fileID: 2259625813584463973}
-  heartbeatSound: {fileID: 0}
 --- !u!1 &1210630871623584881
 GameObject:
   m_ObjectHideFlags: 0
@@ -13281,3 +13348,4 @@ SceneRoots:
   - {fileID: 1669015974}
   - {fileID: 278518190}
   - {fileID: 623577673}
+  - {fileID: 1765455127}
