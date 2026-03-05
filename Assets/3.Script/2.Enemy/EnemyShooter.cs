@@ -212,6 +212,15 @@ public class EnemyShooter : MonoBehaviour
         _nextFireTime = Time.time + fireRate;
     }
 
+    public void CancelAttack()
+    {
+        if (_isAiming)
+        {
+            StopAllCoroutines();
+            StopAttack();
+        }
+    }
+
     private void StopAttack()
     {
         _isAiming = false;

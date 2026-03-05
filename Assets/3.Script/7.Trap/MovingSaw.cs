@@ -7,7 +7,12 @@ namespace Trap
         [Header("Movement")]
         [SerializeField] private Vector3 moveOffset = new Vector3(5, 0, 0);
         [SerializeField] private float speed = 2.0f;
+        
+        [Header("Rotation")]
+        [SerializeField] private Transform visualTransform;
         [SerializeField] private float rotationSpeed = 360f;
+        [SerializeField] private Vector3 rotationAxis = Vector3.forward;
+        [SerializeField] private Space rotationSpace = Space.Self;
 
         [Header("Delay")]
         [SerializeField] private float waitTime = 0.5f;
@@ -24,7 +29,14 @@ namespace Trap
 
         private void Update()
         {
-            transform.Rotate(Vector3.forward * rotationSpeed * Time.deltaTime);
+            if (visualTransform != null)
+            {
+                visualTransform.Rotate(rotationAxis * (rotationSpeed * Time.deltaTime), rotationSpace);
+            }
+            else
+            {
+                transform.Rotate(rotationAxis * (rotationSpeed * Time.deltaTime), rotationSpace);
+            }
 
             float distance = Vector3.Distance(_startPos, _endPos);
             if (distance > 0.01f)

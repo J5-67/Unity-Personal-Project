@@ -30,6 +30,7 @@ namespace Core
             if (Instance == null)
             {
                 Instance = this;
+                transform.SetParent(null);
                 DontDestroyOnLoad(gameObject);
             }
             else
@@ -133,9 +134,13 @@ namespace Core
             }
         }
 
+        private Coroutine _hitStopRoutine;
+        private Coroutine _bulletTimeRoutine;
+
         public void TriggerHitStop(float duration = 0.05f)
         {
-            StartCoroutine(HitStopRoutine(duration));
+            if (_hitStopRoutine != null) StopCoroutine(_hitStopRoutine);
+            _hitStopRoutine = StartCoroutine(HitStopRoutine(duration));
         }
 
         private System.Collections.IEnumerator HitStopRoutine(float duration)
@@ -143,15 +148,17 @@ namespace Core
             Time.timeScale = 0f;
             yield return new WaitForSecondsRealtime(duration);
 
+            _hitStopRoutine = null;
+
             if (!isPaused)
             {
-                if (!_isBulletTimeActive)
+                if (_isBulletTimeActive)
                 {
-                    Time.timeScale = 1f;
+                    Time.timeScale = _currentBulletTimeScale;
                 }
                 else
                 {
-                    Time.timeScale = _currentBulletTimeScale;
+                    Time.timeScale = 1f;
                 }
             }
         }
@@ -161,15 +168,20 @@ namespace Core
 
         public void TriggerBulletTime(float duration, float scale, bool cancelOnInput = false)
         {
-            StopCoroutine(nameof(BulletTimeRoutine));
-            StartCoroutine(BulletTimeRoutine(duration, scale, cancelOnInput));
+            if (_bulletTimeRoutine != null) StopCoroutine(_bulletTimeRoutine);
+            _bulletTimeRoutine = StartCoroutine(BulletTimeRoutine(duration, scale, cancelOnInput));
         }
 
         private System.Collections.IEnumerator BulletTimeRoutine(float duration, float scale, bool cancelOnInput)
         {
             _isBulletTimeActive = true;
             _currentBulletTimeScale = scale;
-            Time.timeScale = scale;
+            
+            // 만약 히트스탑이 실행 중이 아니라면 즉시 타임스케일을 내립니다.
+            if (_hitStopRoutine == null)
+            {
+                Time.timeScale = scale;
+            }
 
             float timer = 0f;
             float minDuration = 0.1f;
@@ -178,7 +190,6 @@ namespace Core
 
             while (timer < duration)
             {
-
                 if (isPaused)
                 {
                     yield return null;
@@ -187,7 +198,6 @@ namespace Core
 
                 if (cancelOnInput && _gameInput != null && timer > minDuration)
                 {
-
                     Vector2 currentMove = _gameInput.Player.Move.ReadValue<Vector2>();
                     bool moveChanged = (currentMove - initialMove).sqrMagnitude > 0.01f;
 
@@ -207,8 +217,9 @@ namespace Core
             }
 
             _isBulletTimeActive = false;
+            _bulletTimeRoutine = null;
 
-            if (!isPaused)
+            if (!isPaused && _hitStopRoutine == null)
             {
                 Time.timeScale = 1f;
             }
@@ -216,13 +227,9 @@ namespace Core
 
         public void TriggerCameraShake(float intensity = 1f)
         {
-            if (impulseSource != null)
+            if (CameraEffectManager.Instance != null)
             {
-                impulseSource.GenerateImpulse(intensity);
-            }
-            else
-            {
-
+                CameraEffectManager.Instance.AddUnscaledShake(intensity);
             }
         }
 

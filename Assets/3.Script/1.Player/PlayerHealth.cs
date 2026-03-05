@@ -19,7 +19,8 @@ public class PlayerHealth : MonoBehaviour
     [SerializeField] private Renderer playerRenderer;
 
     private bool _isInvincible = false;
-    public bool IsInvincible => _isInvincible;
+    private bool _isDashInvincible = false;
+    public bool IsInvincible => _isInvincible || _isDashInvincible;
     public int CurrentHealth => currentHealth;
 
     public event System.Action OnTakeDamageEvent;
@@ -42,9 +43,14 @@ public class PlayerHealth : MonoBehaviour
         }
     }
 
+    public void SetDashInvincible(bool state)
+    {
+        _isDashInvincible = state;
+    }
+
     public void TakeDamage(int amount)
     {
-        if (_isInvincible) return;
+        if (_isInvincible || _isDashInvincible) return;
 
         currentHealth -= amount;
 
@@ -165,15 +171,18 @@ public class PlayerHealth : MonoBehaviour
         {
             if (enemy.IsFrozen) return;
 
-            TakeDamage(1);
-
-            if (TryGetComponent(out Rigidbody rb))
+            if (currentHealth > 1)
             {
-                Vector3 contactPoint = collision.GetContact(0).point;
-                Vector3 dir = (transform.position - contactPoint).normalized;
-                dir += Vector3.up * 0.5f;
-                rb.AddForce(dir.normalized * 10f, ForceMode.Impulse);
+                if (TryGetComponent(out Rigidbody rb))
+                {
+                    Vector3 contactPoint = collision.GetContact(0).point;
+                    Vector3 dir = (transform.position - contactPoint).normalized;
+                    dir += Vector3.up * 0.5f;
+                    rb.AddForce(dir.normalized * 10f, ForceMode.Impulse);
+                }
             }
+
+            TakeDamage(1);
         }
     }
 }

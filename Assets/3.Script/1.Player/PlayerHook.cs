@@ -29,7 +29,7 @@ public class PlayerHook : MonoBehaviour
     [SerializeField] private float climbSpeed = 6f;
 
     [SerializeField] private float stopDistance = 0.5f;
-    [SerializeField] private float hookRadius = 0.5f;
+    [SerializeField] private float hookRadius = 0.2f;
 
     [SerializeField] private LayerMask hookableLayer;
 
@@ -58,6 +58,7 @@ public class PlayerHook : MonoBehaviour
     private PlayerMovement _playerMovement;
     private Camera _mainCamera;
     private bool _isHooking;
+    public bool IsHooking => _isHooking;
     private Transform _currentHookTarget;
     private Transform _hookAnchor;
     private Vector3 _flyingHookPosition;
@@ -113,7 +114,7 @@ public class PlayerHook : MonoBehaviour
             AudioManager.Instance.PlaySFX(fireSound);
         }
 
-        Vector3 startPos = transform.position + Vector3.up * 1.0f;
+        Vector3 startPos = firePoint != null ? firePoint.position : transform.position + Vector3.up * 1.0f;
         Vector3 currentPos = startPos;
 
         Vector3 dir;
@@ -225,15 +226,29 @@ public class PlayerHook : MonoBehaviour
             {
                 moveStep = maxDistance - traveledDistance;
             }
-
             if (Physics.SphereCast(currentPos, hookRadius, dir, out RaycastHit hit, moveStep, hookableLayer))
             {
-                currentPos = hit.point;
+                if (hit.distance > 0f)
+                {
+                    currentPos = hit.point;
+                }
+                else
+                {
+                    Vector3 closest = hit.collider.ClosestPoint(currentPos);
+                    if (closest == Vector3.zero && currentPos != Vector3.zero)
+                    {
+                        currentPos = currentPos + dir * 0.1f; // 안전하게 약간 앞의 좌표 사용
+                    }
+                    else
+                    {
+                        currentPos = closest;
+                    }
+                }
                 ropeVisual.DrawRope(transform.position, currentPos);
 
                 if (hit.collider.TryGetComponent(out Interaction.IInteractable interactable))
                 {
-                    ropeVisual.DrawRope(transform.position, hit.point);
+                    ropeVisual.DrawRope(transform.position, currentPos);
                     interactable.OnInteract(gameObject);
                     StopHook();
                     yield break;
@@ -245,7 +260,7 @@ public class PlayerHook : MonoBehaviour
 
                     if (enemy.IsFrozen)
                     {
-                        _hookAnchor.position = hit.point;
+                        _hookAnchor.position = currentPos;
                         _hookAnchor.SetParent(hit.transform);
                         _hookAnchor.gameObject.SetActive(true);
                         _currentHookTarget = _hookAnchor;
@@ -263,7 +278,7 @@ public class PlayerHook : MonoBehaviour
 
                     if (tag == wallTag || tag == frozenEnemyTag)
                     {
-                        _hookAnchor.position = hit.point;
+                        _hookAnchor.position = currentPos;
                         _hookAnchor.SetParent(hit.transform);
                         _hookAnchor.gameObject.SetActive(true);
                         _currentHookTarget = _hookAnchor;

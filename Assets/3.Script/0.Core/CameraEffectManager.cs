@@ -8,9 +8,9 @@ namespace Core
     {
         public static CameraEffectManager Instance { get; private set; }
 
-        [Header("References")]
-        [SerializeField] private CinemachineCamera virtualCamera;
         private Camera _mainCam;
+        private Unity.Cinemachine.CinemachineBrain _brain;
+        private Unity.Cinemachine.CinemachineCamera _currentVirtualCamera;
 
         private float _defaultFOV;
         private Coroutine _punchRoutine;
@@ -30,18 +30,32 @@ namespace Core
 
         private void Start()
         {
-            if (virtualCamera == null)
-            {
-                virtualCamera = FindAnyObjectByType<CinemachineCamera>();
-            }
-
             _mainCam = Camera.main;
-
-            if (virtualCamera != null)
+            if (_mainCam != null)
             {
-                _defaultFOV = virtualCamera.Lens.FieldOfView;
+                _brain = _mainCam.GetComponent<Unity.Cinemachine.CinemachineBrain>();
             }
-            else if (_mainCam != null)
+        }
+
+        private void UpdateActiveCamera()
+        {
+            if (_brain != null && _brain.ActiveVirtualCamera != null)
+            {
+                var newVcam = _brain.ActiveVirtualCamera as Unity.Cinemachine.CinemachineCamera;
+                if (newVcam != null && newVcam != _currentVirtualCamera)
+                {
+                    if (_currentVirtualCamera != null)
+                    {
+                        var lens = _currentVirtualCamera.Lens;
+                        lens.FieldOfView = _defaultFOV;
+                        _currentVirtualCamera.Lens = lens;
+                    }
+
+                    _currentVirtualCamera = newVcam;
+                    _defaultFOV = _currentVirtualCamera.Lens.FieldOfView;
+                }
+            }
+            else if (_mainCam != null && _currentVirtualCamera == null && _defaultFOV == 0f)
             {
                 _defaultFOV = _mainCam.fieldOfView;
             }
@@ -52,9 +66,10 @@ namespace Core
 
         private void LateUpdate()
         {
-            if (virtualCamera != null || _mainCam != null)
-            {
+            UpdateActiveCamera();
 
+            if (_currentVirtualCamera != null || _mainCam != null)
+            {
                 SetFOV(_defaultFOV + _punchFOVOffset + _velocityFOVOffset);
             }
         }
@@ -73,7 +88,7 @@ namespace Core
             float expandDuration = duration * 0.2f;
             while (time < expandDuration)
             {
-                time += Time.deltaTime;
+                time += Time.unscaledDeltaTime;
                 float t = time / expandDuration;
                 t = t * (2 - t);
 
@@ -85,7 +100,7 @@ namespace Core
             float recoverDuration = duration * 0.8f;
             while (time < recoverDuration)
             {
-                time += Time.deltaTime;
+                time += Time.unscaledDeltaTime;
                 float t = time / recoverDuration;
                 t = t * t;
 
@@ -99,18 +114,18 @@ namespace Core
 
         private float GetCurrentFOV()
         {
-            if (virtualCamera != null) return virtualCamera.Lens.FieldOfView;
+            if (_currentVirtualCamera != null) return _currentVirtualCamera.Lens.FieldOfView;
             if (_mainCam != null) return _mainCam.fieldOfView;
             return 60f;
         }
 
         private void SetFOV(float fov)
         {
-            if (virtualCamera != null)
+            if (_currentVirtualCamera != null)
             {
-                var lens = virtualCamera.Lens;
+                var lens = _currentVirtualCamera.Lens;
                 lens.FieldOfView = fov;
-                virtualCamera.Lens = lens;
+                _currentVirtualCamera.Lens = lens;
             }
             else if (_mainCam != null)
             {
@@ -120,7 +135,54 @@ namespace Core
 
         public void SetVelocityFOV(float targetOffset, float smoothTime = 5f)
         {
-            _velocityFOVOffset = Mathf.Lerp(_velocityFOVOffset, targetOffset, Time.deltaTime * smoothTime);
+            _velocityFOVOffset = Mathf.Lerp(_velocityFOVOffset, targetOffset, Time.unscaledDeltaTime * smoothTime);
+        }
+
+        private float _shakeTrauma = 0f;
+
+        private void OnEnable()
+        {
+            Application.onBeforeRender += ApplyUnscaledShake;
+        }
+
+        private void OnDisable()
+        {
+            Application.onBeforeRender -= ApplyUnscaledShake;
+        }
+
+        public void AddUnscaledShake(float intensity)
+        {
+            _shakeTrauma = Mathf.Clamp01(_shakeTrauma + intensity * 0.5f);
+        }
+
+        [Header("🔥 Camera Shake")]
+        [SerializeField, Tooltip("최대 회전 각도 (도)")] private float shakeAngleMax = 3f;
+        [SerializeField, Tooltip("최대 위치 이동 (m)")] private float shakeOffsetMax = 0.2f;
+        [SerializeField, Tooltip("흔들림 속도 (주파수)")] private float shakeSpeed = 40f;
+        [SerializeField, Tooltip("진동이 줄어드는 속도")] private float shakeDecay = 2.5f;
+
+        private void ApplyUnscaledShake()
+        {
+            if (_mainCam == null) return;
+            
+            if (_shakeTrauma > 0f)
+            {
+                float shakePow = _shakeTrauma * _shakeTrauma;
+                
+                float seed = Time.unscaledTime * shakeSpeed;
+                float rotX = (Mathf.PerlinNoise(seed, 0f) - 0.5f) * 2f * shakeAngleMax * shakePow;
+                float rotY = (Mathf.PerlinNoise(0f, seed) - 0.5f) * 2f * shakeAngleMax * shakePow;
+                float rotZ = (Mathf.PerlinNoise(seed, seed) - 0.5f) * 2f * shakeAngleMax * shakePow;
+
+                float posX = (Mathf.PerlinNoise(seed + 10f, 0f) - 0.5f) * 2f * shakeOffsetMax * shakePow;
+                float posY = (Mathf.PerlinNoise(0f, seed + 10f) - 0.5f) * 2f * shakeOffsetMax * shakePow;
+
+                _mainCam.transform.localRotation *= Quaternion.Euler(rotX, rotY, rotZ);
+                _mainCam.transform.localPosition += _mainCam.transform.right * posX + _mainCam.transform.up * posY;
+
+                _shakeTrauma -= Time.unscaledDeltaTime * shakeDecay; 
+                if (_shakeTrauma < 0f) _shakeTrauma = 0f;
+            }
         }
     }
 }

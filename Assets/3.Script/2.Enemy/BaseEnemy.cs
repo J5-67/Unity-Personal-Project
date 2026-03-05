@@ -245,6 +245,11 @@ public class BaseEnemy : MonoBehaviour
 
         if (IsFrozen || _isDestroyed || _isOverloaded) return;
 
+        if (TryGetComponent(out EnemyShooter shooter))
+        {
+            shooter.CancelAttack();
+        }
+
         if (canKamikaze)
         {
             StartCoroutine(KamikazeRoutine());

@@ -247,6 +247,14 @@ public class PlayerAim : MonoBehaviour
 
     private void DrawAimLine()
     {
+        if (_playerHook != null && _playerHook.IsHooking)
+        {
+            if (lineRenderer.enabled) lineRenderer.enabled = false;
+            return;
+        }
+
+        if (!lineRenderer.enabled) lineRenderer.enabled = true;
+
         float currentMaxDistance = maxHookDistance;
         if (_playerHook != null) currentMaxDistance = _playerHook.MaxDistance;
 
@@ -275,6 +283,7 @@ public class PlayerAim : MonoBehaviour
         {
             if (hit.collider.gameObject == gameObject) continue;
             if (hit.collider.isTrigger) continue;
+            if (hit.distance == 0f) continue;
             if (hasObstruction && hit.distance > obstructionHit.distance + 1.0f) continue;
 
             BaseEnemy enemy = hit.collider.GetComponentInParent<BaseEnemy>();
@@ -297,7 +306,7 @@ public class PlayerAim : MonoBehaviour
             {
                 maxScore = score;
                 bestTarget = hit.collider;
-                if (enemy != null) endPos = hit.point;
+                endPos = hit.point;
             }
         }
 
@@ -326,7 +335,7 @@ public class PlayerAim : MonoBehaviour
             {
                 if (targetEnemy.IsFrozen)
                 {
-                    targetColor = defaultColor;
+                    targetColor = hookableColor;
                     targetTexture = _dashTexture;
                     currentFlowSpeed = 0f;
                     currentTiling = dashTiling;

@@ -295,6 +295,11 @@ public class PlayerMovement : MonoBehaviour
         _currentDashCharges--;
         _dashRechargeTimer = 0f;
 
+        if (TryGetComponent(out PlayerHealth phStart))
+        {
+            phStart.SetDashInvincible(true);
+        }
+
         int playerLayer = gameObject.layer;
 
         int projectileLayer = LayerMask.NameToLayer("Projectile");
@@ -423,6 +428,7 @@ public class PlayerMovement : MonoBehaviour
 
                 if (TryGetComponent(out PlayerHealth ph))
                 {
+                    ph.SetDashInvincible(false);
                     ph.TakeDamage(1);
                 }
 
@@ -521,6 +527,10 @@ public class PlayerMovement : MonoBehaviour
         }
 
         _isDashing = false;
+        if (TryGetComponent(out PlayerHealth phEnd))
+        {
+            phEnd.SetDashInvincible(false);
+        }
     }
 
     private void HandleDashRecharge()

@@ -185,17 +185,6 @@
                 },
                 {
                     "name": "",
-                    "id": "791d5444-c24f-4b3f-8b94-fe67b46bee4b",
-                    "path": "<Keyboard>/leftShift",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": ";Keyboard & Mouse",
-                    "action": "Dash",
-                    "isComposite": false,
-                    "isPartOfComposite": false
-                },
-                {
-                    "name": "",
                     "id": "31a02dce-ccc2-499c-8920-154b98581efc",
                     "path": "<Mouse>/rightButton",
                     "interactions": "",
