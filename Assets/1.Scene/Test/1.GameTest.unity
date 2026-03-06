@@ -14794,6 +14794,9 @@ MonoBehaviour:
   enemyZipSpeed: 120
   wallZipSpeed: 15
   safeZipDistance: 1.5
+  useAimAssist: 1
+  aimAssistRadius: 2
+  aimAssistAngleLimit: 25
   swingForce: 50
   swingAngleLimit: 5
   winchUpForce: 0.5
@@ -15107,7 +15110,7 @@ Transform:
   m_GameObject: {fileID: 8014722533618008624}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0.42578316, y: 20.970436, z: 7.8323736}
+  m_LocalPosition: {x: 0.42578316, y: 1.8, z: -70.9}
   m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -15983,6 +15986,7 @@ MonoBehaviour:
   gravityScale: 2.5
   fastFallSpeed: 20
   wallSlideSpeed: 2
+  wallClimbSpeed: 4
   wallJumpPower: {x: 12, y: 16}
   wallJumpStopControlTime: 0.2
   coyoteTime: 0.15

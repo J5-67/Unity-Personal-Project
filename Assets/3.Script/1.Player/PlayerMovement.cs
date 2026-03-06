@@ -11,7 +11,7 @@ public class PlayerMovement : MonoBehaviour
 
     [Header("💨 Dash Settings (New!)")]
     [SerializeField] private float dashSpeed = 40f;
-    [SerializeField] private float dashDuration = 0.15f;
+    [SerializeField] private float dashDuration = 0.25f;
     [SerializeField] private int maxDashCharges = 2;
     [SerializeField] private float dashCooldown = 3f;
     [SerializeField] private LayerMask dashPassLayer;
@@ -26,6 +26,7 @@ public class PlayerMovement : MonoBehaviour
 
     [Header("🧗 Wall Mechanics")]
     [SerializeField] private float wallSlideSpeed = 2f;
+    [SerializeField] private float wallClimbSpeed = 4f;
     [SerializeField] private Vector2 wallJumpPower = new Vector2(12f, 16f);
     [SerializeField] private float wallJumpStopControlTime = 0.2f;
 
@@ -61,11 +62,15 @@ public class PlayerMovement : MonoBehaviour
     public bool IsGrounded => _isGrounded;
     private bool _isTouchingWall;
     private bool _isWallSliding;
+    public bool IsWallSliding => _isWallSliding;
+    private float _lastWallDir = 1f;
     private bool _isJumpPressed;
     private bool _canMove = true;
     public bool CanMove => _canMove;
+    public Vector3 LastPosition { get; private set; }
     private bool _isHookingState = false;
     public bool IsHookingState => _isHookingState;
+    private bool _isDead = false;
 
     public event System.Action OnJumpEvent;
     public event System.Action OnDashEvent;
@@ -110,8 +115,23 @@ public class PlayerMovement : MonoBehaviour
         HandleDashRecharge();
     }
 
+    public void SetDeadState(bool isDead)
+    {
+        _isDead = isDead;
+        if (isDead)
+        {
+            _moveInput = Vector2.zero;
+        }
+    }
+
     private void FixedUpdate()
     {
+        if (_isDead)
+        {
+            LastPosition = transform.position;
+            return;
+        }
+
         CheckSurroundings();
 
         if (Core.GameManager.Instance != null && Core.GameManager.Instance.IsDialogueActive)
@@ -162,10 +182,13 @@ public class PlayerMovement : MonoBehaviour
         {
             TryJump();
         }
+        
+        LastPosition = transform.position;
     }
 
     public void OnMove(InputAction.CallbackContext context)
     {
+        if (_isDead) return;
         if (Core.GameManager.Instance != null && Core.GameManager.Instance.IsDialogueActive)
         {
             _moveInput = Vector2.zero;
@@ -177,6 +200,7 @@ public class PlayerMovement : MonoBehaviour
 
     public void OnJump(InputAction.CallbackContext context)
     {
+        if (_isDead) return;
         if (Core.GameManager.Instance != null && Core.GameManager.Instance.IsDialogueActive) return;
 
         if (context.started || (context.performed && context.ReadValueAsButton()))
@@ -201,6 +225,7 @@ public class PlayerMovement : MonoBehaviour
 
     public void OnDash(InputAction.CallbackContext context)
     {
+        if (_isDead) return;
         if (Core.GameManager.Instance != null && Core.GameManager.Instance.IsDialogueActive) return;
 
         if (context.started)
@@ -215,6 +240,7 @@ public class PlayerMovement : MonoBehaviour
 
     public void OnHack(InputAction.CallbackContext context)
     {
+        if (_isDead) return;
         if (Core.GameManager.Instance != null && Core.GameManager.Instance.IsDialogueActive) return;
 
         if (context.started)
@@ -323,12 +349,18 @@ public class PlayerMovement : MonoBehaviour
         }
 
         Vector3 mousePos = playerAim.GetAimWorldPosition();
-        Vector3 dashDir = (mousePos - transform.position).normalized;
+        Vector3 dashVector = mousePos - transform.position;
+        Vector3 dashDir = dashVector.normalized;
 
         dashDir = new Vector3(0, dashDir.y, dashDir.z).normalized;
 
         float currentSpeed = _rb.linearVelocity.magnitude;
         float actualDashSpeed = Mathf.Max(dashSpeed, currentSpeed);
+
+        // 🎯 커서 거리 비례 동적 대쉬 길이 조절 (최소 0.05초 ~ 최대 dashDuration)
+        float distanceToMouse = new Vector3(0, dashVector.y, dashVector.z).magnitude;
+        float timeToReachMouse = distanceToMouse / actualDashSpeed;
+        float actualDashDuration = Mathf.Clamp(timeToReachMouse, 0.05f, dashDuration);
 
         _rb.linearVelocity = dashDir * actualDashSpeed;
 
@@ -356,7 +388,7 @@ public class PlayerMovement : MonoBehaviour
             Core.CameraEffectManager.Instance.PunchFOV(dashFovAmount, dashFovDuration);
         }
 
-        while (elapsedTime < dashDuration || (isOverlappingEnemy && elapsedTime < dashDuration + maxExtensionTime))
+        while (elapsedTime < actualDashDuration || (isOverlappingEnemy && elapsedTime < actualDashDuration + maxExtensionTime))
         {
 
             Vector3 currentVel = _rb.linearVelocity;
@@ -497,6 +529,15 @@ public class PlayerMovement : MonoBehaviour
                          isOverlappingEnemy = true;
                      }
                 }
+            }
+
+            // 🎯 관통 제동 (Penetration Brake)
+            // 적을 한 번이라도 베고(hasRecharged) 적의 몸뚱어리를 완전히 빠져나왔다면(!isOverlappingEnemy)
+            // 남은 대쉬 거리에 상관없이 즉시 멈춰서 뒤에 있는 트랩에 쳐박히는 것을 방지
+            if (hasRecharged && !isOverlappingEnemy)
+            {
+                _rb.linearVelocity = Vector3.zero; // 급제동
+                break;
             }
 
             if (hasRecharged && !bulletTimeTriggered && Core.GameManager.Instance != null)
@@ -688,15 +729,51 @@ public class PlayerMovement : MonoBehaviour
         bool touchRight = Physics.CheckSphere(rightPos, checkRadius, wallLayer | groundLayer);
         bool touchLeft = Physics.CheckSphere(leftPos, checkRadius, wallLayer | groundLayer);
 
-        bool isPushingWall = (_moveInput.x > 0 && touchRight) || (_moveInput.x < 0 && touchLeft);
+        if (touchRight) _lastWallDir = 1f;
+        else if (touchLeft) _lastWallDir = -1f;
 
-        if (_isTouchingWall && !_isGrounded && _rb.linearVelocity.y < 0 && isPushingWall)
+        bool isPushingWall = (_moveInput.x > 0 && touchRight) || (_moveInput.x < 0 && touchLeft);
+        bool isPullingAway = (_moveInput.x < 0 && touchRight) || (_moveInput.x > 0 && touchLeft);
+
+        if (_isWallSliding && !isPullingAway && _isTouchingWall)
+        {
+            isPushingWall = true;
+        }
+
+        if (_isTouchingWall && !_isGrounded && isPushingWall)
         {
             _isWallSliding = true;
-            _rb.linearVelocity = new Vector3(0, -wallSlideSpeed, _rb.linearVelocity.z);
+
+            float vMove = _moveInput.y;
+
+            if (vMove > 0.1f)
+            {
+                _rb.linearVelocity = new Vector3(0, wallClimbSpeed, _rb.linearVelocity.z);
+            }
+            else if (vMove < -0.1f)
+            {
+                _rb.linearVelocity = new Vector3(0, -wallClimbSpeed, _rb.linearVelocity.z);
+            }
+            else
+            {
+                if (_rb.linearVelocity.y < 0)
+                {
+                    _rb.linearVelocity = new Vector3(0, -wallSlideSpeed, _rb.linearVelocity.z);
+                }
+                else
+                {
+                    // If moving upwards from jump, let gravity reduce it or stay zero
+                    _rb.linearVelocity = new Vector3(0, Mathf.Min(_rb.linearVelocity.y, 0f), _rb.linearVelocity.z);
+                }
+            }
         }
         else
         {
+            if (_isWallSliding && _moveInput.y > 0.1f && !_isTouchingWall)
+            {
+                // Ledge Boost: Vault over the top of the wall!
+                _rb.linearVelocity = new Vector3(_rb.linearVelocity.x, 8f, _lastWallDir * 5f);
+            }
             _isWallSliding = false;
         }
     }

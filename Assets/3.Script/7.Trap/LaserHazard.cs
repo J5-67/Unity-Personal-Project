@@ -16,17 +16,21 @@ namespace Trap
 
         [Header("Damage & Knockback")]
         [SerializeField] private int damage = 1;
+        [SerializeField] private float damageKnockbackDelay = 0.5f;
         [SerializeField] private float knockbackForce = 15f;
 
         [Header("Portal Style Visual")]
         [SerializeField] private Color laserCoreColor = new Color(1f, 0.9f, 0.9f, 1f);
         [SerializeField] private Color laserGlowColor = new Color(1f, 0.1f, 0.1f, 1f);
+        [SerializeField] private float texTileSpeed = 2f;
         [SerializeField] private float hdrIntensity = 5f;
 
         private LineRenderer _lineRenderer;
+        private PlayerMovement _playerMove;
 
         private void Awake()
         {
+            _playerMove = FindObjectOfType<PlayerMovement>();
             _lineRenderer = GetComponent<LineRenderer>();
             _lineRenderer.positionCount = 2;
             _lineRenderer.useWorldSpace = true;
@@ -121,6 +125,47 @@ namespace Trap
 
             Collider[] hits = Physics.OverlapCapsule(startPos, endPos, laserThickness / 2f, playerLayer);
 
+            // 🌀 High-Speed Tunneling Math Fallback (Line Segment Intersection Z-Y Plane)
+            if (hits.Length == 0 && _playerMove != null && _playerMove.gameObject.activeInHierarchy)
+            {
+                if (!_playerMove.IsDashing) // Ignore intersection logic if already dashing
+                {
+                    Vector3 playerPos = _playerMove.transform.position;
+                    Vector3 lastPos = _playerMove.LastPosition;
+
+                    if ((playerPos - lastPos).sqrMagnitude > 0.01f)
+                    {
+                        Vector2 p1 = new Vector2(startPos.z, startPos.y);
+                        Vector2 p2 = new Vector2(endPos.z, endPos.y);
+                        Vector2 p3 = new Vector2(lastPos.z, lastPos.y);
+                        Vector2 p4 = new Vector2(playerPos.z, playerPos.y);
+
+                        float den = (p4.y - p3.y) * (p2.x - p1.x) - (p4.x - p3.x) * (p2.y - p1.y);
+                        if (Mathf.Abs(den) > 0.0001f)
+                        {
+                            float ua = ((p4.x - p3.x) * (p1.y - p3.y) - (p4.y - p3.y) * (p1.x - p3.x)) / den;
+                            float ub = ((p2.x - p1.x) * (p1.y - p3.y) - (p2.y - p1.y) * (p1.x - p3.x)) / den;
+
+                            // Include player thickness in check bounds indirectly
+                            if (ua >= -0.1f && ua <= 1.1f && ub >= 0f && ub <= 1f)
+                            {
+                                // TUNNELING DETECTED!
+                                Vector2 intersect2D = p1 + ua * (p2 - p1);
+                                Vector3 intersect3D = new Vector3(playerPos.x, intersect2D.y, intersect2D.x);
+
+                                Vector3 moveDir = (playerPos - lastPos).normalized;
+                                _playerMove.transform.position = intersect3D - moveDir * (laserThickness * 2f);
+                                
+                                if (_playerMove.TryGetComponent(out Collider playerCol))
+                                {
+                                    hits = new Collider[] { playerCol };
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             foreach (var col in hits)
             {
 
@@ -132,46 +177,56 @@ namespace Trap
 
                 if (col.TryGetComponent(out PlayerHealth health))
                 {
-
-                    if (health.CurrentHealth > damage)
-                    {
                         if (col.TryGetComponent(out PlayerMovement playerMove))
                         {
-                            if (playerMove.CanMove)
+                            Vector3 lineDir = transform.forward;
+                            Vector3 toPlayer = col.transform.position - startPos;
+                            float dot = Vector3.Dot(toPlayer, lineDir);
+                            Vector3 closestPoint = startPos + lineDir * Mathf.Clamp(dot, 0, currentDistance);
+
+                            // 1. Calculate the raw outward direction from the laser line to the player
+                            Vector3 knockbackDir = (col.transform.position - closestPoint);
+                            knockbackDir.x = 0f; // Keep it 2D (assuming Gameplay is on Z/Y)
+
+                            // Fallback if exactly on the line
+                            if (knockbackDir.sqrMagnitude < 0.01f)
                             {
-                                Vector3 lineDir = transform.forward;
-                                Vector3 toPlayer = col.transform.position - startPos;
-                                float dot = Vector3.Dot(toPlayer, lineDir);
-                                Vector3 closestPoint = startPos + lineDir * Mathf.Clamp(dot, 0, currentDistance);
-
-                                Vector3 knockbackDir = (col.transform.position - closestPoint);
-
-                                knockbackDir.x = 0f;
-
-                                if (knockbackDir.sqrMagnitude < 0.01f)
-                                {
-                                    knockbackDir = -playerMove.transform.forward;
-                                }
-
-                                if (knockbackDir.y < 0.5f)
-                                {
-                                    knockbackDir.y += 0.8f;
-                                }
-
-                                playerMove.ApplyKnockback(knockbackDir.normalized, knockbackForce, 0.25f);
+                                knockbackDir = -playerMove.transform.forward;
                             }
+                            
+                            knockbackDir = knockbackDir.normalized;
+
+                            Rigidbody rb = playerMove.GetComponent<Rigidbody>();
+                            if (rb != null)
+                            {
+                                // 2. Check if the player is moving INTO the laser (tunneling scenario)
+                                // If Dot < 0, they are moving opposite to the outward push (i.e., penetrating)
+                                float dotVelocity = Vector3.Dot(knockbackDir, rb.linearVelocity.normalized);
+                                
+                                if (dotVelocity < 0f && rb.linearVelocity.sqrMagnitude > 1f)
+                                {
+                                    // Player is tunneling! Reverse the knockback direction to push them back the way they came.
+                                    // Use the inverse of their velocity as the absolute correct bounce direction.
+                                    knockbackDir = -rb.linearVelocity.normalized;
+                                    knockbackDir.x = 0f;
+                                    
+                                    // Force a small teleport backwards to exit the capsule intersection immediately
+                                    col.transform.position += knockbackDir * (laserThickness * 2f);
+                                }
+                            }
+
+                            // 3. Add a little upward bounce for better game feel and to prevent floor dragging
+                            if (knockbackDir.y < 0.5f)
+                            {
+                                knockbackDir.y += 0.8f;
+                            }
+
+                            playerMove.ApplyKnockback(knockbackDir.normalized, knockbackForce, 0.25f);
                         }
-                        else if (col.TryGetComponent(out Rigidbody rb))
-                        {
-                            Vector3 fallbackDir = transform.forward + Vector3.up * 0.5f;
-                            rb.linearVelocity = Vector3.zero;
-                            rb.AddForce(fallbackDir.normalized * knockbackForce, ForceMode.Impulse);
-                        }
-                    }
 
                     if (!health.IsInvincible)
                     {
-                        health.TakeDamage(damage);
+                        health.TakeDamage(damage, false);
                     }
                 }
             }

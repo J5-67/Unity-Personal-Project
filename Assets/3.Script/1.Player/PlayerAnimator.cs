@@ -13,8 +13,10 @@ namespace Player
         private readonly int _isWalkingHash = Animator.StringToHash("IsWalking");
         private readonly int _isJumpingHash = Animator.StringToHash("IsJumping");
         private readonly int _isSwingingHash = Animator.StringToHash("IsSwinging");
+        private readonly int _isWallSlidingHash = Animator.StringToHash("IsWallSliding");
         private readonly int _dashHash = Animator.StringToHash("Dash");
         private readonly int _dieHash = Animator.StringToHash("Die");
+        private readonly int _respawnHash = Animator.StringToHash("Respawn");
         private readonly int _takeDamageHash = Animator.StringToHash("Take Damage");
 
         private void Awake()
@@ -39,6 +41,7 @@ namespace Player
             {
                 _playerHealth.OnTakeDamageEvent += TriggerTakeDamage;
                 _playerHealth.OnDieEvent += TriggerDie;
+                _playerHealth.OnRespawnEvent += TriggerRespawn;
             }
         }
 
@@ -54,6 +57,7 @@ namespace Player
             {
                 _playerHealth.OnTakeDamageEvent -= TriggerTakeDamage;
                 _playerHealth.OnDieEvent -= TriggerDie;
+                _playerHealth.OnRespawnEvent -= TriggerRespawn;
             }
         }
 
@@ -69,6 +73,9 @@ namespace Player
 
             bool isSwinging = _playerMovement.IsHookingState;
             _animator.SetBool(_isSwingingHash, isSwinging);
+
+            bool isWallSliding = _playerMovement.IsWallSliding;
+            _animator.SetBool(_isWallSlidingHash, isWallSliding);
         }
 
         private void TriggerJump()
@@ -89,6 +96,11 @@ namespace Player
         private void TriggerDie()
         {
             if (_animator != null) _animator.SetTrigger(_dieHash);
+        }
+
+        private void TriggerRespawn()
+        {
+            if (_animator != null) _animator.SetTrigger(_respawnHash);
         }
     }
 }

@@ -5,17 +5,16 @@ using UnityEngine;
 public class BaseEnemy : MonoBehaviour
 {
     [Header("🎯 Enemy Settings")]
-    [SerializeField] private float hookInteractSpeed = 30f;
     [SerializeField] private float freezeDuration = 5f;
 
     private Rigidbody _rb;
 
-    public float HookInteractSpeed => hookInteractSpeed;
     public bool IsFrozen { get; private set; }
 
     private string _originalTag;
     private Color _originalColor;
     private Renderer _renderer;
+    public Renderer EnemyRenderer => _renderer;
     private EnemyPatrol _patrol;
 
     private Vector3 _startPos;

@@ -259,7 +259,8 @@ public class PlayerAim : MonoBehaviour
         if (_playerHook != null) currentMaxDistance = _playerHook.MaxDistance;
 
         Vector3 startPos = firePoint != null ? firePoint.position : transform.position + Vector3.up * 1.0f;
-        Vector3 direction = (_aimWorldPosition - startPos).normalized;
+        Vector3 rawDirection = (_aimWorldPosition - startPos).normalized;
+        Vector3 direction = rawDirection;
         Vector3 endPos = startPos + (direction * currentMaxDistance);
 
         Color targetColor = defaultColor;
@@ -267,15 +268,8 @@ public class PlayerAim : MonoBehaviour
         float currentFlowSpeed = -animationSpeed * 0.5f;
         float currentTiling = dashTiling;
 
-        RaycastHit obstructionHit;
-        bool hasObstruction = Physics.Raycast(startPos, direction, out obstructionHit, currentMaxDistance, aimLayerMask);
-        if (hasObstruction)
-        {
-            endPos = obstructionHit.point;
-            targetColor = hookableColor;
-        }
-
-        RaycastHit[] hits = Physics.SphereCastAll(startPos, aimRadius, direction, currentMaxDistance, aimLayerMask);
+        // 1. 적(Enemy) 타겟팅 우선 확인 (SphereCast)
+        RaycastHit[] hits = Physics.SphereCastAll(startPos, aimRadius, rawDirection, currentMaxDistance, aimLayerMask);
         Collider bestTarget = null;
         float maxScore = -100.0f;
 
@@ -283,79 +277,92 @@ public class PlayerAim : MonoBehaviour
         {
             if (hit.collider.gameObject == gameObject) continue;
             if (hit.collider.isTrigger) continue;
-            if (hit.distance == 0f) continue;
-            if (hasObstruction && hit.distance > obstructionHit.distance + 1.0f) continue;
+            if (hit.distance <= 0f) continue;
 
             BaseEnemy enemy = hit.collider.GetComponentInParent<BaseEnemy>();
-            float dot = Vector3.Dot(direction, (hit.point - startPos).normalized);
+            float dot = Vector3.Dot(rawDirection, (hit.point - startPos).normalized);
 
             if (dot < 0.0f) continue;
 
             float score = dot;
             if (enemy != null)
             {
-                score += 5.0f;
-
+                score += 5.0f; // 적 타겟팅 점수 어드밴티지
             }
             else
             {
-                score -= hit.distance * 0.1f;
+                score -= hit.distance * 0.1f; // 일발 벽은 뒷순위
             }
 
             if (score > maxScore)
             {
                 maxScore = score;
                 bestTarget = hit.collider;
-                endPos = hit.point;
             }
         }
 
-        if (bestTarget != null)
-        {
-             BaseEnemy targetEnemy = bestTarget.GetComponentInParent<BaseEnemy>();
-             if (targetEnemy != null)
-             {
-                 LockedTarget = bestTarget.transform;
-             }
-             else
-             {
-                 LockedTarget = null;
-             }
-        }
-        else
-        {
-             LockedTarget = null;
-        }
+        BaseEnemy targetEnemy = bestTarget != null ? bestTarget.GetComponentInParent<BaseEnemy>() : null;
 
-        if (bestTarget != null)
+        if (targetEnemy != null)
         {
-            BaseEnemy targetEnemy = bestTarget.GetComponentInParent<BaseEnemy>();
-
-            if (targetEnemy != null)
+            // --- 적 포착 모드 ---
+            LockedTarget = bestTarget.transform;
+            direction = (bestTarget.transform.position - startPos).normalized;
+            
+            RaycastHit enemyHit;
+            if (Physics.Raycast(startPos, direction, out enemyHit, currentMaxDistance, aimLayerMask))
             {
-                if (targetEnemy.IsFrozen)
-                {
-                    targetColor = hookableColor;
-                    targetTexture = _dashTexture;
-                    currentFlowSpeed = 0f;
-                    currentTiling = dashTiling;
-                }
-                else
-                {
-                    targetColor = enemyColor;
-
-                    targetTexture = _arrowTextureReverse;
-                    currentFlowSpeed = animationSpeed;
-                    currentTiling = enemyArrowTiling;
-                }
+                endPos = enemyHit.point;
             }
             else
             {
+                endPos = bestTarget.transform.position;
+            }
+
+            if (targetEnemy.IsFrozen)
+            {
                 targetColor = hookableColor;
                 targetTexture = _dashTexture;
-                currentFlowSpeed = -animationSpeed * 0.5f;
+                currentFlowSpeed = 0f;
                 currentTiling = dashTiling;
             }
+            else
+            {
+                targetColor = enemyColor;
+                targetTexture = _arrowTextureReverse;
+                currentFlowSpeed = animationSpeed;
+                currentTiling = enemyArrowTiling;
+            }
+        }
+        else
+        {
+            // --- 빈 공간 (벽 조준) 모드 + 산나비 엣지 스크린 픽스 ---
+            LockedTarget = null;
+            
+            if (_playerHook != null)
+            {
+                // Hook 스크립트에서 계산한 보정(스냅) 방향을 그대로 가져온다
+                direction = _playerHook.GetSnappedAimDirection(startPos, rawDirection);
+            }
+
+            endPos = startPos + (direction * currentMaxDistance);
+            
+            RaycastHit obstructionHit;
+            bool hasObstruction = Physics.Raycast(startPos, direction, out obstructionHit, currentMaxDistance, aimLayerMask);
+            
+            if (hasObstruction)
+            {
+                endPos = obstructionHit.point;
+                targetColor = hookableColor;
+            }
+            else
+            {
+                targetColor = defaultColor;
+            }
+
+            targetTexture = _dashTexture;
+            currentFlowSpeed = -animationSpeed * 0.5f;
+            currentTiling = dashTiling;
         }
 
         int segmentCount = 10;

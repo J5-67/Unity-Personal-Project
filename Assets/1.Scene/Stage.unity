@@ -316,7 +316,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2352392279810709626, guid: afd33925338ae154bb9a8be23360135f, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2749977664618813648, guid: afd33925338ae154bb9a8be23360135f, type: 3}
       propertyPath: m_Pivot.x
@@ -3441,6 +3441,10 @@ PrefabInstance:
       propertyPath: m_Layer
       value: 10
       objectReference: {fileID: 0}
+    - target: {fileID: 3363513297093943601, guid: dd5f6df226cf80b4fa20d61420dc6251, type: 3}
+      propertyPath: safeZipDistance
+      value: 0.5
+      objectReference: {fileID: 0}
     - target: {fileID: 3902011015455189127, guid: dd5f6df226cf80b4fa20d61420dc6251, type: 3}
       propertyPath: m_LocalScale.x
       value: 1
@@ -3553,7 +3557,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3526659109277025125, guid: bd088fda8c4ebe242adbe76cabcee2a3, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7604542600773263516, guid: bd088fda8c4ebe242adbe76cabcee2a3, type: 3}
       propertyPath: m_LocalScale.x
@@ -3659,9 +3663,11 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 1024
   damage: 1
+  damageKnockbackDelay: 0.5
   knockbackForce: 15
   laserCoreColor: {r: 1, g: 0.9, b: 0.9, a: 1}
   laserGlowColor: {r: 1, g: 0.1, b: 0.1, a: 1}
+  texTileSpeed: 2
   hdrIntensity: 5
 --- !u!120 &1660829741
 LineRenderer:

@@ -20,11 +20,14 @@ public class PlayerHealth : MonoBehaviour
 
     private bool _isInvincible = false;
     private bool _isDashInvincible = false;
+    private bool _isDead = false;
     public bool IsInvincible => _isInvincible || _isDashInvincible;
+    public bool IsDead => _isDead;
     public int CurrentHealth => currentHealth;
 
     public event System.Action OnTakeDamageEvent;
     public event System.Action OnDieEvent;
+    public event System.Action OnRespawnEvent;
 
     private void Start()
     {
@@ -48,9 +51,20 @@ public class PlayerHealth : MonoBehaviour
         _isDashInvincible = state;
     }
 
-    public void TakeDamage(int amount)
+    public void TakeDamage(int amount, bool applyGenericKnockback = true)
     {
-        if (_isInvincible || _isDashInvincible) return;
+        if (_isDead || _isInvincible || _isDashInvincible) return;
+
+        if (TryGetComponent(out PlayerHook hook) && hook.IsHooking)
+        {
+            hook.StopHook();
+            
+            if (applyGenericKnockback && TryGetComponent(out Rigidbody rb))
+            {
+                rb.linearVelocity = Vector3.zero;
+                rb.AddForce((Vector3.up * 7f) + (-transform.forward * 5f), ForceMode.Impulse);
+            }
+        }
 
         currentHealth -= amount;
 
@@ -98,6 +112,8 @@ public class PlayerHealth : MonoBehaviour
 
     public void OnDeadZoneEnter()
     {
+        if (_isDead) return;
+        
         currentHealth -= 1;
         healthUI?.UpdateHealth(currentHealth);
         UpdateLowHealthEffect();
@@ -105,7 +121,7 @@ public class PlayerHealth : MonoBehaviour
         if (currentHealth > 0)
         {
             OnTakeDamageEvent?.Invoke();
-            Respawn(false);
+            StartCoroutine(RespawnDelayRoutine(false));
             StartCoroutine(InvincibilityRoutine());
         }
         else
@@ -114,15 +130,67 @@ public class PlayerHealth : MonoBehaviour
         }
     }
 
+    private System.Collections.IEnumerator RespawnDelayRoutine(bool isFullReset)
+    {
+        _isDead = true; 
+        
+        if (TryGetComponent(out PlayerMovement pm))
+        {
+            pm.SetDeadState(true);
+        }
+
+        // Wait for death/fall animation time
+        yield return new WaitForSeconds(1.0f);
+
+        Respawn(isFullReset);
+        _isDead = false;
+        
+        if (TryGetComponent(out PlayerMovement pm2))
+        {
+            pm2.SetDeadState(false);
+        }
+    }
+
     private void Die()
     {
+        if (_isDead) return;
+        _isDead = true;
+        
         OnDieEvent?.Invoke();
 
         if (playerRenderer != null) playerRenderer.enabled = true;
         StopAllCoroutines();
-        _isInvincible = false;
+        // Keep them invincible during death animation
+        _isInvincible = true; 
 
+        StartCoroutine(DeathRoutine());
+    }
+
+    private System.Collections.IEnumerator DeathRoutine()
+    {
+        if (TryGetComponent(out PlayerMovement pm))
+        {
+            pm.SetDeadState(true);
+        }
+
+        // Add hitstop effect on death for impact
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.TriggerHitStop(0.2f);
+            GameManager.Instance.TriggerCameraShake(2.0f);
+        }
+
+        // Wait to show player flying off from the trap's huge knockback!
+        yield return new WaitForSeconds(1.5f);
+
+        _isInvincible = false;
         Respawn(true);
+        _isDead = false;
+        
+        if (TryGetComponent(out PlayerMovement pm2))
+        {
+            pm2.SetDeadState(false);
+        }
     }
 
     private void Respawn(bool isFullReset)
@@ -156,6 +224,8 @@ public class PlayerHealth : MonoBehaviour
                 GameManager.Instance.TriggerPlayerRespawn();
             }
         }
+        
+        OnRespawnEvent?.Invoke();
     }
 
     public void SetCheckpoint(Vector3 pos)
@@ -171,18 +241,16 @@ public class PlayerHealth : MonoBehaviour
         {
             if (enemy.IsFrozen) return;
 
-            if (currentHealth > 1)
+            if (TryGetComponent(out Rigidbody rb))
             {
-                if (TryGetComponent(out Rigidbody rb))
-                {
-                    Vector3 contactPoint = collision.GetContact(0).point;
-                    Vector3 dir = (transform.position - contactPoint).normalized;
-                    dir += Vector3.up * 0.5f;
-                    rb.AddForce(dir.normalized * 10f, ForceMode.Impulse);
-                }
+                Vector3 contactPoint = collision.GetContact(0).point;
+                Vector3 dir = (transform.position - contactPoint).normalized;
+                dir += Vector3.up * 0.5f;
+                rb.linearVelocity = Vector3.zero; // Clear velocity before bouncing
+                rb.AddForce(dir.normalized * 10f, ForceMode.Impulse);
             }
 
-            TakeDamage(1);
+            TakeDamage(1, false);
         }
     }
 }

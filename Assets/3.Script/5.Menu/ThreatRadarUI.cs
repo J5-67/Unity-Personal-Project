@@ -21,7 +21,7 @@ namespace UI
         [SerializeField] private float scanInterval = 0.2f;
 
         private Camera _mainCamera;
-        private List<Transform> _threats = new List<Transform>();
+        private List<BaseEnemy> _threats = new List<BaseEnemy>();
 
         private ObjectPool<RectTransform> _indicatorPool;
         private List<RectTransform> _activeIndicators = new List<RectTransform>();
@@ -52,42 +52,14 @@ namespace UI
             {
                 _threats.Clear();
 
-                var missiles = FindObjectsByType<EnemyMissile>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
-                foreach (var m in missiles)
-                {
-
-                    if (!m.IsFrozen && !m.IsHacked)
-                    {
-
-                        if (Time.timeScale > 0f)
-                        {
-                            _threats.Add(m.transform);
-                        }
-                    }
-                }
-
                 var enemies = FindObjectsByType<BaseEnemy>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
                 foreach (var e in enemies)
                 {
-                    if (e.IsOverloaded && !e.IsDestroyed && !e.IsFrozen)
+                    if (!e.IsDestroyed && !e.IsFrozen)
                     {
-
                         if (Time.timeScale > 0f)
                         {
-                            _threats.Add(e.transform);
-                        }
-                        continue;
-                    }
-
-                    if (e.TryGetComponent(out EnemyShooter shooter))
-                    {
-                        if (shooter.IsAiming && !e.IsDestroyed && !e.IsFrozen)
-                        {
-
-                            if (Time.timeScale > 0f)
-                            {
-                                _threats.Add(e.transform);
-                            }
+                            _threats.Add(e);
                         }
                     }
                 }
@@ -106,18 +78,31 @@ namespace UI
             }
             _activeIndicators.Clear();
 
+            Plane[] cameraPlanes = GeometryUtility.CalculateFrustumPlanes(_mainCamera);
+
             foreach (var threat in _threats)
             {
                 if (threat == null) continue;
 
-                Vector3 viewportPos = _mainCamera.WorldToViewportPoint(threat.position);
+                bool isVisibleOnCamera = false;
+                if (threat.EnemyRenderer != null)
+                {
+                    isVisibleOnCamera = GeometryUtility.TestPlanesAABB(cameraPlanes, threat.EnemyRenderer.bounds);
+                }
+                else
+                {
+                    Vector3 vPos = _mainCamera.WorldToViewportPoint(threat.transform.position);
+                    isVisibleOnCamera = (vPos.z >= 0 && vPos.x >= 0f && vPos.x <= 1f && vPos.y >= 0f && vPos.y <= 1f);
+                }
+
+                if (isVisibleOnCamera)
+                {
+                    continue; // 렌더러가 화면에 1픽셀이라도 보이면 패스
+                }
+
+                Vector3 viewportPos = _mainCamera.WorldToViewportPoint(threat.transform.position);
 
                 bool isBehind = viewportPos.z < 0;
-
-                if (!isBehind && viewportPos.x >= 0f && viewportPos.x <= 1f && viewportPos.y >= 0f && viewportPos.y <= 1f)
-                {
-                    continue;
-                }
 
                 RectTransform indicator = _indicatorPool.Get();
                 _activeIndicators.Add(indicator);

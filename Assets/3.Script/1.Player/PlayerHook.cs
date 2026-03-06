@@ -20,6 +20,11 @@ public class PlayerHook : MonoBehaviour
     [SerializeField] private float wallZipSpeed = 100f;
     [SerializeField] private float safeZipDistance = 1.5f;
 
+    [Header("🧲 Aim Assist Settings")]
+    [SerializeField] private bool useAimAssist = true;
+    [SerializeField] private float aimAssistAngleLimit = 25f;
+    [SerializeField] private float aimAssistStep = 1.5f;
+
     [Header("🧗 Swing Settings")]
     [SerializeField] private float swingForce = 50f;
     [SerializeField] [Range(0, 180)] private float swingAngleLimit = 80f;
@@ -126,7 +131,8 @@ public class PlayerHook : MonoBehaviour
         else
         {
             Vector3 aimPos = _playerAim.GetAimWorldPosition();
-            dir = (aimPos - startPos).normalized;
+            Vector3 rawDir = (aimPos - startPos).normalized;
+            dir = GetSnappedAimDirection(startPos, rawDir);
         }
 
         dir = new Vector3(0, dir.y, dir.z).normalized;
@@ -163,7 +169,8 @@ public class PlayerHook : MonoBehaviour
 
             if (bestCol != null)
             {
-                ropeVisual.DrawRope(transform.position, bestHitPoint);
+                Vector3 dynamicStart = firePoint != null ? firePoint.position : transform.position + Vector3.up * 1.0f;
+                if (ropeVisual != null) ropeVisual.DrawRope(dynamicStart, bestHitPoint);
 
                 if (bestCol.TryGetComponent(out Interaction.IInteractable interactable))
                 {
@@ -226,7 +233,7 @@ public class PlayerHook : MonoBehaviour
             {
                 moveStep = maxDistance - traveledDistance;
             }
-            if (Physics.SphereCast(currentPos, hookRadius, dir, out RaycastHit hit, moveStep, hookableLayer))
+            if (Physics.Raycast(currentPos, dir, out RaycastHit hit, moveStep, hookableLayer))
             {
                 if (hit.distance > 0f)
                 {
@@ -234,21 +241,15 @@ public class PlayerHook : MonoBehaviour
                 }
                 else
                 {
-                    Vector3 closest = hit.collider.ClosestPoint(currentPos);
-                    if (closest == Vector3.zero && currentPos != Vector3.zero)
-                    {
-                        currentPos = currentPos + dir * 0.1f; // 안전하게 약간 앞의 좌표 사용
-                    }
-                    else
-                    {
-                        currentPos = closest;
-                    }
+                    // Fallback just in case point is exactly inside something
+                    currentPos = currentPos + dir * 0.1f;
                 }
-                ropeVisual.DrawRope(transform.position, currentPos);
+                Vector3 dynamicStart = firePoint != null ? firePoint.position : transform.position + Vector3.up * 1.0f;
+                if (ropeVisual != null) ropeVisual.DrawRope(dynamicStart, currentPos);
 
                 if (hit.collider.TryGetComponent(out Interaction.IInteractable interactable))
                 {
-                    ropeVisual.DrawRope(transform.position, currentPos);
+                    if (ropeVisual != null) ropeVisual.DrawRope(dynamicStart, currentPos);
                     interactable.OnInteract(gameObject);
                     StopHook();
                     yield break;
@@ -396,13 +397,10 @@ public class PlayerHook : MonoBehaviour
         _playerMovement.AddDashStack(1);
 
         float currentRopeLength = Vector3.Distance(transform.position, targetPos);
-
         float baseRopeLength = currentRopeLength;
         bool isInitAutoWinching = false;
 
-        Rigidbody rb = GetComponent<Rigidbody>();
-
-        if (_playerMovement.IsGrounded)
+        if (_playerMovement.IsGrounded && targetPos.y > transform.position.y + 1.0f)
         {
              float heightDiff = Mathf.Max(targetPos.y - transform.position.y, 1.0f);
              float safeLength = Mathf.Max(heightDiff - minGroundClearance, 1.0f);
@@ -411,6 +409,8 @@ public class PlayerHook : MonoBehaviour
              baseRopeLength = Mathf.Min(standardWinchLength, safeLength);
              isInitAutoWinching = true;
         }
+
+        Rigidbody rb = GetComponent<Rigidbody>();
 
         float currentRopeLengthSqr = currentRopeLength * currentRopeLength;
 
@@ -488,31 +488,19 @@ public class PlayerHook : MonoBehaviour
 
                 if (inputY > 0)
                 {
-
                     Vector3 currentVel = rb.linearVelocity;
                     float speedAlongRope = Vector3.Dot(currentVel, tensionDir);
                     rb.linearVelocity = currentVel - (tensionDir * speedAlongRope) + (tensionDir * climbSpeed);
 
                     currentRopeLength -= changeAmount;
 
-                    if (currentRopeLength < distToAnchor)
+                    if (currentRopeLength < distToAnchor - 0.05f)
                     {
-                        currentRopeLength = distToAnchor;
-                    }
-
-                    if (distToAnchor < currentRopeLength)
-                    {
-                        currentRopeLength = distToAnchor;
+                        currentRopeLength = distToAnchor - 0.05f;
                     }
                 }
                 else
                 {
-
-                    if (distToAnchor > currentRopeLength)
-                    {
-                         currentRopeLength = distToAnchor;
-                    }
-
                     if (distToAnchor >= maxDistance - 0.1f)
                     {
                         currentRopeLength = maxDistance;
@@ -527,15 +515,18 @@ public class PlayerHook : MonoBehaviour
                     }
                     else
                     {
-
-                         if (currentRopeLength < maxDistance - 0.1f)
+                         if (currentRopeLength < maxDistance - 0.05f)
                          {
-
                              Vector3 currentVel = rb.linearVelocity;
                              float speedAlongRope = Vector3.Dot(currentVel, tensionDir);
                              rb.linearVelocity = currentVel - (tensionDir * speedAlongRope) + (-tensionDir * climbSpeed);
 
                              currentRopeLength += changeAmount;
+                             
+                             if (currentRopeLength > distToAnchor + 1.0f)
+                             {
+                                 currentRopeLength = distToAnchor + 1.0f;
+                             }
                          }
                     }
                 }
@@ -546,47 +537,40 @@ public class PlayerHook : MonoBehaviour
             }
             else
             {
-
                  if (isInitAutoWinching)
                  {
-
                       Vector3 currentVel = rb.linearVelocity;
                       float speedAlongRope = Vector3.Dot(currentVel, tensionDir);
                       rb.linearVelocity = currentVel - (tensionDir * speedAlongRope) + (tensionDir * autoWinchSpeed);
 
                       currentRopeLength = Mathf.MoveTowards(currentRopeLength, baseRopeLength, autoWinchSpeed * Time.fixedDeltaTime);
 
-                      if (currentRopeLength < distToAnchor)
+                      if (currentRopeLength < distToAnchor - 0.05f)
                       {
-                           currentRopeLength = distToAnchor;
+                           currentRopeLength = distToAnchor - 0.05f;
                       }
 
                       if (currentRopeLength <= baseRopeLength + 0.01f)
                       {
                            isInitAutoWinching = false;
+                           baseRopeLength = currentRopeLength;
                       }
                  }
-                 else
+                 else if (!_playerMovement.IsGrounded)
                  {
-
                       float targetLength = baseRopeLength;
 
                       Vector3 velDir = rb.linearVelocity.normalized;
                       float speed = rb.linearVelocity.magnitude;
-
                       int obstacleLayer = hookableLayer | _playerMovement.GroundLayer | _playerMovement.WallLayer;
 
                       if (speed > 2.0f)
                       {
-
                            if (Physics.SphereCast(myPos, 0.4f, velDir, out RaycastHit forwardHit, 1.5f, obstacleLayer))
                            {
-
                                 if (Vector3.Dot(velDir, forwardHit.normal) < -0.1f)
                                 {
-
                                      Vector3 projectedVel = Vector3.ProjectOnPlane(rb.linearVelocity, forwardHit.normal);
-
                                      rb.linearVelocity = projectedVel.normalized * speed;
                                 }
                            }
@@ -611,8 +595,12 @@ public class PlayerHook : MonoBehaviour
                       {
                            float smoothWinchSpeed = climbSpeed * 1.5f;
                            currentRopeLength = Mathf.MoveTowards(currentRopeLength, targetLength, Time.fixedDeltaTime * smoothWinchSpeed);
+                           baseRopeLength = currentRopeLength;
                       }
-
+                 }
+                 else
+                 {
+                      baseRopeLength = currentRopeLength;
                  }
             }
 
@@ -631,12 +619,6 @@ public class PlayerHook : MonoBehaviour
             }
 
             bool isWinchingUp = (_playerMovement.MoveInput.y > 0.1f);
-
-            if (_playerMovement.IsGrounded && !isWinchingUp)
-            {
-                currentRopeLength = Mathf.Clamp(distToAnchor, 1f, maxDistance);
-                baseRopeLength = currentRopeLength;
-            }
 
             if (distToAnchor > currentRopeLength)
             {
@@ -674,16 +656,6 @@ public class PlayerHook : MonoBehaviour
                 {
                     if (distError > 0.01f)
                     {
-
-                        float correctAmount = Mathf.Min(distError, 0.4f);
-                        Vector3 fixPos = transform.position + tensionDir * correctAmount;
-                        rb.MovePosition(fixPos);
-                    }
-                }
-                else
-                {
-                    if (distError > 1.0f)
-                    {
                         float correctAmount = Mathf.Min(distError, 0.4f);
                         Vector3 fixPos = transform.position + tensionDir * correctAmount;
                         rb.MovePosition(fixPos);
@@ -712,22 +684,30 @@ public class PlayerHook : MonoBehaviour
                 Vector3 axis = Vector3.right;
                 Vector3 tangent = Vector3.Cross(ropeDir, axis).normalized;
 
+                // Ensure tangent always points in the positive Z direction (+Z = Right)
+                // This guarantees that D (Positive Input) always swings the player to the Right (+Z)
+                // and A (Negative Input) always swings the player to the Left (-Z), regardless
+                // of whether the anchor is above or below the player.
+                if (tangent.z < 0)
+                {
+                    tangent = -tangent;
+                }
+
                 if (_playerMovement.IsGrounded)
                 {
-
                     float currentZSpeed = Mathf.Abs(rb.linearVelocity.z);
                     float boostMultiplier = 1.0f;
 
                     if (currentZSpeed < 5f) boostMultiplier = 15.0f;
                     else if (currentZSpeed < 15f) boostMultiplier = 5.0f;
 
-                    Vector3 groundForce = new Vector3(0f, 0f, inputX * swingForce * boostMultiplier);
+                    Vector3 groundForce = tangent * (inputX * swingForce * boostMultiplier);
                     _playerMovement.AddHookForce(groundForce);
                 }
                 else
                 {
-
-                    _playerMovement.AddHookForce(new Vector3(0f, 0f, inputX * swingForce));
+                    Vector3 airForce = tangent * (inputX * swingForce);
+                    _playerMovement.AddHookForce(airForce);
                 }
             }
 
@@ -751,13 +731,6 @@ public class PlayerHook : MonoBehaviour
         if (speedOverride > 0)
         {
             currentZipSpeed = speedOverride;
-        }
-        else if (target.TryGetComponent(out BaseEnemy enemy))
-        {
-             if (enemy.HookInteractSpeed > 0)
-             {
-                 currentZipSpeed = enemy.HookInteractSpeed;
-             }
         }
 
         float stuckTimer = 0f;
@@ -784,21 +757,23 @@ public class PlayerHook : MonoBehaviour
             }
 
             Vector3 zipDir = (targetPos - myPos).normalized;
-
             Rigidbody myRb = GetComponent<Rigidbody>();
-            myRb.linearVelocity = zipDir * currentZipSpeed;
 
             bool isEnemy = target.TryGetComponent(out BaseEnemy _) || (target.parent != null && target.parent.TryGetComponent(out BaseEnemy _));
             float checkDist = isEnemy ? safeZipDistance : stopDistance;
+            
+            float distanceToSurface = Mathf.Sqrt(distToSurfaceSqr);
 
-            if (distToSurfaceSqr < checkDist * checkDist && (Time.time - startTime) > 0.1f)
+            // 다음 프레임(Time.fixedDeltaTime)에 도달할 예정이거나 이미 안전 거리 안에 있다면 즉시 멈춤
+            // 초근접에서 쐈을 때 0.1초 동안 억지로 120m/s로 가속하여 적과 충돌하는 버그(몸통박치기) 해결
+            if (distanceToSurface <= checkDist || (distanceToSurface - checkDist) <= currentZipSpeed * Time.fixedDeltaTime)
             {
-
                 myRb.linearVelocity = Vector3.zero;
-
                 StopHook();
                 yield break;
             }
+
+            myRb.linearVelocity = zipDir * currentZipSpeed;
 
             float movedDist = Vector3.Distance(myPos, lastPos);
             if (movedDist < 0.01f)
@@ -821,5 +796,79 @@ public class PlayerHook : MonoBehaviour
             yield return new WaitForFixedUpdate();
         }
         StopHook();
+    }
+
+    private Collider _lastSnappedCollider;
+    private Vector3 _lastSnappedPoint;
+
+    public Vector3 GetSnappedAimDirection(Vector3 startPos, Vector3 rawDir)
+    {
+        Vector3 dir = new Vector3(0, rawDir.y, rawDir.z).normalized;
+
+        if (!useAimAssist) return dir;
+
+        bool hasDirectHit = Physics.Raycast(startPos, dir, out RaycastHit directHit, maxDistance, hookableLayer);
+
+        if (hasDirectHit)
+        {
+            _lastSnappedCollider = null;
+            return dir;
+        }
+
+        if (_lastSnappedCollider != null)
+        {
+            Vector3 dirToLast = (_lastSnappedPoint - startPos).normalized;
+            dirToLast = new Vector3(0, dirToLast.y, dirToLast.z).normalized;
+
+            if (Vector3.Angle(dir, dirToLast) <= aimAssistAngleLimit)
+            {
+                if (Physics.Raycast(startPos, dirToLast, out RaycastHit stickHit, maxDistance, hookableLayer))
+                {
+                    if (stickHit.collider == _lastSnappedCollider)
+                    {
+                        return dirToLast;
+                    }
+                }
+            }
+        }
+
+        _lastSnappedCollider = null;
+        int maxSteps = Mathf.RoundToInt(aimAssistAngleLimit / aimAssistStep);
+
+        for (int i = 1; i <= maxSteps; i++)
+        {
+            float currentAngle = i * aimAssistStep;
+
+            Vector3 dirP = Quaternion.AngleAxis(currentAngle, Vector3.right) * dir;
+            bool hitP = Physics.Raycast(startPos, dirP, out RaycastHit rcp, maxDistance, hookableLayer);
+
+            Vector3 dirM = Quaternion.AngleAxis(-currentAngle, Vector3.right) * dir;
+            bool hitM = Physics.Raycast(startPos, dirM, out RaycastHit rcm, maxDistance, hookableLayer);
+
+            if (hitP && hitM)
+            {
+                bool useP = rcp.distance < rcm.distance;
+                _lastSnappedPoint = useP ? rcp.point : rcm.point;
+                _lastSnappedCollider = useP ? rcp.collider : rcm.collider;
+                dir = (_lastSnappedPoint - startPos).normalized;
+                break;
+            }
+            else if (hitP)
+            {
+                _lastSnappedPoint = rcp.point;
+                _lastSnappedCollider = rcp.collider;
+                dir = (_lastSnappedPoint - startPos).normalized;
+                break;
+            }
+            else if (hitM)
+            {
+                _lastSnappedPoint = rcm.point;
+                _lastSnappedCollider = rcm.collider;
+                dir = (_lastSnappedPoint - startPos).normalized;
+                break;
+            }
+        }
+
+        return new Vector3(0, dir.y, dir.z).normalized;
     }
 }

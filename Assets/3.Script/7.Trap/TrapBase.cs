@@ -30,32 +30,26 @@ namespace Trap
                         knockbackDir = (other.transform.position - transform.position).normalized;
                     }
 
-                    if (health.CurrentHealth > damage)
+                    if (other.TryGetComponent(out PlayerMovement playerMove))
                     {
-                        if (other.TryGetComponent(out PlayerMovement playerMove))
+                        knockbackDir.x = 0f; // Optional, maybe we want horizontal knockback?
+                        if (knockbackDir.sqrMagnitude < 0.01f)
                         {
-                            if (playerMove.CanMove)
-                            {
-                                knockbackDir.x = 0f; // Optional, maybe we want horizontal knockback?
-                                if (knockbackDir.sqrMagnitude < 0.01f)
-                                {
-                                    knockbackDir = -playerMove.transform.forward;
-                                }
-                                if (knockbackDir.y < 0.5f)
-                                {
-                                    knockbackDir.y += 0.8f;
-                                }
-                                playerMove.ApplyKnockback(knockbackDir.normalized, knockbackForce, 0.25f);
-                            }
+                            knockbackDir = -playerMove.transform.forward;
                         }
-                        else if (other.TryGetComponent(out Rigidbody rb))
+                        if (knockbackDir.y < 0.5f)
                         {
-                            rb.linearVelocity = Vector3.zero;
-                            rb.AddForce(knockbackDir.normalized * knockbackForce, ForceMode.Impulse);
+                            knockbackDir.y += 0.8f;
                         }
+                        playerMove.ApplyKnockback(knockbackDir.normalized, knockbackForce, 0.25f);
+                    }
+                    else if (other.TryGetComponent(out Rigidbody rb))
+                    {
+                        rb.linearVelocity = Vector3.zero;
+                        rb.AddForce(knockbackDir.normalized * knockbackForce, ForceMode.Impulse);
                     }
 
-                    health.TakeDamage(damage);
+                    health.TakeDamage(damage, false);
                 }
             }
         }
