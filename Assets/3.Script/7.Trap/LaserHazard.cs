@@ -25,12 +25,19 @@ namespace Trap
         [SerializeField] private float texTileSpeed = 2f;
         [SerializeField] private float hdrIntensity = 5f;
 
+        [Header("⏰ Timer Settings")]
+        [SerializeField] private bool useTimer = false;
+        [SerializeField] private float activeTime = 2f;
+        [SerializeField] private float inactiveTime = 2f;
+
         private LineRenderer _lineRenderer;
         private PlayerMovement _playerMove;
+        private bool _isActive = true;
+        private float _timer;
 
         private void Awake()
         {
-            _playerMove = FindObjectOfType<PlayerMovement>();
+            _playerMove = FindFirstObjectByType<PlayerMovement>();
             _lineRenderer = GetComponent<LineRenderer>();
             _lineRenderer.positionCount = 2;
             _lineRenderer.useWorldSpace = true;
@@ -39,6 +46,7 @@ namespace Trap
             _lineRenderer.endWidth = laserThickness;
 
             SetupLaserVisuals();
+            _timer = activeTime; // 타이머 초기화 오빠! 🥰
         }
 
         private void SetupLaserVisuals()
@@ -108,6 +116,26 @@ namespace Trap
 
         private void FixedUpdate()
         {
+            // 🎯 타이머 로직 처리
+            if (useTimer)
+            {
+                _timer -= Time.fixedDeltaTime;
+                if (_timer <= 0f)
+                {
+                    _isActive = !_isActive;
+                    _timer = _isActive ? activeTime : inactiveTime;
+                    _lineRenderer.enabled = _isActive;
+                }
+            }
+            else
+            {
+                _isActive = true;
+                _lineRenderer.enabled = true;
+            }
+
+            // 레이저가 비활성화 상태면 물리 체크를 건너뛰어 오빠! 🥰
+            if (!_isActive) return;
+
             float currentDistance = maxDistance;
 
             int mask = ~(playerLayer.value | (1 << 2));

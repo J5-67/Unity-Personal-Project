@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections;
 
 namespace Core
 {
@@ -106,7 +107,41 @@ namespace Core
             if (bgmSource.clip == clip && bgmSource.isPlaying) return;
 
             bgmSource.clip = clip;
+            bgmSource.volume = _masterVolume * _bgmVolume; // 볼륨 강제 리셋 방지
             bgmSource.Play();
+        }
+
+        public void FadeBGM(AudioClip clip, float duration = 1.0f)
+        {
+            if (clip == null) return;
+            if (bgmSource.clip == clip && bgmSource.isPlaying) return;
+            StartCoroutine(FadeBGMRoutine(clip, duration));
+        }
+
+        private IEnumerator FadeBGMRoutine(AudioClip clip, float duration)
+        {
+            float targetVolume = _masterVolume * _bgmVolume;
+            
+            // 1. 기존 BGM 페이드 아웃
+            if (bgmSource.isPlaying)
+            {
+                float startVol = bgmSource.volume;
+                for (float t = 0; t < duration; t += Time.deltaTime)
+                {
+                    bgmSource.volume = Mathf.Lerp(startVol, 0, t / duration);
+                    yield return null;
+                }
+            }
+
+            // 2. 새로운 BGM 교체 및 페이드 인
+            bgmSource.clip = clip;
+            bgmSource.Play();
+            for (float t = 0; t < duration; t += Time.deltaTime)
+            {
+                bgmSource.volume = Mathf.Lerp(0, targetVolume, t / duration);
+                yield return null;
+            }
+            bgmSource.volume = targetVolume;
         }
 
         public void PlaySFX(AudioClip clip)

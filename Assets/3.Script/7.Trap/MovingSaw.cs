@@ -51,15 +51,20 @@ namespace Trap
             }
         }
 
-        private void OnDrawGizmosSelected()
+        private void OnDrawGizmos()
         {
-            Gizmos.color = Color.red;
+            // 🎯 레이저처럼 선택하지 않아도 항상 보이게 OnDrawGizmos로 바꿨어 오빠! 🥰
+            Gizmos.color = Color.yellow; // 노란색 실선으로 경로를 더 잘 보이게!
+            
             Vector3 start = Application.isPlaying ? _startPos : transform.position;
             Vector3 end = start + moveOffset;
 
             Gizmos.DrawLine(start, end);
-            Gizmos.DrawWireSphere(start, 0.2f);
-            Gizmos.DrawWireSphere(end, 0.2f);
+
+            // 시작점과 끝점은 빨간색 구체로 표시할게!
+            Gizmos.color = Color.red;
+            Gizmos.DrawWireSphere(start, 0.3f);
+            Gizmos.DrawWireSphere(end, 0.3f);
         }
     }
 }

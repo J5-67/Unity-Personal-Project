@@ -396,6 +396,10 @@ public class PlayerHook : MonoBehaviour
         _playerMovement.SetHookState(true);
         _playerMovement.AddDashStack(1);
 
+        // 🎯 훅 걸자마자 리지드바디를 깨워서 멈칫거림을 방지해!
+        Rigidbody rb = GetComponent<Rigidbody>();
+        if (rb != null) rb.WakeUp();
+
         float currentRopeLength = Vector3.Distance(transform.position, targetPos);
         float baseRopeLength = currentRopeLength;
         bool isInitAutoWinching = false;
@@ -409,8 +413,6 @@ public class PlayerHook : MonoBehaviour
              baseRopeLength = Mathf.Min(standardWinchLength, safeLength);
              isInitAutoWinching = true;
         }
-
-        Rigidbody rb = GetComponent<Rigidbody>();
 
         float currentRopeLengthSqr = currentRopeLength * currentRopeLength;
 
@@ -564,17 +566,8 @@ public class PlayerHook : MonoBehaviour
                       float speed = rb.linearVelocity.magnitude;
                       int obstacleLayer = hookableLayer | _playerMovement.GroundLayer | _playerMovement.WallLayer;
 
-                      if (speed > 2.0f)
-                      {
-                           if (Physics.SphereCast(myPos, 0.4f, velDir, out RaycastHit forwardHit, 1.5f, obstacleLayer))
-                           {
-                                if (Vector3.Dot(velDir, forwardHit.normal) < -0.1f)
-                                {
-                                     Vector3 projectedVel = Vector3.ProjectOnPlane(rb.linearVelocity, forwardHit.normal);
-                                     rb.linearVelocity = projectedVel.normalized * speed;
-                                }
-                           }
-                      }
+                      // 🎯 벽 슬라이딩 로직을 제거해서 벽을 타고 승천하는 현상을 막았어 오빠!
+
 
                       Vector3 checkStartPos = myPos + Vector3.up * 0.5f;
 
@@ -610,7 +603,8 @@ public class PlayerHook : MonoBehaviour
             }
             else
             {
-                 _playerMovement.SetDrag(0.05f);
+                 // 🎯 공기 저항을 0.05f에서 0.5f로 높여서 가만히 있으면 점점 멈추게 했어 오빠!
+                 _playerMovement.SetDrag(0.5f);
             }
 
             if (_playerMovement != null)
@@ -637,28 +631,31 @@ public class PlayerHook : MonoBehaviour
 
                 if (speedAway > limitSpeed)
                 {
-                    Vector3 velocityCorrection = -tensionDir * (speedAway - limitSpeed);
+                    // 🎯 벽 근처 떨림(Jitter) 방지: 벽과 너무 가까우면 속도 보정을 살짝 유연하게 해줄게!
+                    float jitterDamping = (distToSurface < 0.5f) ? 0.5f : 1.0f;
+                    Vector3 velocityCorrection = -tensionDir * (speedAway - limitSpeed) * jitterDamping;
                     Vector3 newVel = velocity - velocityCorrection;
 
-                    if (limitSpeed == 0f && newVel.sqrMagnitude > 0.01f)
-                    {
-                        rb.linearVelocity = newVel.normalized * velocity.magnitude;
-                    }
-                    else
-                    {
-                        rb.linearVelocity = newVel;
-                    }
+                    // 🎯 속도 보존 로직을 제거해서 공기 저항(Drag)이 정상적으로 작동하게 했어 오빠!
+                    rb.linearVelocity = newVel;
                 }
 
                 float distError = distToAnchor - currentRopeLength;
 
+                // 🎯 팅김 현상 해결: 강제 위치 보정 시 벽 충돌을 고려하도록 수정했어!
                 if (!isWinchingDown && !isWinchingUp && !isInitAutoWinching)
                 {
-                    if (distError > 0.01f)
+                    if (distError > 0.05f) // 허용 오차를 살짝 늘려서 미세한 떨림을 방지해.
                     {
-                        float correctAmount = Mathf.Min(distError, 0.4f);
-                        Vector3 fixPos = transform.position + tensionDir * correctAmount;
-                        rb.MovePosition(fixPos);
+                        float correctAmount = Mathf.Min(distError, 0.2f); // 보정 강도를 낮춰서 쫀득하게!
+                        Vector3 targetOffset = tensionDir * correctAmount;
+                        
+                        // 🎯 기준점을 발 밑이 아닌 몸통(Vector3.up)으로 올리고, 반지름을 줄여서 더 정확하게 체크해!
+                        Vector3 castOrigin = transform.position + Vector3.up;
+                        if (!Physics.SphereCast(castOrigin, 0.3f, tensionDir, out _, correctAmount, hookableLayer))
+                        {
+                            rb.MovePosition(transform.position + targetOffset);
+                        }
                     }
                 }
             }

@@ -90,8 +90,29 @@ public class BossHealthUI : MonoBehaviour
         }
     }
 
+    private void OnEnable()
+    {
+        // 🎯 보스가 활성화될 때 자동으로 연결해줄게 오빠!
+        if (bossHealth == null)
+        {
+            bossHealth = FindAnyObjectByType<BossHealth>(FindObjectsInactive.Include);
+        }
+
+        if (bossHealth != null)
+        {
+            ConnectBoss(bossHealth);
+        }
+    }
+
     public void ConnectBoss(BossHealth newBoss)
     {
+        if (newBoss == null) return;
+        
+        // 중복 방지
+        newBoss.OnHealthChanged -= UpdateUI;
+        newBoss.OnDamageTaken -= ShakeUI;
+        newBoss.OnDeath -= OnBossDead;
+
         bossHealth = newBoss;
         bossHealth.OnHealthChanged += UpdateUI;
         bossHealth.OnDamageTaken += ShakeUI;
@@ -103,6 +124,7 @@ public class BossHealthUI : MonoBehaviour
              easeSlider.value = hpSlider.value;
 
         if (canvasGroup != null) canvasGroup.alpha = 1f;
+        gameObject.SetActive(true);
     }
 
     private void UpdateUI(float current, float max)

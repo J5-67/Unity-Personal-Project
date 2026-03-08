@@ -26,6 +26,8 @@ public class EnemyShooter : MonoBehaviour
     private bool _isAiming = false;
     public bool IsAiming => _isAiming;
 
+    private Material _aimMaterial; // 🎯 URP 색상 지원용! 🥰
+
     private UnityEngine.Pool.ObjectPool<EnemyProjectile> _projectilePool;
 
     private void Awake()
@@ -37,6 +39,11 @@ public class EnemyShooter : MonoBehaviour
         {
             aimLaser.positionCount = 2;
             aimLaser.enabled = false;
+            
+            // 🎯 URP에서 색깔이 잘 나오게 기본 머티리얼을 세팅할게 오빠!
+            _aimMaterial = new Material(Shader.Find("Universal Render Pipeline/Particles/Unlit"));
+            if (_aimMaterial.shader == null) _aimMaterial.shader = Shader.Find("Universal Render Pipeline/Unlit");
+            aimLaser.material = _aimMaterial;
         }
 
         _projectilePool = new UnityEngine.Pool.ObjectPool<EnemyProjectile>(
@@ -155,18 +162,17 @@ public class EnemyShooter : MonoBehaviour
                 aimLaser.SetPosition(0, searchFirePoint().position);
                 aimLaser.SetPosition(1, _playerTr.position);
 
+                // 🎯 레이저 슈터랑 똑같은 쫀득한 빨-노 깜빡임 수식이야 오빠! 🥰
                 float progress = timer / aimDuration;
+                float blinkSpeed = Mathf.Lerp(8f, 40f, Mathf.Pow(progress, 2f)); 
+                bool isRed = Mathf.Sin(Time.time * blinkSpeed * 2f * Mathf.PI) > 0f;
+                Color blinkColor = isRed ? Color.red : Color.yellow;
 
-                float blinkSpeed = Mathf.Lerp(10f, 80f, Mathf.Pow(progress, 3f));
-
-                float alpha = Mathf.Sin(Time.time * blinkSpeed) > 0f ? 1f : 0.05f;
-
-                Color c1 = aimLaser.startColor;
-                Color c2 = aimLaser.endColor;
-                c1.a = alpha;
-                c2.a = alpha;
-                aimLaser.startColor = c1;
-                aimLaser.endColor = c2;
+                aimLaser.enabled = true; // 깜빡일 때 꺼지는 게 아니라 색이 변하게!
+                aimLaser.startColor = blinkColor;
+                aimLaser.endColor = blinkColor;
+                
+                if (_aimMaterial != null) _aimMaterial.SetColor("_BaseColor", blinkColor);
             }
 
             timer += Time.deltaTime;

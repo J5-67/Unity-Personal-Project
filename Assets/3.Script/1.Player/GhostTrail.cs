@@ -21,11 +21,28 @@ public class GhostTrail : MonoBehaviour
     {
         _ghostPool = new ObjectPool<GameObject>(CreateGhost, OnGetGhost, OnReleaseGhost, OnDestroyGhost, true, 20, 50);
 
+        RefreshRenderers();
+
+        _propertyBlock = new MaterialPropertyBlock();
+    }
+
+    public void RefreshRenderers()
+    {
+        // 1. 먼저 자식에서 찾아보고
         _skinnedRenderers = GetComponentsInChildren<SkinnedMeshRenderer>();
         _meshFilters = GetComponentsInChildren<MeshFilter>();
         _spriteRenderers = GetComponentsInChildren<SpriteRenderer>();
 
-        _propertyBlock = new MaterialPropertyBlock();
+        // 2. 아무것도 없다면 부모(플레이어 본체) 쪽을 뒤져보기 (transform.root는 너무 넓어서 위험해!)
+        if ((_skinnedRenderers == null || _skinnedRenderers.Length == 0) &&
+            (_meshFilters == null || _meshFilters.Length == 0) &&
+            (_spriteRenderers == null || _spriteRenderers.Length == 0))
+        {
+            Transform searchRoot = transform.parent != null ? transform.parent : transform;
+            _skinnedRenderers = searchRoot.GetComponentsInChildren<SkinnedMeshRenderer>();
+            _meshFilters = searchRoot.GetComponentsInChildren<MeshFilter>();
+            _spriteRenderers = searchRoot.GetComponentsInChildren<SpriteRenderer>();
+        }
     }
 
     private GameObject CreateGhost()
@@ -46,7 +63,7 @@ public class GhostTrail : MonoBehaviour
         sr.material = ghostMaterial;
 
         GhostEffect effect = ghostObj.AddComponent<GhostEffect>();
-        effect.Initialize(this, fadeDuration, _propertyBlock, ghostColor, mr, sr, mf);
+        effect.Initialize(this, fadeDuration, null, ghostColor, mr, sr, mf);
 
         return ghostObj;
     }
@@ -54,6 +71,7 @@ public class GhostTrail : MonoBehaviour
     private void OnGetGhost(GameObject ghost)
     {
         ghost.SetActive(true);
+        ghost.transform.SetParent(null); // 🎯 중요: 풀에서 나올 때 부모(플레이어)를 버려야 잔상이 제자리에 남아요!
     }
 
     private void OnReleaseGhost(GameObject ghost)
@@ -76,6 +94,19 @@ public class GhostTrail : MonoBehaviour
 
     public void ShowGhost()
     {
+        SpawnGhostLayer(ghostColor, Vector3.zero);
+    }
+
+    public void ShowGlitchGhost()
+    {
+        // 🎯 더 입체적인 3중 글리치 잔상! (색상 오류 수정 완료!)
+        SpawnGhostLayer(new Color(1f, 0f, 1f, 0.4f), new Vector3(-0.1f, 0.05f, 0f));  // Magenta
+        SpawnGhostLayer(new Color(0f, 1f, 1f, 0.5f), Vector3.zero);                   // Cyan (Center)
+        SpawnGhostLayer(new Color(0.2f, 0.1f, 1f, 0.4f), new Vector3(0.1f, -0.05f, 0f)); // Blue/Purple
+    }
+
+    private void SpawnGhostLayer(Color color, Vector3 offset)
+    {
         if (_skinnedRenderers != null && _skinnedRenderers.Length > 0)
         {
             foreach (var skinned in _skinnedRenderers)
@@ -83,15 +114,14 @@ public class GhostTrail : MonoBehaviour
                 if (!skinned.gameObject.activeInHierarchy) continue;
 
                 GameObject ghostObj = _ghostPool.Get();
-                ghostObj.transform.SetParent(null);
-                ghostObj.transform.SetPositionAndRotation(skinned.transform.position, skinned.transform.rotation);
+                ghostObj.transform.SetPositionAndRotation(skinned.transform.position + offset, skinned.transform.rotation);
                 ghostObj.transform.localScale = skinned.transform.lossyScale;
 
                 GhostEffect effect = ghostObj.GetComponent<GhostEffect>();
                 skinned.BakeMesh(effect.GetMeshFilter().mesh);
 
                 effect.SetupMesh();
-                effect.StartFade();
+                effect.StartFade(color);
             }
         }
 
@@ -102,15 +132,14 @@ public class GhostTrail : MonoBehaviour
                 if (!filter.gameObject.activeInHierarchy) continue;
 
                 GameObject ghostObj = _ghostPool.Get();
-                ghostObj.transform.SetParent(null);
-                ghostObj.transform.SetPositionAndRotation(filter.transform.position, filter.transform.rotation);
+                ghostObj.transform.SetPositionAndRotation(filter.transform.position + offset, filter.transform.rotation);
                 ghostObj.transform.localScale = filter.transform.lossyScale;
 
                 GhostEffect effect = ghostObj.GetComponent<GhostEffect>();
                 effect.GetMeshFilter().mesh = filter.sharedMesh;
 
                 effect.SetupMesh();
-                effect.StartFade();
+                effect.StartFade(color);
             }
         }
 
@@ -121,13 +150,12 @@ public class GhostTrail : MonoBehaviour
                 if (!sr.gameObject.activeInHierarchy || sr.sprite == null) continue;
 
                 GameObject ghostObj = _ghostPool.Get();
-                ghostObj.transform.SetParent(null);
-                ghostObj.transform.SetPositionAndRotation(sr.transform.position, sr.transform.rotation);
+                ghostObj.transform.SetPositionAndRotation(sr.transform.position + offset, sr.transform.rotation);
                 ghostObj.transform.localScale = sr.transform.lossyScale;
 
                 GhostEffect effect = ghostObj.GetComponent<GhostEffect>();
                 effect.SetupSprite(sr.sprite, sr.flipX, sr.flipY);
-                effect.StartFade();
+                effect.StartFade(color);
             }
         }
     }
@@ -155,24 +183,34 @@ public class GhostEffect : MonoBehaviour
     private MeshFilter _meshFilter;
 
     private int _colorPropertyId;
+    private int _glitchPowerId;
     private bool _isSprite;
+    private bool _useGlitch;
+    private Vector3 _originalLocalPos;
 
     public void Initialize(GhostTrail manager, float duration, MaterialPropertyBlock block, Color color, MeshRenderer mr, SpriteRenderer sr, MeshFilter mf)
     {
         _manager = manager;
         _fadeDuration = duration;
-        _propertyBlock = block;
         _initColor = color;
 
         _meshRenderer = mr;
         _spriteRenderer = sr;
         _meshFilter = mf;
 
+        _propertyBlock = new MaterialPropertyBlock(); // 각 잔상마다 독립적인 블록 사용 (안전!)
         _colorPropertyId = Shader.PropertyToID("_BaseColor");
+        _glitchPowerId = Shader.PropertyToID("_GlitchPower");
+
         if (_meshRenderer != null && _meshRenderer.sharedMaterial != null && !_meshRenderer.sharedMaterial.HasProperty(_colorPropertyId))
         {
              _colorPropertyId = Shader.PropertyToID("_Color");
         }
+    }
+
+    public void SetGlitch(bool useGlitch)
+    {
+        _useGlitch = useGlitch;
     }
 
     public MeshFilter GetMeshFilter()
@@ -210,18 +248,29 @@ public class GhostEffect : MonoBehaviour
         }
     }
 
-    public void StartFade()
+    public void StartFade(Color overrideColor = default)
     {
         _timeElapsed = 0f;
+        if (overrideColor != default) _initColor = overrideColor;
 
         if (!_isSprite)
         {
-            _propertyBlock.SetColor(_colorPropertyId, _initColor);
-            _meshRenderer.SetPropertyBlock(_propertyBlock);
+            if (_meshRenderer != null)
+            {
+                _meshRenderer.enabled = true;
+                _propertyBlock.SetColor(_colorPropertyId, _initColor);
+                _meshRenderer.SetPropertyBlock(_propertyBlock);
+            }
+            if (_spriteRenderer != null) _spriteRenderer.enabled = false;
         }
         else
         {
-            _spriteRenderer.color = _initColor;
+            if (_spriteRenderer != null)
+            {
+                _spriteRenderer.enabled = true;
+                _spriteRenderer.color = _initColor;
+            }
+            if (_meshRenderer != null) _meshRenderer.enabled = false;
         }
 
         enabled = true;

@@ -88,7 +88,6 @@ public class BossMissileLauncher : MonoBehaviour
             actionOnGet: (missile) => missile.gameObject.SetActive(true),
             actionOnRelease: (missile) => {
                 missile.gameObject.SetActive(false);
-                missile.transform.position = transform.position;
             },
             actionOnDestroy: (missile) => Destroy(missile.gameObject),
             defaultCapacity: 20,
@@ -108,9 +107,10 @@ public class BossMissileLauncher : MonoBehaviour
         EnemyMissile missile = _missilePool.Get();
 
         missile.transform.position = position;
-        missile.transform.rotation = Quaternion.identity;
+        missile.transform.rotation = Quaternion.LookRotation(direction);
 
         missile.Set3DHoming(true);
+        missile.SetOwner(transform); // 🎯 누구 미사일인지 알려줘야 해!
 
         missile.Launch(direction, launchDelay);
 

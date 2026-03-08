@@ -87,14 +87,18 @@ public class EnemyMissile : EnemyProjectile
         }
 
         _pidController.Reset();
+        _target = null;
+        _targetCollider = null;
+
+        if (TryGetComponent(out Collider col)) col.enabled = true;
+        if (_renderer != null) _renderer.enabled = true;
+
         _isHoming = true;
         _isFrozen = false;
         _isHit = false;
         _isHacked = false;
         _timer = 0f;
-
-        if (TryGetComponent(out Collider col)) col.enabled = true;
-        if (_renderer != null) _renderer.enabled = true;
+        _homingDelay = 0f; // 🎯 발사 전에는 딜레이 초기화!
 
         if (_target == null)
         {
@@ -202,11 +206,24 @@ public class EnemyMissile : EnemyProjectile
 
         Transform hackTarget = null;
 
-        if (_owner != null && _owner.gameObject.activeInHierarchy && !_owner.GetComponent<BaseEnemy>().IsDestroyed)
+        // 🎯 오빠! 보스가 죽었거나 사라졌을 때를 대비해서 안전장치를 달았어! 🥰
+        if (_owner != null && _owner.gameObject.activeInHierarchy)
         {
-            hackTarget = _owner;
+            var ownerEnemy = _owner.GetComponent<BaseEnemy>();
+            var ownerBoss = _owner.GetComponent<BossHealth>();
+
+            // 보스거나 일반 적일 때, 아직 살아있는지 확인해!
+            bool isAlive = false;
+            if (ownerBoss != null) isAlive = !ownerBoss.IsDead;
+            else if (ownerEnemy != null) isAlive = !ownerEnemy.IsDestroyed;
+
+            if (isAlive)
+            {
+                hackTarget = _owner;
+            }
         }
-        else
+        
+        if (hackTarget == null)
         {
 
             Collider[] hits = Physics.OverlapSphere(transform.position, 30f);
@@ -503,7 +520,8 @@ public class EnemyMissile : EnemyProjectile
 
                 if (Core.VFXManager.Instance != null)
                 {
-                    Core.VFXManager.Instance.PlayHackExplosion(transform.position);
+                    // 🎯 보스를 맞췄을 때는 보스 전용(약한 흔들림) 효과를 써야 해 오빠! 🥰
+                    Core.VFXManager.Instance.PlayBossHitExplosion(transform.position);
                 }
 
                 HitAndDestroy();

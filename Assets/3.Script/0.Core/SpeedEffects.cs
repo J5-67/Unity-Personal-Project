@@ -14,6 +14,7 @@ namespace Core
         [SerializeField] private float ghostInterval = 0.1f;
 
         private float _ghostTimer;
+        private Vector3 _lastGhostPos;
         private bool _isEffectActive;
 
         private void Start()
@@ -86,16 +87,14 @@ namespace Core
 
             if (_isEffectActive && ghostTrail != null)
             {
-
-                float currentInterval = Mathf.Lerp(ghostInterval, ghostInterval * 0.2f, speedRatio);
+                // 🎯 롤백: 초기 시간 기반 생성 방식
+                float currentInterval = ghostInterval;
 
                 _ghostTimer += Time.deltaTime;
                 if (_ghostTimer >= currentInterval)
                 {
                     ghostTrail.ShowGhost();
-
-                    _ghostTimer -= currentInterval;
-                    if (_ghostTimer > currentInterval) _ghostTimer = 0f;
+                    _ghostTimer = 0f;
                 }
             }
         }

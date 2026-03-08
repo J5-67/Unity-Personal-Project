@@ -15,10 +15,9 @@ GameObject:
   - component: {fileID: 8219096891562254297}
   - component: {fileID: 5122460285685888555}
   - component: {fileID: 1941089588104781090}
-  - component: {fileID: 4811696063257135438}
   - component: {fileID: 7126965636140243150}
   m_Layer: 8
-  m_Name: E_SL
+  m_Name: E_KK
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -32,7 +31,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 909764043625235358}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: -0.13999987, z: -3.77}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -157,12 +156,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 51f52f29575082e47915412b70d8d6c7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BaseEnemy
-  hookInteractSpeed: 15
   freezeDuration: 5
   glitchShader: {fileID: 4800000, guid: 4680fba1598edad4db7d7ecd46ff810e, type: 3}
   glitchIntensity: 1.5
   glitchSpeed: 20
-  canKamikaze: 0
+  canKamikaze: 1
   kamikazeTriggerRadius: 10
   overloadDelay: 1
   kamikazeDuration: 3
@@ -186,27 +184,6 @@ MonoBehaviour:
   - {fileID: 1782106264355049523}
   moveSpeed: 3
   waitTime: 1
---- !u!114 &4811696063257135438
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 909764043625235358}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1e1c6556b1214c143a53a8129ae6b687, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::EnemyShooter
-  detectRange: 15
-  attackRange: 12
-  fireRate: 2
-  aimDuration: 1
-  firePoint: {fileID: 5084087744296974859}
-  projectilePrefab: {fileID: 8695200416132757608, guid: cb776dddf9c4bae488a62dba2d4f9400, type: 3}
-  aimLaser: {fileID: 7126965636140243150}
-  aimSound: {fileID: 0}
-  fireSound: {fileID: 0}
 --- !u!120 &7126965636140243150
 LineRenderer:
   serializedVersion: 2

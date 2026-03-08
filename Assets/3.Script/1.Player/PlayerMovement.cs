@@ -10,8 +10,8 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private float rotationSpeed = 15f;
 
     [Header("💨 Dash Settings (New!)")]
-    [SerializeField] private float dashSpeed = 40f;
-    [SerializeField] private float dashDuration = 0.25f;
+    [SerializeField] private float dashDistance = 8f; // 이제 거리를 직접 설정!
+    [SerializeField] private float dashDuration = 0.2f; // 대시가 지속되는 시간
     [SerializeField] private int maxDashCharges = 2;
     [SerializeField] private float dashCooldown = 3f;
     [SerializeField] private LayerMask dashPassLayer;
@@ -104,6 +104,9 @@ public class PlayerMovement : MonoBehaviour
         if (_rb != null)
         {
             _rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+            _rb.interpolation = RigidbodyInterpolation.Interpolate;
+            // 🎯 훅 스윙 중 멈칫하거나 떨리는 현상 해결! 리지드바디가 잠들지 않게 해줄게 오빠! 🥰
+            _rb.sleepThreshold = 0f;
         }
 
         _currentDashCharges = maxDashCharges;
@@ -321,24 +324,20 @@ public class PlayerMovement : MonoBehaviour
         _currentDashCharges--;
         _dashRechargeTimer = 0f;
 
-        if (TryGetComponent(out PlayerHealth phStart))
+        if (TryGetComponent(out PlayerHealth ph))
         {
-            phStart.SetDashInvincible(true);
+            ph.SetDashInvincible(true);
         }
 
         int playerLayer = gameObject.layer;
-
         int projectileLayer = LayerMask.NameToLayer("Projectile");
         if (projectileLayer != -1)
         {
-             Physics.IgnoreLayerCollision(playerLayer, projectileLayer, true);
+            Physics.IgnoreLayerCollision(playerLayer, projectileLayer, true);
         }
 
         int passMask = dashPassLayer.value;
-        if (passMask == 0)
-        {
-            passMask = LayerMask.GetMask("Enemy", "Projectile", "Default");
-        }
+        if (passMask == 0) passMask = LayerMask.GetMask("Enemy", "Projectile", "Default");
 
         for (int i = 0; i < 32; i++)
         {
@@ -355,32 +354,27 @@ public class PlayerMovement : MonoBehaviour
         dashDir = new Vector3(0, dashDir.y, dashDir.z).normalized;
 
         float currentSpeed = _rb.linearVelocity.magnitude;
-        float actualDashSpeed = Mathf.Max(dashSpeed, currentSpeed);
-
-        // 🎯 커서 거리 비례 동적 대쉬 길이 조절 (최소 0.05초 ~ 최대 dashDuration)
-        float distanceToMouse = new Vector3(0, dashVector.y, dashVector.z).magnitude;
-        float timeToReachMouse = distanceToMouse / actualDashSpeed;
-        float actualDashDuration = Mathf.Clamp(timeToReachMouse, 0.05f, dashDuration);
+        float baseDashSpeed = dashDistance / dashDuration;
+        float actualDashSpeed = Mathf.Max(baseDashSpeed, currentSpeed); 
+        float actualDashDuration = dashDuration; 
 
         _rb.linearVelocity = dashDir * actualDashSpeed;
 
         float elapsedTime = 0f;
-        float maxExtensionTime = 0.5f;
         bool isOverlappingEnemy = false;
         bool hasRecharged = false;
         bool bulletTimeTriggered = false;
-
         Vector3 lastGhostPos = transform.position;
 
-        if (ghostTrail != null)
-        {
-            ghostTrail.ShowGhost();
-            lastGhostPos = transform.position;
-        }
+        // 🎯 렌더러와 글리치 세팅 (여기 있어야 루프 안에서도 누군지 알아요!)
+        Renderer playerRen = GetComponentInChildren<Renderer>();
+        MaterialPropertyBlock mpb = new MaterialPropertyBlock();
+        int glitchId = Shader.PropertyToID("_GlitchPower");
+        float postPierceTimer = 0f; // 🎯 관통 제동 타이머 복구!
 
         if (Core.PostProcessManager.Instance != null)
         {
-            Core.PostProcessManager.Instance.TriggerChromaticAberration(1.0f, 0.5f);
+            Core.PostProcessManager.Instance.TriggerChromaticAberration(1.2f, 0.4f);
         }
 
         if (Core.CameraEffectManager.Instance != null)
@@ -388,15 +382,24 @@ public class PlayerMovement : MonoBehaviour
             Core.CameraEffectManager.Instance.PunchFOV(dashFovAmount, dashFovDuration);
         }
 
-        while (elapsedTime < actualDashDuration || (isOverlappingEnemy && elapsedTime < actualDashDuration + maxExtensionTime))
+        // 🎯 루프 조건: 기본 시간 내이거나, 아직 적과 겹쳐있거나, 관통 후 제동이 덜 끝났을 때!
+        // 단, 1.0초 이상 대시가 지속되면 벽에 끼거나 버그가 생긴 걸로 보고 강제로 종료할게 오빠! 🥰
+        while ((elapsedTime < actualDashDuration || isOverlappingEnemy || (hasRecharged && postPierceTimer > 0 && postPierceTimer < 0.05f)) 
+               && elapsedTime < 1.0f) 
         {
+            // 🎯 플레이어 본체 글리치 연출
+            if (playerRen != null)
+            {
+                playerRen.GetPropertyBlock(mpb);
+                mpb.SetFloat(glitchId, Random.Range(0.25f, 0.55f));
+                playerRen.SetPropertyBlock(mpb);
+            }
 
             Vector3 currentVel = _rb.linearVelocity;
             float speedAlongDash = Vector3.Dot(currentVel, dashDir);
 
             if (elapsedTime > 0f && speedAlongDash < actualDashSpeed * 0.3f)
             {
-
                 if (Mathf.Abs(dashDir.y) < 0.1f && currentVel.y <= 0f)
                 {
                     _rb.linearVelocity = new Vector3(currentVel.x, 0f, currentVel.z);
@@ -408,26 +411,14 @@ public class PlayerMovement : MonoBehaviour
             }
             else
             {
-
                 _rb.linearVelocity = dashDir * actualDashSpeed;
             }
 
-            if (ghostTrail != null)
-            {
-
-                float sqrDistance = (transform.position - lastGhostPos).sqrMagnitude;
-                if (sqrDistance >= ghostSpacing * ghostSpacing)
-                {
-                    ghostTrail.ShowGhost();
-                    lastGhostPos = transform.position;
-                }
-            }
-
-            isOverlappingEnemy = false;
-
+            // 🎯 관통 및 충돌 감지
+            bool isCurrentlyInside = false; // 현재 물리적으로 겹쳐 있는가?
             Vector3 dashBoxCenter = transform.position + Vector3.up * 1.0f;
-            Vector3 tightExtents = new Vector3(0.8f, 0.5f, 0.3f);
-            Vector3 looseExtents = new Vector3(1.2f, 0.8f, 1.5f);
+            Vector3 tightExtents = new Vector3(0.8f, 0.5f, 0.8f); // 🎯 깊이를 좀 더 줘서 적 몸속에서 멈추지 않게!
+            Vector3 looseExtents = new Vector3(1.2f, 0.8f, 1.8f);
 
             int castMask = dashPassLayer.value != 0 ? dashPassLayer.value : Physics.AllLayers;
             Collider[] tightHits = Physics.OverlapBox(dashBoxCenter, tightExtents, Quaternion.identity, castMask);
@@ -458,14 +449,21 @@ public class PlayerMovement : MonoBehaviour
                 _rb.linearVelocity = bounceDir * blockingShield.BounceForce;
                 blockingShield.OnBlock(transform.position);
 
-                if (TryGetComponent(out PlayerHealth ph))
+                if (TryGetComponent(out PlayerHealth phDamage))
                 {
-                    ph.SetDashInvincible(false);
-                    ph.TakeDamage(1);
+                    phDamage.SetDashInvincible(false);
+                    phDamage.TakeDamage(1);
                 }
 
                 _isDashing = false;
                 _currentDashCharges = 0;
+                
+                if (playerRen != null)
+                {
+                    playerRen.GetPropertyBlock(mpb);
+                    mpb.SetFloat(glitchId, 0f);
+                    playerRen.SetPropertyBlock(mpb);
+                }
                 yield break;
             }
 
@@ -473,20 +471,10 @@ public class PlayerMovement : MonoBehaviour
             {
                 if (hit.TryGetComponent(out BaseEnemy enemy) || (hit.transform.parent != null && hit.transform.parent.TryGetComponent(out enemy)))
                 {
-                    if (enemy.IsFrozen)
-                    {
-                        isOverlappingEnemy = true;
-                        continue;
-                    }
-
+                    if (enemy.IsFrozen) { isCurrentlyInside = true; continue; }
                     enemy.Freeze();
-                    isOverlappingEnemy = true;
-
-                    if (!hasRecharged)
-                    {
-                        AddDashStack(1);
-                        hasRecharged = true;
-                    }
+                    isCurrentlyInside = true;
+                    if (!hasRecharged) { AddDashStack(1); hasRecharged = true; }
                 }
             }
 
@@ -494,66 +482,61 @@ public class PlayerMovement : MonoBehaviour
             {
                 if (hit.TryGetComponent(out EnemyMissile missile) || (hit.transform.parent != null && hit.transform.parent.TryGetComponent(out missile)))
                 {
-                    if (missile.IsHacked || missile.IsFrozen)
-                    {
-                        isOverlappingEnemy = true;
-                        continue;
-                    }
-
+                    if (missile.IsHacked || missile.IsFrozen) { isCurrentlyInside = true; continue; }
                     missile.SetFrozen(true);
-                    isOverlappingEnemy = true;
-
-                    if (!hasRecharged)
-                    {
-                        AddDashStack(1);
-                        hasRecharged = true;
-                    }
+                    isCurrentlyInside = true;
+                    if (!hasRecharged) { AddDashStack(1); hasRecharged = true; }
                 }
             }
 
-            if (!isOverlappingEnemy && !hasRecharged)
+            // 미래의 적 감지 (대시 연장용)
+            bool isSeeingEnemyAhead = false;
+            if (!isCurrentlyInside && !hasRecharged)
             {
-
-                if (Physics.BoxCast(dashBoxCenter, tightExtents, dashDir, out RaycastHit hit, Quaternion.identity, 0.5f, castMask))
-                {
-                     if (hit.collider.TryGetComponent(out BaseEnemy enemy) || (hit.transform.parent != null && hit.transform.parent.TryGetComponent(out enemy)))
-                     {
-                         isOverlappingEnemy = true;
-                     }
-                }
-
-                if (!isOverlappingEnemy && Physics.BoxCast(dashBoxCenter, looseExtents, dashDir, out RaycastHit mHit, Quaternion.identity, 3.0f, castMask))
-                {
-                     if (mHit.collider.TryGetComponent(out EnemyMissile m) || (mHit.transform.parent != null && mHit.transform.parent.TryGetComponent(out m)))
-                     {
-                         isOverlappingEnemy = true;
-                     }
-                }
+                if (Physics.BoxCast(dashBoxCenter, tightExtents, dashDir, Quaternion.identity, 0.5f, castMask)) isSeeingEnemyAhead = true;
+                if (!isSeeingEnemyAhead && Physics.BoxCast(dashBoxCenter, looseExtents, dashDir, Quaternion.identity, 2.5f, castMask)) isSeeingEnemyAhead = true;
             }
 
-            // 🎯 관통 제동 (Penetration Brake)
-            // 적을 한 번이라도 베고(hasRecharged) 적의 몸뚱어리를 완전히 빠져나왔다면(!isOverlappingEnemy)
-            // 남은 대쉬 거리에 상관없이 즉시 멈춰서 뒤에 있는 트랩에 쳐박히는 것을 방지
-            if (hasRecharged && !isOverlappingEnemy)
+            // 최종 상태 업데이트
+            isOverlappingEnemy = isCurrentlyInside || isSeeingEnemyAhead;
+
+            // 🎯 관통 제동 (Penetration Brake) - 0.05초의 여운!
+            if (hasRecharged && !isCurrentlyInside)
             {
-                _rb.linearVelocity = Vector3.zero; // 급제동
-                break;
+                postPierceTimer += Time.deltaTime;
+                if (postPierceTimer >= 0.05f)
+                {
+                    _rb.linearVelocity = Vector3.zero; 
+                    isOverlappingEnemy = false; // 루프 종료 유도
+                    break;
+                }
+            }
+            else
+            {
+                postPierceTimer = 0f; 
             }
 
             if (hasRecharged && !bulletTimeTriggered && Core.GameManager.Instance != null)
             {
-                 Core.GameManager.Instance.TriggerBulletTime(dashBulletTimeDuration, dashBulletTimeScale, true);
-                 bulletTimeTriggered = true;
+                Core.GameManager.Instance.TriggerBulletTime(dashBulletTimeDuration, dashBulletTimeScale, true);
+                bulletTimeTriggered = true;
             }
 
-            elapsedTime += Time.fixedDeltaTime;
-            yield return new WaitForFixedUpdate();
+            elapsedTime += Time.deltaTime;
+            yield return null;
+        }
+
+        if (playerRen != null)
+        {
+            playerRen.GetPropertyBlock(mpb);
+            mpb.SetFloat(glitchId, 0f);
+            playerRen.SetPropertyBlock(mpb);
         }
 
         int projectileLayerEnd = LayerMask.NameToLayer("Projectile");
-         if (projectileLayerEnd != -1)
+        if (projectileLayerEnd != -1)
         {
-             Physics.IgnoreLayerCollision(playerLayer, projectileLayerEnd, false);
+            Physics.IgnoreLayerCollision(playerLayer, projectileLayerEnd, false);
         }
 
         int passMaskEnd = dashPassLayer.value;
@@ -603,23 +586,20 @@ public class PlayerMovement : MonoBehaviour
 
                 if (isMovingFast && isSameDir)
                 {
-
-                    float decayed = Mathf.MoveTowards(currentZ, targetSpeedZ, 10f * Time.deltaTime);
+                    float decayed = Mathf.MoveTowards(currentZ, targetSpeedZ, 10f * Time.fixedDeltaTime);
                     _rb.linearVelocity = new Vector3(0f, _rb.linearVelocity.y, decayed);
                 }
                 else
                 {
-
                     float accel = _isGrounded ? moveSpeed * 10f : moveSpeed * 5f;
-                    float newSpeed = Mathf.MoveTowards(currentZ, targetSpeedZ, accel * Time.deltaTime);
+                    float newSpeed = Mathf.MoveTowards(currentZ, targetSpeedZ, accel * Time.fixedDeltaTime);
                     _rb.linearVelocity = new Vector3(0f, _rb.linearVelocity.y, newSpeed);
                 }
             }
             else
             {
-
                 float decel = _isGrounded ? moveSpeed * 7f : moveSpeed * 2f;
-                float newSpeed = Mathf.MoveTowards(currentZ, 0f, decel * Time.deltaTime);
+                float newSpeed = Mathf.MoveTowards(currentZ, 0f, decel * Time.fixedDeltaTime);
                 _rb.linearVelocity = new Vector3(0f, _rb.linearVelocity.y, newSpeed);
             }
         }
@@ -720,6 +700,12 @@ public class PlayerMovement : MonoBehaviour
 
     private void WallSlide()
     {
+        // 🎯 훅을 건 상태에서는 벽타기가 시작되지 않게 막았어 오빠!
+        if (_isHookingState)
+        {
+            _isWallSliding = false;
+            return;
+        }
 
         float zDist = Mathf.Abs(wallCheckPos.localPosition.z);
         if (zDist < 0.1f) zDist = 0.5f;
@@ -910,6 +896,13 @@ public class PlayerMovement : MonoBehaviour
 
         if (_disableMoveCoroutine != null) StopCoroutine(_disableMoveCoroutine);
         _disableMoveCoroutine = StartCoroutine(DisableMoveRoutine(disableTime));
+    }
+
+    public void ApplyKnockback(Vector3 force)
+    {
+        if (_isDashing) return;
+        _rb.linearVelocity = Vector3.zero;
+        _rb.AddForce(force, ForceMode.Impulse);
     }
 
     private void OnDrawGizmos()

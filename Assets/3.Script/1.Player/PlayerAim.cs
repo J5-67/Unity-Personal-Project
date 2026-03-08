@@ -26,7 +26,8 @@ public class PlayerAim : MonoBehaviour
 
     [Header("📉 조준선 투명도 (알파 그래프 조절)")]
     [Tooltip("우측 빈 공간을 클릭하고 키보드/마우스로 점을 찍어 원하는 구간(10% 단위 등)의 투명도를 맘대로 세팅하세요!\n(0.0 = 캐릭터 몸통 / 1.0 = 훅 타겟)")]
-    [SerializeField] private AnimationCurve customAlphaCurve = new AnimationCurve(
+    [SerializeField]
+    private AnimationCurve customAlphaCurve = new AnimationCurve(
         new Keyframe(0f, 0f),
         new Keyframe(0.05f, 0f),
         new Keyframe(0.2f, 1f),
@@ -115,11 +116,24 @@ public class PlayerAim : MonoBehaviour
         GenerateReverseArrowTexture();
         GenerateDashTexture();
 
-        Shader shader = Shader.Find("Legacy Shaders/Particles/Alpha Blended");
-        if(shader == null) shader = Shader.Find("Particles/Alpha Blended");
-        if(shader == null) shader = Shader.Find("Mobile/Particles/Alpha Blended");
+        // 🎯 텍스처 반복 설정 (애니메이션을 위해 필수!)
+        if (_arrowTexture != null) _arrowTexture.wrapMode = TextureWrapMode.Repeat;
+        if (_arrowTextureReverse != null) _arrowTextureReverse.wrapMode = TextureWrapMode.Repeat;
+        if (_dashTexture != null) _dashTexture.wrapMode = TextureWrapMode.Repeat;
+
+        // 🎯 URP 최신 쉐이더로 세팅! 오빠 프로젝트는 URP니까! 😤
+        Shader shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+        if (shader == null) shader = Shader.Find("Universal Render Pipeline/Unlit");
 
         _lineMaterial = new Material(shader);
+
+        // 투명도 설정
+        _lineMaterial.SetFloat("_Surface", 1.0f); 
+        _lineMaterial.SetFloat("_Blend", 0.0f);   
+        _lineMaterial.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+        _lineMaterial.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+        _lineMaterial.SetInt("_ZWrite", 0);
+        _lineMaterial.renderQueue = 3000;
 
         _lineGradient = new Gradient();
         _colorKeys = new GradientColorKey[2];
@@ -128,9 +142,12 @@ public class PlayerAim : MonoBehaviour
         lineRenderer.material = _lineMaterial;
         lineRenderer.startWidth = lineWidth;
         lineRenderer.endWidth = lineWidth;
-        lineRenderer.positionCount = 2;
+        lineRenderer.positionCount = 10;
+        
+        lineRenderer.sortingLayerName = "Player";
+        lineRenderer.sortingOrder = 1000;
 
-        lineRenderer.textureMode = LineTextureMode.Stretch;
+        lineRenderer.textureMode = LineTextureMode.Tile;
         lineRenderer.enabled = true;
     }
 
@@ -176,7 +193,7 @@ public class PlayerAim : MonoBehaviour
         int startX = (size - width) / 2;
         for (int x = startX; x < startX + width; x++)
         {
-             DrawPixelBlock(_dashTexture, x, center, thickness, Color.white);
+            DrawPixelBlock(_dashTexture, x, center, thickness, Color.white);
         }
         _dashTexture.Apply();
     }
@@ -194,10 +211,10 @@ public class PlayerAim : MonoBehaviour
 
     private void DrawPixelBlock(Texture2D tex, int x, int y, int size, Color color)
     {
-        for(int i=0; i<size; i++)
-            for(int j=0; j<size; j++)
-                if(x+i < 64 && y+j < 64 && x+i>=0 && y+j>=0)
-                    tex.SetPixel(x+i, y+j, color);
+        for (int i = 0; i < size; i++)
+            for (int j = 0; j < size; j++)
+                if (x + i < 64 && y + j < 64 && x + i >= 0 && y + j >= 0)
+                    tex.SetPixel(x + i, y + j, color);
     }
 
     private void Update()
@@ -226,19 +243,26 @@ public class PlayerAim : MonoBehaviour
 
     private void UpdateAimPosition()
     {
-        Plane gameplayPlane = new Plane(Vector3.right, transform.position);
+        float pX = transform.position.x;
+        Plane gameplayPlane = new Plane(Vector3.right, new Vector3(pX, 0, 0));
 
         Ray ray = _mainCamera.ScreenPointToRay(_virtualMousePos);
 
         if (gameplayPlane.Raycast(ray, out float enterDistance))
         {
             _aimWorldPosition = ray.GetPoint(enterDistance);
-            _aimWorldPosition.x = transform.position.x;
+            _aimWorldPosition.x = pX;
 
             if (crosshairTransform != null)
             {
                 crosshairTransform.position = _aimWorldPosition;
                 crosshairTransform.rotation = Quaternion.Euler(0, -90, 0);
+                
+                if (crosshairTransform.TryGetComponent(out MeshRenderer mr))
+                {
+                    mr.sortingLayerName = "Player";
+                    mr.sortingOrder = 32767;
+                }
             }
         }
     }
@@ -255,10 +279,13 @@ public class PlayerAim : MonoBehaviour
 
         if (!lineRenderer.enabled) lineRenderer.enabled = true;
 
+        float pX = transform.position.x;
         float currentMaxDistance = maxHookDistance;
         if (_playerHook != null) currentMaxDistance = _playerHook.MaxDistance;
 
         Vector3 startPos = firePoint != null ? firePoint.position : transform.position + Vector3.up * 1.0f;
+        startPos.x = pX;
+        
         Vector3 rawDirection = (_aimWorldPosition - startPos).normalized;
         Vector3 direction = rawDirection;
         Vector3 endPos = startPos + (direction * currentMaxDistance);
@@ -268,7 +295,6 @@ public class PlayerAim : MonoBehaviour
         float currentFlowSpeed = -animationSpeed * 0.5f;
         float currentTiling = dashTiling;
 
-        // 1. 적(Enemy) 타겟팅 우선 확인 (SphereCast)
         RaycastHit[] hits = Physics.SphereCastAll(startPos, aimRadius, rawDirection, currentMaxDistance, aimLayerMask);
         Collider bestTarget = null;
         float maxScore = -100.0f;
@@ -278,89 +304,36 @@ public class PlayerAim : MonoBehaviour
             if (hit.collider.gameObject == gameObject) continue;
             if (hit.collider.isTrigger) continue;
             if (hit.distance <= 0f) continue;
-
             BaseEnemy enemy = hit.collider.GetComponentInParent<BaseEnemy>();
             float dot = Vector3.Dot(rawDirection, (hit.point - startPos).normalized);
-
             if (dot < 0.0f) continue;
-
             float score = dot;
-            if (enemy != null)
-            {
-                score += 5.0f; // 적 타겟팅 점수 어드밴티지
-            }
-            else
-            {
-                score -= hit.distance * 0.1f; // 일발 벽은 뒷순위
-            }
-
-            if (score > maxScore)
-            {
-                maxScore = score;
-                bestTarget = hit.collider;
-            }
+            if (enemy != null) score += 5.0f;
+            else score -= hit.distance * 0.1f;
+            if (score > maxScore) { maxScore = score; bestTarget = hit.collider; }
         }
 
         BaseEnemy targetEnemy = bestTarget != null ? bestTarget.GetComponentInParent<BaseEnemy>() : null;
 
         if (targetEnemy != null)
         {
-            // --- 적 포착 모드 ---
             LockedTarget = bestTarget.transform;
             direction = (bestTarget.transform.position - startPos).normalized;
-            
             RaycastHit enemyHit;
-            if (Physics.Raycast(startPos, direction, out enemyHit, currentMaxDistance, aimLayerMask))
-            {
-                endPos = enemyHit.point;
-            }
-            else
-            {
-                endPos = bestTarget.transform.position;
-            }
+            if (Physics.Raycast(startPos, direction, out enemyHit, currentMaxDistance, aimLayerMask)) endPos = enemyHit.point;
+            else endPos = bestTarget.transform.position;
 
-            if (targetEnemy.IsFrozen)
-            {
-                targetColor = hookableColor;
-                targetTexture = _dashTexture;
-                currentFlowSpeed = 0f;
-                currentTiling = dashTiling;
-            }
-            else
-            {
-                targetColor = enemyColor;
-                targetTexture = _arrowTextureReverse;
-                currentFlowSpeed = animationSpeed;
-                currentTiling = enemyArrowTiling;
-            }
+            if (targetEnemy.IsFrozen) { targetColor = hookableColor; currentFlowSpeed = 0f; }
+            else { targetColor = enemyColor; targetTexture = _arrowTextureReverse; currentFlowSpeed = animationSpeed; currentTiling = enemyArrowTiling; }
         }
         else
         {
-            // --- 빈 공간 (벽 조준) 모드 + 산나비 엣지 스크린 픽스 ---
             LockedTarget = null;
-            
-            if (_playerHook != null)
-            {
-                // Hook 스크립트에서 계산한 보정(스냅) 방향을 그대로 가져온다
-                direction = _playerHook.GetSnappedAimDirection(startPos, rawDirection);
-            }
-
+            if (_playerHook != null) direction = _playerHook.GetSnappedAimDirection(startPos, rawDirection);
             endPos = startPos + (direction * currentMaxDistance);
-            
             RaycastHit obstructionHit;
-            bool hasObstruction = Physics.Raycast(startPos, direction, out obstructionHit, currentMaxDistance, aimLayerMask);
-            
-            if (hasObstruction)
-            {
-                endPos = obstructionHit.point;
-                targetColor = hookableColor;
-            }
-            else
-            {
-                targetColor = defaultColor;
-            }
-
-            targetTexture = _dashTexture;
+            if (Physics.Raycast(startPos, direction, out obstructionHit, currentMaxDistance, aimLayerMask)) { endPos = obstructionHit.point; targetColor = hookableColor; }
+            else targetColor = defaultColor;
             currentFlowSpeed = -animationSpeed * 0.5f;
             currentTiling = dashTiling;
         }
@@ -370,37 +343,25 @@ public class PlayerAim : MonoBehaviour
         for (int i = 0; i < segmentCount; i++)
         {
             float t = i / (float)(segmentCount - 1);
-            lineRenderer.SetPosition(i, Vector3.Lerp(startPos, endPos, t));
+            Vector3 point = Vector3.Lerp(startPos, endPos, t);
+            point.x = pX;
+            lineRenderer.SetPosition(i, point);
         }
 
-        _colorKeys[0].color = targetColor;
-        _colorKeys[0].time = 0f;
-        _colorKeys[1].color = targetColor;
-        _colorKeys[1].time = 1f;
-
-        for (int i = 0; i < 8; i++)
-        {
-            float t = i / 7f;
-            _alphaKeys[i].alpha = customAlphaCurve.Evaluate(t);
-            _alphaKeys[i].time = t;
-        }
-
+        _colorKeys[0].color = targetColor; _colorKeys[0].time = 0f;
+        _colorKeys[1].color = targetColor; _colorKeys[1].time = 1f;
+        for (int i = 0; i < 8; i++) { float t = i / 7f; _alphaKeys[i].alpha = customAlphaCurve.Evaluate(t); _alphaKeys[i].time = t; }
         _lineGradient.SetKeys(_colorKeys, _alphaKeys);
         lineRenderer.colorGradient = _lineGradient;
 
         if (_lineMaterial != null)
         {
-            if (_lineMaterial.HasProperty("_TintColor")) _lineMaterial.SetColor("_TintColor", targetColor);
-            else if (_lineMaterial.HasProperty("_Color")) _lineMaterial.color = targetColor;
-
-            _lineMaterial.mainTexture = targetTexture;
-
+            if (_lineMaterial.HasProperty("_BaseColor")) _lineMaterial.SetColor("_BaseColor", targetColor);
+            _lineMaterial.SetTexture("_BaseMap", targetTexture);
             float distance = Vector3.Distance(startPos, endPos);
-
-            _lineMaterial.mainTextureScale = new Vector2(distance * currentTiling, 1f);
-
             _currentTextureOffset += currentFlowSpeed * Time.deltaTime;
-            _lineMaterial.mainTextureOffset = new Vector2(_currentTextureOffset, 0f);
+            _lineMaterial.SetTextureScale("_BaseMap", new Vector2(distance * currentTiling, 1f));
+            _lineMaterial.SetTextureOffset("_BaseMap", new Vector2(_currentTextureOffset, 0f));
         }
     }
 }

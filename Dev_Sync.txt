@@ -1,0 +1,26 @@
+[Dev_Sync]
+📅 2026-03-09 보스전 기믹 및 페이즈 완성! ✨
+
+✅ 수정/추가 파일 리스트:
+1. Assets/3.Script/2.Enemy/Boss/BossPhaseManager.cs (신규) - 페이즈/맵 관리
+2. Assets/3.Script/2.Enemy/Boss/BossController.cs (신규) - 보스 AI 공격 루틴
+3. Assets/3.Script/7.Trap/MovingLaser.cs (신규) - 오프셋 기반 이동 레이저
+4. Assets/3.Script/2.Enemy/Boss/BossHealth.cs (수정) - ResetBossHealth 기능 추가
+5. Assets/3.Script/1.Player/PlayerMovement.cs (수정) - 대쉬 무한루프 방지(1초 타임아웃)
+6. Assets/3.Script/2.Enemy/Boss/BossEncounterTrigger.cs (수정) - 보스 BGM 페이드 연동
+7. Assets/3.Script/0.Core/AudioManager.cs (수정) - BGM 페이드 기능 구현
+
+⚠️ 작업실에서 세팅할 것:
+- Boss 오브젝트에 'BossPhaseManager'와 'BossController' 컴포넌트 추가하고 레퍼런스(Health, Launcher 등) 연결하기.
+- BossPhaseManager 인스펙터:
+  * Boss Floor: 좁아질 바닥 오브젝트
+  * Spikes/Lasers/Aerial Platforms: 각 기믹 오브젝트들 할당
+  * Checkpoints: 2, 3페이즈 시작용 빈 오브젝트(Transform) 할당
+- MovingLaser 인스펙터:
+  * Start/End Offset (Vector3) 값으로 이동 범위 설정 (기즈모가 보여서 쉬울 거야!)
+
+🚀 주요 변경 로직:
+- 50% 체력 -> 2페이즈: 바닥 좁아짐(Lerp) + 가시 활성화 + 공중 발판 등장 + 체크포인트 저장.
+- 30% 체력 -> 3페이즈: 레이저 활성화 + 공격 속도 빨라짐(1초 간격) + 체크포인트 저장.
+- 플레이어 사망 시: 현재 페이즈 시작 체력으로 보스 초기화. (단, 보스가 이미 죽었다면 리셋 안 함!)
+- 무한 대쉬 버그: 대쉬 연장이 아무리 길어도 1.0초면 강제 종료되게 안전장치 설치 완료!

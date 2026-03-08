@@ -121,13 +121,30 @@ public class PlayerHealth : MonoBehaviour
         if (currentHealth > 0)
         {
             OnTakeDamageEvent?.Invoke();
-            StartCoroutine(RespawnDelayRoutine(false));
+            // 🎯 오빠! 기다리지 말고 바로 체크포인트로 보내줄게! 슝~ ✈️
+            StartCoroutine(QuickRespawnRoutine());
             StartCoroutine(InvincibilityRoutine());
         }
         else
         {
              Die();
         }
+    }
+
+    private System.Collections.IEnumerator QuickRespawnRoutine()
+    {
+        _isDead = true; 
+        
+        if (TryGetComponent(out PlayerMovement pm)) pm.SetDeadState(true);
+
+        // 🎯 앗! 여기서 1초나 기다리고 있었어 오빠! 바로 리스폰하게 고쳤어! 🥰
+        Respawn(false);
+        
+        // 아주 잠깐만(0.1초) 멈췄다가 다시 움직이게 해줄게! (화면 전환 느낌)
+        yield return new WaitForSeconds(0.1f);
+
+        _isDead = false;
+        if (TryGetComponent(out PlayerMovement pm2)) pm2.SetDeadState(false);
     }
 
     private System.Collections.IEnumerator RespawnDelayRoutine(bool isFullReset)
@@ -231,6 +248,18 @@ public class PlayerHealth : MonoBehaviour
     public void SetCheckpoint(Vector3 pos)
     {
         lastCheckpointPos = pos;
+    }
+
+    public void SetCheckpointAtCurrent()
+    {
+        lastCheckpointPos = transform.position;
+    }
+
+    public void RestoreHealth(int amount)
+    {
+        currentHealth = Mathf.Min(currentHealth + amount, maxHealth);
+        healthUI?.UpdateHealth(currentHealth);
+        UpdateLowHealthEffect();
     }
 
     private void OnCollisionEnter(Collision collision)

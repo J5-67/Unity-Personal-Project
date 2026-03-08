@@ -22,9 +22,11 @@ namespace Core
 
         [SerializeField] private GameObject spawnEffectPrefab;
 
-        [Header("👑 Boss VFX")]
         [SerializeField] private GameObject bossExplosionPrefab;
         [SerializeField] private float bossShakeIntensity = 4.0f;
+        
+        [Header("💥 Boss Hit Settings")]
+        [SerializeField] private float bossHitShakeIntensity = 0.3f; // 🎯 미사일 여러개 터져도 안 어지럽게!
 
         public void PlaySpawnEffect(Vector3 position)
         {
@@ -64,12 +66,20 @@ namespace Core
         {
             if (bossExplosionPrefab != null)
             {
-
                 PlayVFX(bossExplosionPrefab, position, Quaternion.identity);
+                if (Core.GameManager.Instance != null) Core.GameManager.Instance.TriggerCameraShake(bossShakeIntensity);
+            }
+        }
 
+        public void PlayBossHitExplosion(Vector3 position)
+        {
+            // 🎯 보스가 미사일 맞을 때 전용! 흔들림을 아주 살짝만 줘서 중복되어도 편안하게! 🥰
+            if (hackExplosionPrefab != null)
+            {
+                PlayVFX(hackExplosionPrefab, position, Quaternion.identity);
                 if (Core.GameManager.Instance != null)
                 {
-                    Core.GameManager.Instance.TriggerCameraShake(bossShakeIntensity);
+                    Core.GameManager.Instance.TriggerCameraShake(bossHitShakeIntensity);
                 }
             }
         }

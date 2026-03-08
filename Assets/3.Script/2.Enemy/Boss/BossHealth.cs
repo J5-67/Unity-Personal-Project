@@ -138,6 +138,13 @@ public class BossHealth : MonoBehaviour
         }
     }
 
+    public void ResetBossHealth(float percentage)
+    {
+        currentHealth = maxHealth * (percentage / 100f);
+        UpdateUI();
+        Debug.Log($"💖 보스 체력이 {percentage}%로 재설정되었어 오빠!");
+    }
+
     private void Die()
     {
 
