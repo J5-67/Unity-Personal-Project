@@ -40,11 +40,19 @@ namespace Core.Data
             SaveSystem.Save(CurrentData);
         }
 
+        public void SaveProgress(string sceneName, Vector3 checkpointPos)
+        {
+            CurrentData.currentStageSceneName = sceneName;
+            CurrentData.lastCheckpointPosition = checkpointPos;
+            CurrentData.hasSavedPosition = true;
+            SaveGame();
+        }
+
         public void SaveProgress(string sceneName)
         {
             CurrentData.currentStageSceneName = sceneName;
+            CurrentData.hasSavedPosition = false; // 🎯 새 씬으로 갈 때는 저장된 위치를 초기화해서 기본 스폰 지점을 쓰게 할게!
             SaveGame();
-
         }
     }
 }

@@ -4,6 +4,24 @@
 
 ---
 
+## 📅 2026-03-09
+### 1. 🏗️ Unity 6 Boss Battle Development History - [완료]
+*   **Phase Management System (`BossPhaseManager.cs`)**:
+    *   **3-Phase Evolution**: Boss health thresholds set to 100%, 50%, and 30%.
+    *   **Dynamic Floor Narrowing**: Entering Phase 2 smoothly scales `bossFloor` (Lerp/PingPong) over 2.0s.
+    *   **Incremental Hazard Activation**: `Spikes` and `Aerial Platforms` activate at 50% health; `Lasers` activate at 30% health.
+    *   **Dynamic Checkpoints**: Automatically updates player checkpoint to phase-specific positions upon phase transition.
+    *   **Fair Play Logic**: On player death, boss health resets to the start of the current phase (100%/50%/30%), UNLESS the boss is already dead (post-mortem win).
+*   **Boss AI & Patterns (`BossController.cs`, `MovingLaser.cs`)**:
+    *   **BossController**: Replaced manual debug firing with a phase-aware AI loop. (Phase 1: 3.0s interval, Phase 2: 2.0s interval, Phase 3: 1.0s interval)
+    *   **MovingLaser**: Flexible laser trap system using Inspector-defined `Vector3` offsets. Supports point-to-point oscillations with live Gizmo visualization in the Scene view.
+*   **Bug Fixes & Optimization**:
+    *   **Infinite Dash Bug**: Added a 1.0s safety timeout to `PlayerMovement.DashRoutine` to prevent players from getting stuck in an invincible/hacked state when overlapping geometry or enemies.
+    *   **Boss Health Reset**: Added `ResetBossHealth(float percentage)` to allow precise programmatic health restoration.
+    *   **BGM 연동**: 보스 조우 시 `BossEncounterTrigger`를 통해 BGM 페이드.
+
+---
+
 ## 📅 2026-03-06
 ### 1. 🎯 훅 조준선 및 발사 위치 스파이더맨급 영점 조절 (Hook Aim & Target Fixes) - [완료]
 *   **조준선 렌더링 끄기 (Hide AimLine)**:

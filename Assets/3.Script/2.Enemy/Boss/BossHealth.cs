@@ -183,6 +183,13 @@ public class BossHealth : MonoBehaviour
         }
 
         OnDeath?.Invoke();
+
+        // 🎯 오빠! 보스가 죽고 나서 주인공의 멋진 포즈를 볼 시간을 4초 줄게! 😎
+        yield return new WaitForSeconds(4.0f);
+
+        // 🎯 클리어 씬으로 이동! 🥳
+        Core.SceneLoader.LoadScene("Clear");
+
         gameObject.SetActive(false);
     }
 }

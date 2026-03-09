@@ -9,17 +9,17 @@ EditorBuildSettings:
     path: Assets/1.Scene/Test/0.MenuTest.unity
     guid: fa8ab74c37a386d48827332b894dec9c
   - enabled: 1
-    path: Assets/1.Scene/Test/1.GameTest.unity
-    guid: 9fc0d4010bbf28b4594072e72b8655ab
-  - enabled: 1
-    path: Assets/1.Scene/Test/3.ChapterTest.unity
-    guid: e6fad19adea140e44bf0fd4055662d58
-  - enabled: 1
     path: Assets/1.Scene/LoadingScene.unity
     guid: 67c1c99ab9fd44f4caf8bc1f6e7243a3
   - enabled: 1
     path: Assets/1.Scene/Tutorial.unity
-    guid: ec58caa7abbf5df429ca5beb7f80da8a
+    guid: 0c1accb80fe0ead498c131f2688af7a7
+  - enabled: 1
+    path: Assets/1.Scene/Stage.unity
+    guid: dd556d1ab182a364a91f9211cd9d6080
+  - enabled: 1
+    path: Assets/1.Scene/Clear.unity
+    guid: c593681508e78884a89458a038b05c37
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 289c1b55c9541489481df5cc06664110, type: 3}
   m_UseUCBPForAssetBundles: 0

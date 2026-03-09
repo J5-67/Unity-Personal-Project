@@ -40,8 +40,6 @@ namespace Core
             }
 
             _gameInput = new GameInput();
-
-            _gameInput.UI.Pause.performed += OnPausePerformed;
         }
 
         private void OnEnable()
@@ -49,6 +47,8 @@ namespace Core
             if (_gameInput != null)
             {
                 _gameInput.Enable();
+                _gameInput.Player.Pause.performed += OnPausePerformed;
+                _gameInput.UI.Pause.performed += OnPausePerformed;
             }
         }
 
@@ -56,18 +56,28 @@ namespace Core
         {
             if (_gameInput != null)
             {
+                _gameInput.Player.Pause.performed -= OnPausePerformed;
+                _gameInput.UI.Pause.performed -= OnPausePerformed;
                 _gameInput.Disable();
             }
         }
 
+        private float _lastPauseTime = 0f;
+        private const float PauseCooldown = 0.25f; // 조금만 더 넉넉하게!
+
         private void OnPausePerformed(InputAction.CallbackContext context)
         {
+            // 🎯 빌드에서 아주 미세하게 두 번 들리는 걸 막기 위해 쿨타임 체크!
+            if (Time.unscaledTime < _lastPauseTime + PauseCooldown) return;
+            _lastPauseTime = Time.unscaledTime;
+
             if (IsDialogueActive)
             {
                 OnSkipDialogue?.Invoke();
                 return;
             }
 
+            Debug.Log($"[GameManager] Pause Toggled! Current State: {isPaused} -> {!isPaused}");
             TogglePause();
         }
 
@@ -79,6 +89,7 @@ namespace Core
             {
                 Time.timeScale = 0f;
                 if (pauseUI != null) pauseUI.Show();
+                else Debug.LogError("💔 오빠! GameManager에 PauseUI가 연결 안 됐어! 확인해봐!");
 
                 Cursor.visible = true;
                 Cursor.lockState = CursorLockMode.None;

@@ -29,10 +29,21 @@ public class PlayerHealth : MonoBehaviour
     public event System.Action OnDieEvent;
     public event System.Action OnRespawnEvent;
 
+
     private void Start()
     {
         currentHealth = maxHealth;
-        lastCheckpointPos = transform.position;
+        
+        // 🎯 오빠! 저장된 데이터가 있으면 그 위치를 체크포인트로 쓸게! 🥰
+        if (Core.Data.DataManager.Instance != null && Core.Data.DataManager.Instance.CurrentData.hasSavedPosition)
+        {
+            lastCheckpointPos = Core.Data.DataManager.Instance.CurrentData.lastCheckpointPosition;
+            transform.position = lastCheckpointPos;
+        }
+        else
+        {
+            lastCheckpointPos = transform.position;
+        }
 
         healthUI?.UpdateHealth(currentHealth);
         UpdateLowHealthEffect();
@@ -248,6 +259,12 @@ public class PlayerHealth : MonoBehaviour
     public void SetCheckpoint(Vector3 pos)
     {
         lastCheckpointPos = pos;
+        
+        // 🎯 오빠! 체크포인트 밟을 때마다 자동으로 저장해줄게! 걱정 마! 💾✨
+        if (Core.Data.DataManager.Instance != null)
+        {
+            Core.Data.DataManager.Instance.SaveProgress(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name, pos);
+        }
     }
 
     public void SetCheckpointAtCurrent()

@@ -63,6 +63,19 @@ public class EnemyLaserShooter : MonoBehaviour
         if (ph != null) _playerTr = ph.transform;
 
         _nextFireTime = Time.time + Random.Range(1f, 2f);
+        
+        if (Core.GameManager.Instance != null)
+        {
+            Core.GameManager.Instance.OnPlayerRespawn += CancelAttack;
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (Core.GameManager.Instance != null)
+        {
+            Core.GameManager.Instance.OnPlayerRespawn -= CancelAttack;
+        }
     }
 
     private void Update()
@@ -231,6 +244,15 @@ public class EnemyLaserShooter : MonoBehaviour
                     }
                 }
             }
+        }
+    }
+
+    public void CancelAttack()
+    {
+        if (_isAttacking)
+        {
+            StopAllCoroutines();
+            StopAttack();
         }
     }
 
