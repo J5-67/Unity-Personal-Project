@@ -4,6 +4,13 @@
 
 ---
 
+## 📅 2026-03-10
+- 빌드 환경에서 입력 감지 및 로그 확인 불가 문제를 해결하기 위해 시각적 디버깅 도구(`OnGUI`)를 `GameManager`에 도입.
+- 게임 화면 왼쪽 상단에 `GameManager` 생존 여부와 `isPaused`, `Time.timeScale`, `Keyboard.current` 상태를 실시간으로 텍스트 표시하도록 구현.
+- 빌드 콘솔에서 누락될 수 있는 로그를 보완하기 위해 `Debug.LogError`로 입력을 감지하도록 강화.
+
+---
+
 ## 📅 2026-03-09
 ### 1. 🏗️ Unity 6 Boss Battle Development History - [완료]
 *   **Phase Management System (`BossPhaseManager.cs`)**:
