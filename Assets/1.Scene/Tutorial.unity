@@ -9121,7 +9121,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4444437161411550999, guid: dd5f6df226cf80b4fa20d61420dc6251, type: 3}
       propertyPath: m_ActionEvents.Array.data[8].m_PersistentCalls.m_Calls.Array.data[0].m_Mode
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4444437161411550999, guid: dd5f6df226cf80b4fa20d61420dc6251, type: 3}
       propertyPath: m_ActionEvents.Array.data[2].m_PersistentCalls.m_Calls.Array.data[0].m_Target
@@ -9134,7 +9134,7 @@ PrefabInstance:
     - target: {fileID: 4444437161411550999, guid: dd5f6df226cf80b4fa20d61420dc6251, type: 3}
       propertyPath: m_ActionEvents.Array.data[8].m_PersistentCalls.m_Calls.Array.data[0].m_Target
       value: 
-      objectReference: {fileID: 2017668692}
+      objectReference: {fileID: 0}
     - target: {fileID: 4444437161411550999, guid: dd5f6df226cf80b4fa20d61420dc6251, type: 3}
       propertyPath: m_ActionEvents.Array.data[6].m_PersistentCalls.m_Calls.Array.data[0].m_CallState
       value: 2
@@ -9153,7 +9153,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4444437161411550999, guid: dd5f6df226cf80b4fa20d61420dc6251, type: 3}
       propertyPath: m_ActionEvents.Array.data[8].m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
-      value: TogglePause
+      value: 
       objectReference: {fileID: 0}
     - target: {fileID: 4444437161411550999, guid: dd5f6df226cf80b4fa20d61420dc6251, type: 3}
       propertyPath: m_ActionEvents.Array.data[6].m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName

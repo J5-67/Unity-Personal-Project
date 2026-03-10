@@ -792,6 +792,22 @@ MonoBehaviour:
         m_CallState: 2
     m_ActionId: 86652984-497b-47d0-8b57-476998f7a396
     m_ActionName: 'Player/Hack[/Keyboard/q]'
+  - m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 0}
+        m_TargetAssemblyTypeName: 
+        m_MethodName: 
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: 
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+    m_ActionId: a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e5e5e5
+    m_ActionName: 'Player/Pause[/Keyboard/escape]'
   m_NeverAutoSwitchControlSchemes: 0
   m_DefaultControlScheme: Keyboard & Mouse
   m_DefaultActionMap: Player
@@ -830,7 +846,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController
   moveSpeed: 5
   rotationSpeed: 15
-  dashSpeed: 20
+  dashDistance: 8
   dashDuration: 0.15
   maxDashCharges: 2
   dashCooldown: 2
@@ -844,6 +860,7 @@ MonoBehaviour:
   gravityScale: 2.5
   fastFallSpeed: 20
   wallSlideSpeed: 2
+  wallClimbSpeed: 4
   wallJumpPower: {x: 12, y: 16}
   wallJumpStopControlTime: 0.2
   coyoteTime: 0.15
@@ -915,6 +932,7 @@ MonoBehaviour:
   enemyArrowTiling: 0.5
   defaultColor: {r: 0, g: 1, b: 1, a: 1}
   enemyColor: {r: 1, g: 0, b: 0, a: 1}
+  hookableColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
 --- !u!114 &3363513297093943601
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -936,6 +954,9 @@ MonoBehaviour:
   enemyZipSpeed: 120
   wallZipSpeed: 15
   safeZipDistance: 1.5
+  useAimAssist: 1
+  aimAssistAngleLimit: 25
+  aimAssistStep: 1.5
   swingForce: 50
   swingAngleLimit: 5
   winchUpForce: 0.5
@@ -951,6 +972,9 @@ MonoBehaviour:
   frozenEnemyTag: FrozenEnemy
   autoWinchAmount: 0.5
   autoWinchSpeed: 5
+  groundCheckDistance: 3
+  minGroundClearance: 1.5
+  smartWinchLerpSpeed: 10
   ropeVisual: {fileID: 0}
   waveStrength: 0.1
   waveFrequency: 0.5
@@ -1031,6 +1055,7 @@ MonoBehaviour:
   playerTransform: {fileID: 3902011015455189127}
   playerAim: {fileID: 657888405367180169}
   virtualCamera: {fileID: 0}
+  enableAimShift: 0
   shiftAmount: 0.3
   shiftSpeed: 3
   maxShiftDistance: 5
