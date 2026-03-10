@@ -92,6 +92,8 @@ public class PlayerHook : MonoBehaviour
 
     public void OnHook(InputAction.CallbackContext context)
     {
+        if (Core.GameManager.Instance != null && Core.GameManager.Instance.IsDialogueActive) return;
+
         if (context.started && !_isHooking)
         {
             FireHook();
@@ -432,6 +434,12 @@ public class PlayerHook : MonoBehaviour
                 yield break;
             }
 
+            if (Core.GameManager.Instance != null && Core.GameManager.Instance.IsDialogueActive)
+            {
+                StopHook();
+                yield break;
+            }
+
             if (_playerMovement.ConsumeJumpInput())
             {
                 bool allowZip = true;
@@ -735,6 +743,12 @@ public class PlayerHook : MonoBehaviour
 
         while (_isHooking && target != null)
         {
+
+            if (Core.GameManager.Instance != null && Core.GameManager.Instance.IsDialogueActive)
+            {
+                StopHook();
+                yield break;
+            }
 
             if (_playerMovement.IsDashing || _playerMovement.ConsumeJumpInput())
             {

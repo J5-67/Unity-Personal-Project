@@ -204,7 +204,12 @@ public class PlayerMovement : MonoBehaviour
     public void OnJump(InputAction.CallbackContext context)
     {
         if (_isDead) return;
-        if (Core.GameManager.Instance != null && Core.GameManager.Instance.IsDialogueActive) return;
+        if (Core.GameManager.Instance != null && Core.GameManager.Instance.IsDialogueActive) 
+        {
+            _isJumpPressed = false;
+            _jumpBufferCounter = 0f;
+            return;
+        }
 
         if (context.started || (context.performed && context.ReadValueAsButton()))
         {
@@ -387,6 +392,11 @@ public class PlayerMovement : MonoBehaviour
         while ((elapsedTime < actualDashDuration || isOverlappingEnemy || (hasRecharged && postPierceTimer > 0 && postPierceTimer < 0.05f)) 
                && elapsedTime < 1.0f) 
         {
+            if (Core.GameManager.Instance != null && Core.GameManager.Instance.IsDialogueActive)
+            {
+                break;
+            }
+
             // 🎯 플레이어 본체 글리치 연출
             if (playerRen != null)
             {

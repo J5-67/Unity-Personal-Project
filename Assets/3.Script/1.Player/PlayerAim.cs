@@ -219,7 +219,16 @@ public class PlayerAim : MonoBehaviour
 
     private void Update()
     {
-        if (Core.GameManager.Instance != null && (Core.GameManager.Instance.IsDialogueActive || Core.GameManager.Instance.IsPaused)) return;
+        if (Core.GameManager.Instance != null && (Core.GameManager.Instance.IsDialogueActive || Core.GameManager.Instance.IsPaused))
+        {
+            if (lineRenderer != null && lineRenderer.enabled) lineRenderer.enabled = false;
+            if (crosshairTransform != null && crosshairTransform.gameObject.activeSelf) crosshairTransform.gameObject.SetActive(false);
+            return;
+        }
+        else
+        {
+            if (crosshairTransform != null && !crosshairTransform.gameObject.activeSelf) crosshairTransform.gameObject.SetActive(true);
+        }
 
         Vector2 delta = Vector2.zero;
         if (Mouse.current != null)

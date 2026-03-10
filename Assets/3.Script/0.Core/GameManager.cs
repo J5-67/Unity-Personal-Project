@@ -12,12 +12,10 @@ namespace Core
         [SerializeField] private bool isPaused = false;
 
         [Header("References")]
-        [Header("References")]
         [SerializeField] private PauseUI pauseUI;
         [SerializeField] private Unity.Cinemachine.CinemachineImpulseSource impulseSource;
 
         public event System.Action OnPlayerRespawn;
-
         public event System.Action OnSkipDialogue;
 
         public bool IsDialogueActive { get; private set; }
@@ -25,17 +23,13 @@ namespace Core
 
         private GameInput _gameInput;
 
-        private float _debugLogTimer = 0f;
-
         private void Awake()
         {
-            // 🎯 빌드 실행 시 무조건 로그를 찍게 해!
             Debug.LogError("!!! [GameManager] Awake Called !!!");
 
             if (Instance == null)
             {
                 Instance = this;
-                transform.SetParent(null); // 부모로부터 독립! 이게 중요해 오빠!
                 DontDestroyOnLoad(gameObject);
             }
             else
@@ -69,46 +63,19 @@ namespace Core
 
         private void Update()
         {
-            // 🎯 수사 1단계: 어떤 키든 눌리면 일단 로그 찍기! (키보드 작동 확인용)
-            if (Input.anyKeyDown)
-            {
-                // inputString이 비어있을 수 있으니 anyKeyDown 조건만으로 체크
-                // Debug.Log($"[Input Check] Legacy KeyDown Detected."); 
-            }
+            // 🎯 수사 1단계: F-키들을 통한 비상 조작
+            if (Input.GetKeyDown(KeyCode.F1)) { ForceUnlockCursor(); }
+            if (Input.GetKeyDown(KeyCode.F2)) TogglePause();
+            if (Input.GetKeyDown(KeyCode.F3)) { isPaused = false; ApplyPauseState(); } // 강제 해제
+            if (Input.GetKeyDown(KeyCode.F4)) { SetDialogueState(false); } // 대화 강제 종료
 
-            // 🎯 1. Update 생존 신고 (10초마다 무조건 로그 찍기)
-            _debugLogTimer += Time.unscaledDeltaTime;
-            if (_debugLogTimer > 10f)
-            {
-                Debug.Log($"[GameManager] Update is Running... (isPaused: {isPaused})");
-                _debugLogTimer = 0f;
-            }
-
-            // 🎯 2. 비상용 마우스 해제 키 (F1)
-            if (Input.GetKeyDown(KeyCode.F1) || (Keyboard.current != null && Keyboard.current.f1Key.wasPressedThisFrame))
-            {
-                Debug.LogError("!!! F1 Pressed: Force Unlock Cursor !!!");
-                Cursor.visible = true;
-                Cursor.lockState = CursorLockMode.None;
-            }
-
-            // 🎯 3. 입력 감지 (ESC, P, F2)
+            // 🎯 2. 메인 입력 감지
             bool pauseTriggered = false;
 
-            // 뉴 인풋 시스템 방식
-            if (Keyboard.current != null)
+            // ESC 체크
+            if (Input.GetKeyDown(KeyCode.Escape) || (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame))
             {
-                if (Keyboard.current.escapeKey.wasPressedThisFrame || Keyboard.current.pKey.wasPressedThisFrame || Keyboard.current.f2Key.wasPressedThisFrame)
-                {
-                    Debug.LogError("[Input Check] New Input System Key Detected!");
-                    pauseTriggered = true;
-                }
-            }
-
-            // 레거시 방식
-            if (!pauseTriggered && (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.P) || Input.GetKeyDown(KeyCode.F2)))
-            {
-                Debug.LogError("[Input Check] Legacy Input Key Detected!");
+                Debug.LogError("!!! [Input] ESC DETECTED !!!");
                 pauseTriggered = true;
             }
 
@@ -118,103 +85,89 @@ namespace Core
             }
         }
 
-        // 🎯 오빠! 빌드에서 GameManager가 살아있는지 화면에 직접 그려서 확인해보자!
+        private void ForceUnlockCursor()
+        {
+            Debug.LogError("!!! [Action] Force Unlock Cursor !!!");
+            Cursor.visible = true;
+            Cursor.lockState = CursorLockMode.None;
+        }
+
         private void OnGUI()
         {
             #if DEVELOPMENT_BUILD || UNITY_EDITOR
-            Rect debugWindow = new Rect(5, 5, 450, 220);
+            // 🎯 디버그 모드에서는 마우스 커서를 항상 보이게 강제할게! (오빠가 클릭해야 하니까)
+            // Cursor.visible = true; // 주석 해제하면 게임 내내 커서가 보임
             
-            // 🎯 GUI 레벨에서 입력을 직접 낚아채보자! (Update가 안 돌아도 이건 작동해)
-            Event e = Event.current;
-            if (e.type == EventType.KeyDown)
-            {
-                if (e.keyCode == KeyCode.F1) { 
-                    Cursor.visible = true; Cursor.lockState = CursorLockMode.None; 
-                    Debug.LogError("!!! F1 from OnGUI (Event.current) !!!"); 
-                }
-                if (e.keyCode == KeyCode.F2 || e.keyCode == KeyCode.Escape) { 
-                    Debug.LogError("!!! Pause Key from OnGUI (Event.current) !!!");
-                    HandlePauseToggle(); 
-                }
-            }
-
-            // 🎯 마우스 구원! 디버그 박스 위에 마우스가 있으면 커서 띄우기
-            if (debugWindow.Contains(Event.current.mousePosition))
+            Rect debugWindow = new Rect(10, 10, 480, 240);
+            
+            // 박스 근처에 마우스가 오면 커서 풀기
+            Vector2 mousePos = Event.current.mousePosition;
+            if (debugWindow.Contains(mousePos))
             {
                 Cursor.visible = true;
                 Cursor.lockState = CursorLockMode.None;
             }
 
-            // 배경 박스
-            GUI.backgroundColor = Color.black;
-            GUI.Box(debugWindow, "");
+            GUI.backgroundColor = new Color(0, 0, 0, 0.8f);
+            GUI.Box(debugWindow, "🛠️ YUNI'S SUPER DEBUG PANEL");
 
-            GUIStyle labelStyle = new GUIStyle();
-            labelStyle.fontSize = 18;
-            labelStyle.normal.textColor = Color.yellow;
+            GUILayout.BeginArea(new Rect(20, 40, 460, 200));
             
-            GUI.Label(new Rect(15, 10, 430, 25), $"[DEBUG] GameManager Monitoring...", labelStyle);
-            
+            GUILayout.BeginHorizontal();
             GUI.color = isPaused ? Color.red : Color.green;
-            GUI.Label(new Rect(15, 40, 430, 25), $"PAUSE STATE: {isPaused}", labelStyle);
-            
+            GUILayout.Label($"PAUSE: {isPaused}", GUILayout.Width(120));
+            GUI.color = IsDialogueActive ? Color.yellow : Color.white;
+            GUILayout.Label($"DIALOGUE: {IsDialogueActive}", GUILayout.Width(150));
             GUI.color = Color.white;
-            GUI.Label(new Rect(15, 70, 430, 25), $"IsDialogueActive: {IsDialogueActive}", labelStyle);
-            GUI.Label(new Rect(15, 100, 430, 25), $"Time.timeScale: {Time.timeScale}", labelStyle);
-            GUI.Label(new Rect(15, 130, 430, 25), $"[F1]: Unlock Cursor | [ESC/F2]: Pause", labelStyle);
+            GUILayout.Label($"TIME: {Time.timeScale:F2}");
+            GUILayout.EndHorizontal();
 
-            // 🎯 마우스 강제 해제 버튼
-            if (GUI.Button(new Rect(15, 170, 130, 35), "FORCE CURSOR"))
-            {
-                Cursor.visible = true;
-                Cursor.lockState = CursorLockMode.None;
-                Debug.LogError("!!! GUI: FORCE CURSOR CLICKED !!!");
-            }
+            GUILayout.Space(10);
+            GUILayout.Label($"Current Scene: {UnityEngine.SceneManagement.SceneManager.GetActiveScene().name}");
+            GUILayout.Label($"PauseUI Linked: {(pauseUI != null ? "YES" : "NO (Missing!)")}");
+            
+            GUILayout.Space(10);
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("FORCE UNPAUSE", GUILayout.Height(40))) { isPaused = false; ApplyPauseState(); }
+            if (GUILayout.Button("FORCE PAUSE", GUILayout.Height(40))) { isPaused = true; ApplyPauseState(); }
+            GUILayout.EndHorizontal();
 
-            // 🎯 일시정지 토글 버튼
-            if (GUI.Button(new Rect(150, 170, 130, 35), "TOGGLE PAUSE"))
-            {
-                Debug.LogError("!!! GUI: TOGGLE PAUSE CLICKED !!!");
-                HandlePauseToggle();
-            }
+            GUILayout.Space(5);
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("UNLOCK MOUSE", GUILayout.Height(40))) ForceUnlockCursor();
+            if (GUILayout.Button("RESET DIALOGUE", GUILayout.Height(40))) SetDialogueState(false);
+            GUILayout.EndHorizontal();
 
-            // 🎯 대화 상태 강제 초기화
-            if (GUI.Button(new Rect(285, 170, 150, 35), "RESET DIALOGUE"))
-            {
-                SetDialogueState(false);
-                Debug.LogError("!!! GUI: RESET DIALOGUE CLICKED !!!");
-            }
+            GUILayout.EndArea();
             #endif
         }
 
         private void HandlePauseToggle()
         {
             float currentTime = Time.unscaledTime;
-            Debug.LogError($"[Pause Log] HandlePauseToggle Called. Time: {currentTime}, Last: {_lastPauseTime}");
+            Debug.LogError($"[Pause Flow] HandlePauseToggle Called. Time: {currentTime}");
 
             if (currentTime < _lastPauseTime + PauseCooldown) 
             {
-                Debug.LogWarning("[Pause Log] Blocked by Cooldown.");
+                Debug.LogWarning("[Pause Flow] Blocked by Cooldown.");
                 return;
             }
             _lastPauseTime = currentTime;
 
-            // 🎯 대화 중인지 체크!
             if (IsDialogueActive)
             {
-                Debug.LogError("[Pause Log] Dialogue is ACTIVE. Triggering Skip.");
+                Debug.LogError("[Pause Flow] Dialogue Active! Triggering Skip.");
                 OnSkipDialogue?.Invoke();
                 return; 
             }
 
-            Debug.LogError("[Pause Log] All Checks Passed. Calling TogglePause().");
             TogglePause();
         }
 
         public void TogglePause()
         {
             isPaused = !isPaused;
-            Debug.LogError($"[Pause Log] TogglePause() - New State: {isPaused}");
+            Debug.LogError($"[Pause Flow] TogglePause - New State: {isPaused}");
             ApplyPauseState();
         }
 

@@ -1,13 +1,13 @@
 ﻿ID,Name,Side,Portrait,Text
 1,???,Left,Lili_Silhouette,일어나! 제발...눈을 떠!
-2,로봇,Right,Enemy_Robot,위협 요소 감지.\n제거 프로토콜 가동.
-3,???,Left,Lili_Silhouette,지금 늦장 부릴 때가 아니야!\n공격하려고 해! 어서 일어나!
-4,???,Left,Lili_Silhouette,"휴우, 정말 잿더미가 되는 줄 알았네!"
-5,???,Left,Lili_Silhouette,처음엔 반신반의했는데…\n역시 내 예상이 맞았어. 넌 특별해!
-6,릴리,Left,Lili_Smile,"아참, 내 소개가 늦었네! 난 '릴리'야!"
-7,릴리,Left,Lili_Serious,"만나서 반갑다고 하고 싶지만, 지금 이러고 있을 때가 아니야.\n이곳에 치명적인 바이러스가 침투했어."
-8,릴리,Left,Lili_Serious,방금 널 공격한 경비 로봇도 바이러스에 감염돼서\n완전히 통제 불능 상태가 된 거라고!
-9,릴리,Left,Lili_Worried,지금 상황은 최악이야…\n이 세계의 중심이자 우리 모두의 창조자인 마더가 위험해. 
-10,릴리,Left,Lili_Fear,"바이러스가 마더의 메인 코어까지 침투하려고 하고 있어.\n마더가 완전히 잠식당하면, 이 세계는 붕괴하고 말 거야."
-11,릴리,Left,Lili_Plead,"부탁이야, 네 힘이 필요해!\n바이러스를 막고 마더를 구할 수 있는 건 이제 너뿐이야!"
-12,릴리,Left,Lili_Smile,좋아! 그럼 당장 출발하자!\n내가 옆에서 팍팍 서포트할게!
+2,???,Left,Lili_Silhouette,지금 늦장 부릴 때가 아니야!\n어서 일어나!
+3,릴리,Left,Lili_Smile,"아참, 내 소개가 늦었네! 난 '릴리'야!"
+4,릴리,Left,Lili_Serious,"만나서 반갑다고 하고 싶지만, 지금 이러고 있을 때가 아니야."
+5,릴리,Left,Lili_Serious,이곳에 치명적인 바이러스가 침투했어.
+6,릴리,Left,Lili_Worried,지금 상황은 최악이야…
+7,릴리,Left,Lili_Worried,이 세계의 중심이자 우리 모두의 창조자인 마더가 위험해. 
+8,릴리,Left,Lili_Fear,바이러스가 마더의 메인 코어까지 침투하려고 하고 있어.
+9,릴리,Left,Lili_Fear,"마더가 완전히 잠식당하면, 이 세계는 붕괴하고 말 거야."
+10,릴리,Left,Lili_Plead,"부탁이야, 네 힘이 필요해!"
+11,릴리,Left,Lili_Plead,바이러스를 막고 마더를 구할 수 있는 건 이제 너뿐이야!
+12,릴리,Left,Lili_Smile,당장 출발하자!\n내가 옆에서 팍팍 서포트할게!
