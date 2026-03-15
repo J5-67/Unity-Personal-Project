@@ -20,67 +20,69 @@ namespace Core
 
         public bool IsDialogueActive { get; private set; }
         public bool IsPaused => isPaused;
+        private float _lastPauseTime = 0f;
+        private const float PauseCooldown = 0.3f;
 
         private GameInput _gameInput;
 
         private void Awake()
         {
-            Debug.LogError("!!! [GameManager] Awake Called !!!");
-
-            if (Instance == null)
+            if (Instance != null && Instance != this)
             {
-                Instance = this;
-                DontDestroyOnLoad(gameObject);
-            }
-            else
-            {
-                Debug.LogWarning("[GameManager] Duplicate Instance Destroyed.");
-                Destroy(gameObject);
+                // 다른 인스턴스가 살아있을 경우에만 중복 파괴!
+                // 단, gameObject 전체를 파괴하면 같은 오브젝트에 붙은 다른 매니저도 죽을 수 있으므로 this만 파괴.
+                Destroy(this);
                 return;
             }
 
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
+            
             _gameInput = new GameInput();
         }
 
         private void OnEnable()
         {
-            if (_gameInput != null)
+            if (_gameInput == null)
             {
-                _gameInput.Enable();
+                _gameInput = new GameInput();
             }
+            
+            _gameInput.Enable();
+            
+            // 뉴 인풋 시스템 이벤트 연결!
+            _gameInput.Player.Pause.performed -= OnPauseInput;
+            _gameInput.UI.Pause.performed -= OnPauseInput;
+            
+            _gameInput.Player.Pause.performed += OnPauseInput;
+            _gameInput.UI.Pause.performed += OnPauseInput;
         }
 
         private void OnDisable()
         {
             if (_gameInput != null)
             {
+                _gameInput.Player.Pause.performed -= OnPauseInput;
+                _gameInput.UI.Pause.performed -= OnPauseInput;
                 _gameInput.Disable();
             }
         }
 
-        private float _lastPauseTime = 0f;
-        private const float PauseCooldown = 0.3f;
+        private void OnPauseInput(InputAction.CallbackContext context)
+        {
+            if (context.performed)
+            {
+                Debug.Log($"[GameManager] 뉴 인풋 시스템 이벤트로 ESC 감지! (ActionMap: {context.action.actionMap.name})");
+                HandlePauseToggle();
+            }
+        }
 
         private void Update()
         {
-            // 🎯 수사 1단계: F-키들을 통한 비상 조작
-            if (Input.GetKeyDown(KeyCode.F1)) { ForceUnlockCursor(); }
-            if (Input.GetKeyDown(KeyCode.F2)) TogglePause();
-            if (Input.GetKeyDown(KeyCode.F3)) { isPaused = false; ApplyPauseState(); } // 강제 해제
-            if (Input.GetKeyDown(KeyCode.F4)) { SetDialogueState(false); } // 대화 강제 종료
-
-            // 🎯 2. 메인 입력 감지
-            bool pauseTriggered = false;
-
-            // ESC 체크
-            if (Input.GetKeyDown(KeyCode.Escape) || (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame))
+            // 보험용: 만약 이벤트 구독이 풀리더라도 무조건 작동하는 뉴 인풋 쌩-폴링 (Polling)
+            if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
             {
-                Debug.LogError("!!! [Input] ESC DETECTED !!!");
-                pauseTriggered = true;
-            }
-
-            if (pauseTriggered)
-            {
+                Debug.LogWarning("[GameManager Update] Keyboard.current.escapeKey 로부터 ESC 직접 낚아챔!");
                 HandlePauseToggle();
             }
         }
@@ -92,71 +94,18 @@ namespace Core
             Cursor.lockState = CursorLockMode.None;
         }
 
-        private void OnGUI()
-        {
-            #if DEVELOPMENT_BUILD || UNITY_EDITOR
-            // 🎯 디버그 모드에서는 마우스 커서를 항상 보이게 강제할게! (오빠가 클릭해야 하니까)
-            // Cursor.visible = true; // 주석 해제하면 게임 내내 커서가 보임
-            
-            Rect debugWindow = new Rect(10, 10, 480, 240);
-            
-            // 박스 근처에 마우스가 오면 커서 풀기
-            Vector2 mousePos = Event.current.mousePosition;
-            if (debugWindow.Contains(mousePos))
-            {
-                Cursor.visible = true;
-                Cursor.lockState = CursorLockMode.None;
-            }
-
-            GUI.backgroundColor = new Color(0, 0, 0, 0.8f);
-            GUI.Box(debugWindow, "🛠️ YUNI'S SUPER DEBUG PANEL");
-
-            GUILayout.BeginArea(new Rect(20, 40, 460, 200));
-            
-            GUILayout.BeginHorizontal();
-            GUI.color = isPaused ? Color.red : Color.green;
-            GUILayout.Label($"PAUSE: {isPaused}", GUILayout.Width(120));
-            GUI.color = IsDialogueActive ? Color.yellow : Color.white;
-            GUILayout.Label($"DIALOGUE: {IsDialogueActive}", GUILayout.Width(150));
-            GUI.color = Color.white;
-            GUILayout.Label($"TIME: {Time.timeScale:F2}");
-            GUILayout.EndHorizontal();
-
-            GUILayout.Space(10);
-            GUILayout.Label($"Current Scene: {UnityEngine.SceneManagement.SceneManager.GetActiveScene().name}");
-            GUILayout.Label($"PauseUI Linked: {(pauseUI != null ? "YES" : "NO (Missing!)")}");
-            
-            GUILayout.Space(10);
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button("FORCE UNPAUSE", GUILayout.Height(40))) { isPaused = false; ApplyPauseState(); }
-            if (GUILayout.Button("FORCE PAUSE", GUILayout.Height(40))) { isPaused = true; ApplyPauseState(); }
-            GUILayout.EndHorizontal();
-
-            GUILayout.Space(5);
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button("UNLOCK MOUSE", GUILayout.Height(40))) ForceUnlockCursor();
-            if (GUILayout.Button("RESET DIALOGUE", GUILayout.Height(40))) SetDialogueState(false);
-            GUILayout.EndHorizontal();
-
-            GUILayout.EndArea();
-            #endif
-        }
-
         private void HandlePauseToggle()
         {
             float currentTime = Time.unscaledTime;
-            Debug.LogError($"[Pause Flow] HandlePauseToggle Called. Time: {currentTime}");
 
             if (currentTime < _lastPauseTime + PauseCooldown) 
             {
-                Debug.LogWarning("[Pause Flow] Blocked by Cooldown.");
                 return;
             }
             _lastPauseTime = currentTime;
 
             if (IsDialogueActive)
             {
-                Debug.LogError("[Pause Flow] Dialogue Active! Triggering Skip.");
                 OnSkipDialogue?.Invoke();
                 return; 
             }
@@ -167,7 +116,6 @@ namespace Core
         public void TogglePause()
         {
             isPaused = !isPaused;
-            Debug.LogError($"[Pause Flow] TogglePause - New State: {isPaused}");
             ApplyPauseState();
         }
 

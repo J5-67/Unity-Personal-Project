@@ -8,8 +8,8 @@ public class PlayerMovement : MonoBehaviour
     [Header("⚙️ Move Settings")]
     [SerializeField] private float moveSpeed = 10f;
     [SerializeField] private float rotationSpeed = 15f;
-
-    [Header("💨 Dash Settings (New!)")]
+    
+    [Header("💨 Dash Settings")]
     [SerializeField] private float dashDistance = 8f; // 이제 거리를 직접 설정!
     [SerializeField] private float dashDuration = 0.2f; // 대시가 지속되는 시간
     [SerializeField] private int maxDashCharges = 2;
