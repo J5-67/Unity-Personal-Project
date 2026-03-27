@@ -1,9 +1,9 @@
 {
     "currentStageSceneName": "Stage",
     "lastCheckpointPosition": {
-        "x": 0.0,
-        "y": 0.0,
-        "z": 0.0
+        "x": -2.5,
+        "y": 2.05,
+        "z": 28.22
     },
-    "hasSavedPosition": false
+    "hasSavedPosition": true
 }

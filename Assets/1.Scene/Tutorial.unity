@@ -8296,6 +8296,7 @@ GameObject:
   - component: {fileID: 1093252935}
   - component: {fileID: 1093252938}
   - component: {fileID: 1093252939}
+  - component: {fileID: 1093252940}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -8320,7 +8321,7 @@ Camera:
   m_GameObject: {fileID: 1093252934}
   m_Enabled: 1
   serializedVersion: 2
-  m_ClearFlags: 2
+  m_ClearFlags: 1
   m_BackGroundColor: {r: 0, g: 0, b: 0, a: 0}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
@@ -8453,6 +8454,15 @@ MonoBehaviour:
       m_PostInfinity: 2
       m_RotationOrder: 4
   CustomBlends: {fileID: 0}
+--- !u!45 &1093252940
+Skybox:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1093252934}
+  m_Enabled: 1
+  m_CustomSkybox: {fileID: 2100000, guid: 27c0cce60d93adc4aa3fba77995f9921, type: 2}
 --- !u!1 &1102117140
 GameObject:
   m_ObjectHideFlags: 0

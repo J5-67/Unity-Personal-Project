@@ -1308,7 +1308,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 51f52f29575082e47915412b70d8d6c7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BaseEnemy
-  hookInteractSpeed: 15
   freezeDuration: 318.1
   glitchShader: {fileID: 4800000, guid: 4680fba1598edad4db7d7ecd46ff810e, type: 3}
   glitchIntensity: 1.5
@@ -1659,7 +1658,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 51f52f29575082e47915412b70d8d6c7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BaseEnemy
-  hookInteractSpeed: 15
   freezeDuration: 318.1
   glitchShader: {fileID: 4800000, guid: 4680fba1598edad4db7d7ecd46ff810e, type: 3}
   glitchIntensity: 1.5
@@ -2485,7 +2483,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 51f52f29575082e47915412b70d8d6c7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BaseEnemy
-  hookInteractSpeed: 25
   freezeDuration: 5
   glitchShader: {fileID: 4800000, guid: 4680fba1598edad4db7d7ecd46ff810e, type: 3}
   glitchIntensity: 1.5
@@ -3283,7 +3280,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 51f52f29575082e47915412b70d8d6c7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BaseEnemy
-  hookInteractSpeed: 25
   freezeDuration: 5
   glitchShader: {fileID: 4800000, guid: 4680fba1598edad4db7d7ecd46ff810e, type: 3}
   glitchIntensity: 1.5
@@ -4180,7 +4176,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 51f52f29575082e47915412b70d8d6c7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BaseEnemy
-  hookInteractSpeed: 25
   freezeDuration: 5
   glitchShader: {fileID: 4800000, guid: 4680fba1598edad4db7d7ecd46ff810e, type: 3}
   glitchIntensity: 1.5
@@ -4909,7 +4904,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 51f52f29575082e47915412b70d8d6c7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BaseEnemy
-  hookInteractSpeed: 15
   freezeDuration: 318.1
   glitchShader: {fileID: 4800000, guid: 4680fba1598edad4db7d7ecd46ff810e, type: 3}
   glitchIntensity: 1.5
@@ -6032,7 +6026,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 51f52f29575082e47915412b70d8d6c7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BaseEnemy
-  hookInteractSpeed: 25
   freezeDuration: 5
   glitchShader: {fileID: 4800000, guid: 4680fba1598edad4db7d7ecd46ff810e, type: 3}
   glitchIntensity: 1.5
@@ -6702,7 +6695,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 51f52f29575082e47915412b70d8d6c7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BaseEnemy
-  hookInteractSpeed: 15
   freezeDuration: 318.1
   glitchShader: {fileID: 4800000, guid: 4680fba1598edad4db7d7ecd46ff810e, type: 3}
   glitchIntensity: 1.5
@@ -7871,7 +7863,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 51f52f29575082e47915412b70d8d6c7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BaseEnemy
-  hookInteractSpeed: 15
   freezeDuration: 318.1
   glitchShader: {fileID: 4800000, guid: 4680fba1598edad4db7d7ecd46ff810e, type: 3}
   glitchIntensity: 1.5
@@ -8983,7 +8974,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 51f52f29575082e47915412b70d8d6c7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BaseEnemy
-  hookInteractSpeed: 25
   freezeDuration: 5
   glitchShader: {fileID: 4800000, guid: 4680fba1598edad4db7d7ecd46ff810e, type: 3}
   glitchIntensity: 1.5
@@ -14795,8 +14785,8 @@ MonoBehaviour:
   wallZipSpeed: 15
   safeZipDistance: 1.5
   useAimAssist: 1
-  aimAssistRadius: 2
   aimAssistAngleLimit: 25
+  aimAssistStep: 1.5
   swingForce: 50
   swingAngleLimit: 5
   winchUpForce: 0.5
@@ -15110,7 +15100,7 @@ Transform:
   m_GameObject: {fileID: 8014722533618008624}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0.42578316, y: 1.8, z: -70.9}
+  m_LocalPosition: {x: 0.42578316, y: 25.1, z: 8.3}
   m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -15318,6 +15308,10 @@ MonoBehaviour:
         m_CallState: 2
     m_ActionId: 86652984-497b-47d0-8b57-476998f7a396
     m_ActionName: 'Player/Hack[/Keyboard/q]'
+  - m_PersistentCalls:
+      m_Calls: []
+    m_ActionId: a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e5e5e5
+    m_ActionName: 'Player/Pause[/Keyboard/escape]'
   m_NeverAutoSwitchControlSchemes: 0
   m_DefaultControlScheme: Keyboard & Mouse
   m_DefaultActionMap: Player
@@ -15972,7 +15966,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController
   moveSpeed: 5
   rotationSpeed: 15
-  dashSpeed: 20
+  dashDistance: 8
   dashDuration: 0.25
   maxDashCharges: 2
   dashCooldown: 2

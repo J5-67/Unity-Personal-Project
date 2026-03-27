@@ -1,5 +1,5 @@
 ﻿ID,Name,Side,Portrait,Text
-1,유니,Left,Yuni_Smile,A / D : 좌 / 우 이동\nSPACE : 점프
+1,유니,Right,Yuni_Smile,A / D : 좌 / 우 이동\nSPACE : 점프
 2,유니,Left,Yuni_Smile,마우스 우클릭 : 대쉬
 3,유니,Left,Yuni_Smile,벽에 붙은 상태로 점프 시 \n벽점프가 됩니다.
 4,유니,Left,Yuni_Smile,마우스 좌클릭 : 훅 발사
