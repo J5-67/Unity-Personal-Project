@@ -6899,6 +6899,7 @@ MonoBehaviour:
   subMenuGroup: {fileID: 5714232474097151354}
   startSubMenu: {fileID: 5273450155713796200}
   settingsSubMenu: {fileID: 6093724183138415766}
+  continueButton: {fileID: 6073061468620086796}
 --- !u!222 &8287478452543101673
 CanvasRenderer:
   m_ObjectHideFlags: 0
